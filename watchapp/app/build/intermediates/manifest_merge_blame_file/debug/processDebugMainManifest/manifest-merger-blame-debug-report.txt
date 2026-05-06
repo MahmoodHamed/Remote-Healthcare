@@ -1,0 +1,215 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.rpm.watch"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="30"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- ── Hardware ── -->
+12    <uses-feature android:name="android.hardware.type.watch" />
+12-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:5:5-64
+12-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:5:19-61
+13
+14    <!-- ── Network (MQTT) ── -->
+15    <uses-permission android:name="android.permission.INTERNET" />
+15-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:8:5-67
+15-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:8:22-64
+16    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+16-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:9:5-79
+16-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:9:22-76
+17
+18    <!-- ── Samsung Health Sensor SDK – body sensors ── -->
+19    <uses-permission android:name="android.permission.BODY_SENSORS" />
+19-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:12:5-71
+19-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:12:22-68
+20    <!-- Required on Wear OS 4 (API ≥ 33) for background measurement -->
+21    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
+21-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:14:5-82
+21-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:14:22-79
+22
+23    <!-- ── Foreground service to keep MQTT + sensor alive ── -->
+24    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+24-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:17:5-77
+24-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:17:22-74
+25    <!-- API 34+ requires declaring the type -->
+26    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+26-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:19:5-87
+26-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:19:22-84
+27    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+27-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:20:5-84
+27-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:20:22-81
+28
+29    <!-- Tell Samsung Health Sensor SDK which services we may bind to -->
+30    <queries>
+30-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:23:5-26:15
+31        <package android:name="com.samsung.android.service.health" />
+31-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:24:9-70
+31-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:24:18-67
+32        <package android:name="com.sec.android.app.samsungapps" />
+32-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:25:9-67
+32-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:25:18-64
+33    </queries>
+34
+35    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+35-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:28:5-77
+35-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:28:22-74
+36
+37    <permission
+37-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+38        android:name="com.rpm.watch.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+38-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+39        android:protectionLevel="signature" />
+39-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+40
+41    <uses-permission android:name="com.rpm.watch.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+41-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+41-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+42
+43    <application
+43-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:29:5-67:19
+44        android:name="com.rpm.watch.WatchApplication"
+44-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:30:9-41
+45        android:allowBackup="true"
+45-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:31:9-35
+46        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+46-->[androidx.core:core:1.13.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\88541865f3157f423dabe4cc03f4549f\workspace\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+47        android:debuggable="true"
+48        android:extractNativeLibs="false"
+49        android:icon="@drawable/ic_launcher"
+49-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:32:9-45
+50        android:label="@string/app_name"
+50-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:33:9-41
+51        android:supportsRtl="true"
+51-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:34:9-35
+52        android:testOnly="true"
+53        android:theme="@android:style/Theme.DeviceDefault" >
+53-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:35:9-59
+54        <uses-library
+54-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:37:9-39:39
+55            android:name="com.google.android.wearable"
+55-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:38:13-55
+56            android:required="true" />
+56-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:39:13-36
+57
+58        <meta-data
+58-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:41:9-43:36
+59            android:name="com.google.android.wearable.standalone"
+59-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:42:13-66
+60            android:value="true" />
+60-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:43:13-33
+61
+62        <activity
+62-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:45:9-54:20
+63            android:name="com.rpm.watch.MainActivity"
+63-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:46:13-41
+64            android:exported="true"
+64-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:47:13-36
+65            android:taskAffinity=""
+65-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:48:13-36
+66            android:theme="@android:style/Theme.DeviceDefault" >
+66-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:49:13-63
+67            <intent-filter>
+67-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:50:13-53:29
+68                <action android:name="android.intent.action.MAIN" />
+68-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:51:17-69
+68-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:51:25-66
+69
+70                <category android:name="android.intent.category.LAUNCHER" />
+70-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:52:17-77
+70-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:52:27-74
+71            </intent-filter>
+72        </activity>
+73
+74        <!--
+75            HeartRateMonitorService – Foreground service that:
+76              1. binds to Samsung Health Tracking Service
+77              2. starts heart-rate measurement
+78              3. publishes readings to MQTT broker
+79        -->
+80        <service
+80-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:62:9-65:63
+81            android:name="com.rpm.watch.service.HeartRateMonitorService"
+81-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:63:13-60
+82            android:exported="false"
+82-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:64:13-37
+83            android:foregroundServiceType="dataSync|health" />
+83-->C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\watchapp\app\src\main\AndroidManifest.xml:65:13-60
+84
+85        <provider
+85-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+86            android:name="androidx.startup.InitializationProvider"
+86-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:25:13-67
+87            android:authorities="com.rpm.watch.androidx-startup"
+87-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:26:13-68
+88            android:exported="false" >
+88-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:27:13-37
+89            <meta-data
+89-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+90                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+90-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:30:17-75
+91                android:value="androidx.startup" />
+91-->[androidx.emoji2:emoji2:1.3.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\7b649ccf4eb57c8a8e5ae39e2f966648\workspace\transformed\jetified-emoji2-1.3.0\AndroidManifest.xml:31:17-49
+92            <meta-data
+92-->[androidx.lifecycle:lifecycle-process:2.8.5] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\1c0585be24eb2ea561de96c8de1a4fd2\workspace\transformed\jetified-lifecycle-process-2.8.5\AndroidManifest.xml:29:13-31:52
+93                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+93-->[androidx.lifecycle:lifecycle-process:2.8.5] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\1c0585be24eb2ea561de96c8de1a4fd2\workspace\transformed\jetified-lifecycle-process-2.8.5\AndroidManifest.xml:30:17-78
+94                android:value="androidx.startup" />
+94-->[androidx.lifecycle:lifecycle-process:2.8.5] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\1c0585be24eb2ea561de96c8de1a4fd2\workspace\transformed\jetified-lifecycle-process-2.8.5\AndroidManifest.xml:31:17-49
+95            <meta-data
+95-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+96                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+96-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+97                android:value="androidx.startup" />
+97-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+98        </provider>
+99
+100        <activity
+100-->[androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\8792e9e2160c6c7d358bacfb4b6a42d5\workspace\transformed\jetified-ui-tooling-release\AndroidManifest.xml:23:9-25:39
+101            android:name="androidx.compose.ui.tooling.PreviewActivity"
+101-->[androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\8792e9e2160c6c7d358bacfb4b6a42d5\workspace\transformed\jetified-ui-tooling-release\AndroidManifest.xml:24:13-71
+102            android:exported="true" />
+102-->[androidx.compose.ui:ui-tooling-android:1.7.0] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\8792e9e2160c6c7d358bacfb4b6a42d5\workspace\transformed\jetified-ui-tooling-release\AndroidManifest.xml:25:13-36
+103
+104        <receiver
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+105            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+106            android:directBootAware="false"
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+107            android:enabled="true"
+107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+108            android:exported="true"
+108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+109            android:permission="android.permission.DUMP" >
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+111                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+114                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+115            </intent-filter>
+116            <intent-filter>
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+117                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+117-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+118            </intent-filter>
+119            <intent-filter>
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+120                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+120-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+120-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\mahmo\.gradle\caches\9.2.1\transforms\0e46be6db1ba2bf363342631b9fc1166\workspace\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+121            </intent-filter>
+122        </receiver>
+123    </application>
+124
+125</manifest>

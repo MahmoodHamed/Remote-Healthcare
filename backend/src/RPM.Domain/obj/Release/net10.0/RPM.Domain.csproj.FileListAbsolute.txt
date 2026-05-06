@@ -1,0 +1,12 @@
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\bin\Release\net10.0\RPM.Domain.deps.json
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\bin\Release\net10.0\RPM.Domain.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\bin\Release\net10.0\RPM.Domain.pdb
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.csproj.AssemblyReference.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.AssemblyInfoInputs.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.AssemblyInfo.cs
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.csproj.CoreCompileInputs.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\refint\RPM.Domain.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\RPM.Domain.pdb
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Domain\obj\Release\net10.0\ref\RPM.Domain.dll

@@ -1,0 +1,144 @@
+version: '3.9'
+
+networks:
+  rpm_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  mosquitto_data:
+  mosquitto_logs:
+  seq_data:
+
+services:
+
+  # ─── PostgreSQL + TimescaleDB ──────────────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: rpm_postgres
+    environment:
+      POSTGRES_DB: rpm_db
+      POSTGRES_USER: rpm_user
+      POSTGRES_PASSWORD: rpm_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db/01_timescaledb.sql:/docker-entrypoint-initdb.d/01_timescaledb.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - rpm_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rpm_user -d rpm_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: rpm_redis
+    command: redis-server --appendonly yes --requirepass rpm_redis_password
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - rpm_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "rpm_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Eclipse Mosquitto MQTT Broker ────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: rpm_mosquitto
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    ports:
+      - "1883:1883"    # Plain MQTT (internal / dev only)
+      - "8883:8883"    # MQTT over TLS
+      - "9001:9001"    # MQTT over WebSocket
+    networks:
+      - rpm_net
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── MinIO (S3-compatible object storage) ─────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: rpm_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: rpm_minio_access
+      MINIO_ROOT_PASSWORD: rpm_minio_secret
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"    # S3 API
+      - "9001:9001"    # MinIO Console UI
+    networks:
+      - rpm_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Seq structured log viewer ────────────────────────────────────────────
+  seq:
+    image: datalust/seq:latest
+    container_name: rpm_seq
+    environment:
+      ACCEPT_EULA: Y
+    volumes:
+      - seq_data:/data
+    ports:
+      - "5341:80"      # Seq UI + ingestion
+    networks:
+      - rpm_net
+
+  # ─── RPM API ──────────────────────────────────────────────────────────────
+  rpm_api:
+    build:
+      context: ../backend
+      dockerfile: src/RPM.API/Dockerfile
+    container_name: rpm_api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=rpm_db;Username=rpm_user;Password=rpm_password"
+      ConnectionStrings__Redis: "redis:6379,password=rpm_redis_password"
+      Jwt__Secret: "CHANGE_ME_TO_A_STRONG_SECRET_AT_LEAST_32_CHARS"
+      Jwt__Issuer: "RPM-API"
+      Jwt__Audience: "RPM-Mobile"
+      Mqtt__Host: mosquitto
+      Mqtt__Port: "1883"
+      Seq__Url: "http://seq:80"
+      Storage__ServiceUrl: "http://minio:9000"
+      Storage__AccessKey: rpm_minio_access
+      Storage__SecretKey: rpm_minio_secret
+      Storage__BucketName: rpm-files
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    networks:
+      - rpm_net
+    restart: unless-stopped

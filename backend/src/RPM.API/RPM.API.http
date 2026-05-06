@@ -1,0 +1,6 @@
+@RPM.API_HostAddress = http://localhost:5080
+
+GET {{RPM.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
