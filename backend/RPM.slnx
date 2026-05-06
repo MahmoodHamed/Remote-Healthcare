@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RPM.API/RPM.API.csproj" />
+    <Project Path="src/RPM.Application/RPM.Application.csproj" />
+    <Project Path="src/RPM.Domain/RPM.Domain.csproj" />
+    <Project Path="src/RPM.Infrastructure/RPM.Infrastructure.csproj" />
+  </Folder>
+</Solution>

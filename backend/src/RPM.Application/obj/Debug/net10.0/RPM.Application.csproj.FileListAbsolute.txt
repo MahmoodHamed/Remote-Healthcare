@@ -1,0 +1,15 @@
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\bin\Debug\net10.0\RPM.Application.deps.json
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\bin\Debug\net10.0\RPM.Application.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\bin\Debug\net10.0\RPM.Application.pdb
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\bin\Debug\net10.0\RPM.Domain.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\bin\Debug\net10.0\RPM.Domain.pdb
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.csproj.AssemblyReference.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.AssemblyInfoInputs.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.AssemblyInfo.cs
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.csproj.CoreCompileInputs.cache
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Appl.C8F83983.Up2Date
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\refint\RPM.Application.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\RPM.Application.pdb
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Application\obj\Debug\net10.0\ref\RPM.Application.dll
