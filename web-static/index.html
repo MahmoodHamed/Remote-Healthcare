@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Remote Care - real-time remote patient monitoring and smartwatch data delivery." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Remote Care | Remote Patient Monitoring</title>
+  </head>
+  <body>
+    <div class="page" id="top">
+      <header class="nav">
+        <div class="container nav-inner">
+          <a class="brand" href="#top" aria-label="Remote Care">
+            <span class="brand-mark">RC</span>
+            Remote Care
+          </a>
+          <nav class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#security">Security</a>
+            <a href="#faq">FAQ</a>
+            <a href="#contact">Contact</a>
+          </nav>
+          <div class="nav-cta">
+            <a class="btn btn-ghost" href="#contact">Request demo</a>
+            <a class="btn btn-primary" href="#access">Sign in</a>
+          </div>
+          <button class="nav-toggle" type="button" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+        <div class="nav-drawer">
+          <a href="#features" data-close>Features</a>
+          <a href="#how" data-close>How it works</a>
+          <a href="#dashboard" data-close>Dashboard</a>
+          <a href="#security" data-close>Security</a>
+          <a href="#faq" data-close>FAQ</a>
+          <a href="#contact" data-close>Contact</a>
+          <a class="btn btn-primary" href="#access" data-close>Sign in</a>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div class="hero-copy reveal" style="--d: 0ms;">
+              <span class="pill">Remote patient monitoring platform</span>
+              <h1>Real-time monitoring for every patient, every minute.</h1>
+              <p>
+                Remote Care connects smartwatch data to doctors, patients, and families.
+                Stream vitals securely, trigger alerts instantly, and deliver care insights from one dashboard.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="#contact">Request demo</a>
+                <a class="btn btn-ghost" href="#access">Sign in to portal</a>
+              </div>
+              <div class="hero-meta">
+                <span>MQTT ingestion</span>
+                <span>SignalR live updates</span>
+                <span>FHIR-ready exports</span>
+              </div>
+            </div>
+            <div class="hero-panel reveal" style="--d: 160ms;">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-title">Patient 24 - Live session</p>
+                  <p class="panel-sub">Updated just now</p>
+                </div>
+                <span class="badge">Live</span>
+              </div>
+              <div class="panel-grid">
+                <div class="metric">
+                  <span>Heart rate</span>
+                  <strong>78 bpm</strong>
+                  <small>Stable</small>
+                </div>
+                <div class="metric">
+                  <span>SpO2</span>
+                  <strong>98%</strong>
+                  <small>Normal</small>
+                </div>
+                <div class="metric">
+                  <span>Temperature</span>
+                  <strong>36.8 C</strong>
+                  <small>Normal</small>
+                </div>
+                <div class="metric">
+                  <span>Activity</span>
+                  <strong>1,480 steps</strong>
+                  <small>Today</small>
+                </div>
+              </div>
+              <div class="panel-chart">
+                <div class="chart-line"></div>
+                <div class="chart-line"></div>
+                <div class="chart-line"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats">
+          <div class="container stats-grid">
+            <div class="stat">
+              <strong>2.4M</strong>
+              <span>Vitals streamed daily</span>
+            </div>
+            <div class="stat">
+              <strong>1.9s</strong>
+              <span>Average alert latency</span>
+            </div>
+            <div class="stat">
+              <strong>620+</strong>
+              <span>Active care teams</span>
+            </div>
+            <div class="stat">
+              <strong>99.99%</strong>
+              <span>Uptime target</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="features">
+          <div class="container">
+            <div class="section-head">
+              <p class="eyebrow">Platform features</p>
+              <h2>Everything your care team needs to stay ahead.</h2>
+              <p>
+                Built for clinicians and care coordinators, Remote Care keeps data, alerts, and conversations in one place.
+              </p>
+            </div>
+            <div class="card-grid">
+              <article class="card reveal" style="--d: 80ms;">
+                <span class="tag">Realtime</span>
+                <h3>Live vitals streaming</h3>
+                <p>Receive heart rate, SpO2, BP, temperature, and activity data in real time via MQTT and SignalR.</p>
+              </article>
+              <article class="card reveal" style="--d: 120ms;">
+                <span class="tag">Alerts</span>
+                <h3>Smart alert thresholds</h3>
+                <p>Custom thresholds trigger critical alerts instantly so care teams can intervene sooner.</p>
+              </article>
+              <article class="card reveal" style="--d: 160ms;">
+                <span class="tag">Trends</span>
+                <h3>Patient timeline</h3>
+                <p>Historical vitals are stored in TimescaleDB and visualized for clinical review.</p>
+              </article>
+              <article class="card reveal" style="--d: 200ms;">
+                <span class="tag">Access</span>
+                <h3>Multi-role portals</h3>
+                <p>Doctor, patient, and family views keep everyone aligned on the care plan.</p>
+              </article>
+              <article class="card reveal" style="--d: 240ms;">
+                <span class="tag">Collaboration</span>
+                <h3>Secure messaging</h3>
+                <p>Built-in chat keeps discussions in one place with audit-friendly retention.</p>
+              </article>
+              <article class="card reveal" style="--d: 280ms;">
+                <span class="tag">Reliability</span>
+                <h3>Device health signals</h3>
+                <p>Battery level, wear detection, and device status reduce blind spots.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section alt" id="how">
+          <div class="container">
+            <div class="section-head">
+              <p class="eyebrow">How it works</p>
+              <h2>From device to decision in four clear steps.</h2>
+            </div>
+            <div class="step-grid">
+              <div class="step-card reveal" style="--d: 120ms;">
+                <div class="step-number">01</div>
+                <h3>Connect the smartwatch</h3>
+                <p>Register devices to the patient profile and begin secure streaming.</p>
+              </div>
+              <div class="step-card reveal" style="--d: 160ms;">
+                <div class="step-number">02</div>
+                <h3>Validate and ingest</h3>
+                <p>Vitals flow through validation, normalization, and storage pipelines.</p>
+              </div>
+              <div class="step-card reveal" style="--d: 200ms;">
+                <div class="step-number">03</div>
+                <h3>Detect and alert</h3>
+                <p>Rules and thresholds trigger alerts for care teams and family members.</p>
+              </div>
+              <div class="step-card reveal" style="--d: 240ms;">
+                <div class="step-number">04</div>
+                <h3>Collaborate in real time</h3>
+                <p>Chat, dashboards, and notifications keep everyone informed.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="dashboard">
+          <div class="container">
+            <div class="section-head">
+              <p class="eyebrow">Dashboard</p>
+              <h2>Actionable views for clinicians and coordinators.</h2>
+            </div>
+            <div class="shot-grid">
+              <div class="shot reveal" style="--d: 80ms;">
+                <div class="shot-label">Vitals Timeline</div>
+                <div class="shot-body">
+                  <div class="shot-line"></div>
+                  <div class="shot-line"></div>
+                  <div class="shot-line"></div>
+                </div>
+              </div>
+              <div class="shot reveal" style="--d: 160ms;">
+                <div class="shot-label">Alerts Triage</div>
+                <div class="shot-body">
+                  <div class="shot-pill">High HR</div>
+                  <div class="shot-pill">Low SpO2</div>
+                  <div class="shot-pill">Fall detected</div>
+                </div>
+              </div>
+              <div class="shot reveal" style="--d: 240ms;">
+                <div class="shot-label">Patient Profile</div>
+                <div class="shot-body">
+                  <div class="shot-avatar"></div>
+                  <div class="shot-block"></div>
+                  <div class="shot-block"></div>
+                </div>
+              </div>
+            </div>
+            <p class="subtle">Screenshots are illustrative. Customize views per clinic.</p>
+          </div>
+        </section>
+
+        <section class="section alt" id="security">
+          <div class="container security-grid">
+            <div class="security-copy">
+              <p class="eyebrow">Security and compliance</p>
+              <h2>Designed for clinical trust.</h2>
+              <p>
+                Security is embedded across ingestion, storage, and delivery so that sensitive health data is always protected.
+              </p>
+              <div class="security-badges">
+                <span class="badge">TLS encrypted</span>
+                <span class="badge">Role based access</span>
+                <span class="badge">Audit ready</span>
+              </div>
+            </div>
+            <ul class="security-list">
+              <li>JWT authentication with refresh tokens and role-based access control.</li>
+              <li>Encrypted data in transit (TLS) and structured audit logs.</li>
+              <li>Isolated storage for patient data with strict access boundaries.</li>
+              <li>Alerting and anomaly detection for device health issues.</li>
+              <li>Dedicated MQTT broker with optional TLS and credentials.</li>
+              <li>Secure file storage for attachments and clinical documentation.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section" id="access">
+          <div class="container">
+            <div class="section-head">
+              <p class="eyebrow">Portal access</p>
+              <h2>Sign in experiences for every role.</h2>
+            </div>
+            <div class="card-grid">
+              <article class="card">
+                <h3>Doctor Portal</h3>
+                <p>Clinical dashboards, alert triage, and patient timelines.</p>
+                <a class="btn btn-ghost" href="#contact">Sign in for clinicians</a>
+              </article>
+              <article class="card">
+                <h3>Patient App</h3>
+                <p>Personal vitals view, reminders, and care messages.</p>
+                <a class="btn btn-ghost" href="#contact">Sign in for patients</a>
+              </article>
+              <article class="card">
+                <h3>Family View</h3>
+                <p>Receive alerts and stay connected to the care team.</p>
+                <a class="btn btn-ghost" href="#contact">Sign in for family</a>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section alt" id="faq">
+          <div class="container">
+            <div class="section-head">
+              <p class="eyebrow">FAQ</p>
+              <h2>Common questions from care teams.</h2>
+            </div>
+            <div class="faq">
+              <div class="faq-item open">
+                <button type="button" aria-expanded="true">
+                  <span>Which smartwatch devices are supported?</span>
+                  <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-body">
+                  <p>The platform is built for modern wearables that can stream heart rate, SpO2, and activity metrics. Device onboarding is handled per deployment.</p>
+                </div>
+              </div>
+              <div class="faq-item">
+                <button type="button" aria-expanded="false">
+                  <span>How is data delivered to the mobile app?</span>
+                  <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-body">
+                  <p>Vitals are stored in the backend and delivered through secure REST APIs and real-time SignalR streams.</p>
+                </div>
+              </div>
+              <div class="faq-item">
+                <button type="button" aria-expanded="false">
+                  <span>Can we configure alert thresholds per patient?</span>
+                  <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-body">
+                  <p>Yes. Thresholds are stored per patient and can be adjusted by clinicians.</p>
+                </div>
+              </div>
+              <div class="faq-item">
+                <button type="button" aria-expanded="false">
+                  <span>Is the system compliant with healthcare security standards?</span>
+                  <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-body">
+                  <p>The platform follows best practices with encryption, access control, and audit logging. Specific compliance can be configured per region.</p>
+                </div>
+              </div>
+              <div class="faq-item">
+                <button type="button" aria-expanded="false">
+                  <span>How do patients and families sign in?</span>
+                  <span class="faq-icon">+</span>
+                </button>
+                <div class="faq-body">
+                  <p>Accounts are created by administrators. Each role receives secure access to their portal and mobile experience.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="contact">
+          <div class="container contact-grid">
+            <div>
+              <p class="eyebrow">Contact</p>
+              <h2>Ready to bring Remote Care to your clinic?</h2>
+              <p>
+                Tell us about your organization. We will set up a tailored demo and discuss onboarding for patients and care teams.
+              </p>
+              <div class="contact-card">
+                <strong>Care operations</strong>
+                <span>care@remote-care.tech</span>
+                <span>24/7 monitoring support</span>
+              </div>
+            </div>
+            <form class="form">
+              <label>
+                Full name
+                <input type="text" name="name" placeholder="Dr. Jane Ahmed" required />
+              </label>
+              <label>
+                Work email
+                <input type="email" name="email" placeholder="jane@clinic.com" required />
+              </label>
+              <label>
+                Organization
+                <input type="text" name="org" placeholder="Northside Medical" />
+              </label>
+              <label>
+                Message
+                <textarea name="message" rows="4" placeholder="Tell us about your patient monitoring goals"></textarea>
+              </label>
+              <button class="btn btn-primary" type="submit">Request demo</button>
+              <p class="form-note" hidden>Thanks. We will be in touch shortly.</p>
+            </form>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="container footer-inner">
+          <div>
+            <div class="brand compact">
+              <span class="brand-mark">RC</span>
+              Remote Care
+            </div>
+            <p>Real-time remote patient monitoring for clinicians, patients, and families.</p>
+          </div>
+          <div class="footer-links">
+            <a href="#features">Features</a>
+            <a href="#security">Security</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div class="footer-meta">© 2026 Remote Care. All rights reserved.</div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
