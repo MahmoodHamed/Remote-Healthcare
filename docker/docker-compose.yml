@@ -64,7 +64,7 @@ services:
     ports:
       - "1883:1883"    # Plain MQTT (internal / dev only)
       - "8883:8883"    # MQTT over TLS
-      - "9001:9001"    # MQTT over WebSocket
+      - "19001:9001"   # MQTT over WebSocket (host:container)
     networks:
       - rpm_net
     healthcheck:
