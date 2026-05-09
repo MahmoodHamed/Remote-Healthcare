@@ -25,7 +25,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Create non-root user
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
+RUN groupadd --system appuser \
+    && useradd --system --gid appuser --home /app --shell /usr/sbin/nologin appuser \
+    && chown -R appuser /app
 USER appuser
 
 COPY --from=build /app/publish .
