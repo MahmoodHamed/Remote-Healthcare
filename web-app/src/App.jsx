@@ -67,6 +67,109 @@ const compactId = (value) => {
   return `${text.slice(0, 8)}...${text.slice(-4)}`
 }
 
+const guidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+const shortIdPattern = /^[A-Za-z0-9]{6}$/
+
+const md5Bytes = (message) => {
+  const encoder = new TextEncoder()
+  const msg = encoder.encode(message)
+  const msgLen = msg.length
+  const bitLen = msgLen * 8
+  const paddedLen = ((msgLen + 9 + 63) >> 6) << 6
+  const buffer = new Uint8Array(paddedLen)
+  buffer.set(msg)
+  buffer[msgLen] = 0x80
+
+  const view = new DataView(buffer.buffer)
+  view.setUint32(paddedLen - 8, bitLen >>> 0, true)
+  view.setUint32(paddedLen - 4, Math.floor(bitLen / 0x100000000), true)
+
+  let a = 0x67452301
+  let b = 0xefcdab89
+  let c = 0x98badcfe
+  let d = 0x10325476
+
+  const r = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  ]
+  const k = new Uint32Array(64)
+  for (let i = 0; i < 64; i += 1) {
+    k[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 0x100000000)
+  }
+
+  const chunk = new Uint32Array(16)
+
+  for (let offset = 0; offset < buffer.length; offset += 64) {
+    for (let i = 0; i < 16; i += 1) {
+      chunk[i] = view.getUint32(offset + i * 4, true)
+    }
+
+    let aa = a
+    let bb = b
+    let cc = c
+    let dd = d
+
+    for (let i = 0; i < 64; i += 1) {
+      let f = 0
+      let g = 0
+
+      if (i < 16) {
+        f = (bb & cc) | (~bb & dd)
+        g = i
+      } else if (i < 32) {
+        f = (dd & bb) | (~dd & cc)
+        g = (5 * i + 1) % 16
+      } else if (i < 48) {
+        f = bb ^ cc ^ dd
+        g = (3 * i + 5) % 16
+      } else {
+        f = cc ^ (bb | ~dd)
+        g = (7 * i) % 16
+      }
+
+      const temp = dd
+      dd = cc
+      cc = bb
+      const sum = (aa + f + k[i] + chunk[g]) >>> 0
+      bb = (bb + ((sum << r[i]) | (sum >>> (32 - r[i])))) >>> 0
+      aa = temp
+    }
+
+    a = (a + aa) >>> 0
+    b = (b + bb) >>> 0
+    c = (c + cc) >>> 0
+    d = (d + dd) >>> 0
+  }
+
+  const out = new Uint8Array(16)
+  const outView = new DataView(out.buffer)
+  outView.setUint32(0, a, true)
+  outView.setUint32(4, b, true)
+  outView.setUint32(8, c, true)
+  outView.setUint32(12, d, true)
+  return out
+}
+
+const bytesToUuid = (bytes) => {
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+const normalizePatientId = (value) => {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (guidPattern.test(trimmed)) return trimmed.toLowerCase()
+  if (!shortIdPattern.test(trimmed)) return ''
+
+  const bytes = md5Bytes(trimmed)
+  bytes[6] = (bytes[6] & 0x0f) | 0x30
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  return bytesToUuid(bytes)
+}
+
 const parseErrorMessage = async (response) => {
   try {
     const data = await response.json()
@@ -120,12 +223,17 @@ function App() {
 
   const connectToVitalsHub = async (options = {}) => {
     const base = (options.baseOverride ?? apiBaseUrl).trim()
-    const patientId = (options.patientOverride ?? patientIdInput).trim()
+    const patientIdRaw = (options.patientOverride ?? patientIdInput).trim()
+    const patientId = normalizePatientId(patientIdRaw)
     const token = (options.tokenOverride ?? accessToken).trim()
 
     if (!base || !patientId || !token) {
       setConnectionStatus('error')
-      setConnectionError(token ? 'API base URL and patient ID are required.' : 'Sign in to get an access token.')
+      if (!patientIdRaw || !shortIdPattern.test(patientIdRaw)) {
+        setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
+      } else {
+        setConnectionError(token ? 'API base URL and patient ID are required.' : 'Sign in to get an access token.')
+      }
       return
     }
 
@@ -302,6 +410,7 @@ function App() {
 
   const isConnected = connectionStatus === 'connected'
   const isSignedIn = authStatus === 'signed-in'
+  const displayPatientId = patientIdInput.trim() || vitals?.patientId || ''
   const activeRoleLabel = roles.find((role) => role.id === activeRole)?.title || 'User'
   const statusLabel = {
     connected: 'Connected to SignalR',
@@ -468,6 +577,7 @@ function App() {
                 <li>Set the MQTT broker host/port used by the backend.</li>
                 <li>Tap Start on the watch to begin publishing vitals.</li>
               </ol>
+              <p className="muted">Patient ID must be 6 characters (A-Z, 0-9).</p>
               <p className="muted">Doctors and family members can subscribe using the same patient ID.</p>
             </div>
             <div className="live-panel">
@@ -478,8 +588,11 @@ function App() {
                     type="text"
                     value={patientIdInput}
                     onChange={(event) => setPatientIdInput(event.target.value)}
-                    placeholder="GUID from patient profile"
+                    placeholder="ABC123"
                     autoComplete="off"
+                    minLength={6}
+                    maxLength={6}
+                    pattern="[A-Za-z0-9]{6}"
                   />
                 </label>
                 <label>
@@ -533,7 +646,7 @@ function App() {
                 </div>
               ) : null}
               <div className="live-meta">
-                <span>Patient: {compactId(vitals?.patientId || patientIdInput)}</span>
+                <span>Patient: {compactId(displayPatientId)}</span>
                 <span>Device: {compactId(vitals?.deviceId)}</span>
                 <span>Last update: {formatTimestamp(vitals?.recordedAt)}</span>
               </div>
@@ -560,9 +673,12 @@ function App() {
                     type="text"
                     value={patientIdInput}
                     onChange={(event) => setPatientIdInput(event.target.value)}
-                    placeholder="GUID from patient profile"
+                    placeholder="ABC123"
                     autoComplete="off"
                     required
+                    minLength={6}
+                    maxLength={6}
+                    pattern="[A-Za-z0-9]{6}"
                   />
                 </label>
                 <div className="live-token">
