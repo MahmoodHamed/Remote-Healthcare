@@ -368,3 +368,151 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
     </main>
   )
 }
+
+export function HeartRateMonitor({ authProfile, accessToken, onLogout }) {
+  const navigate = useNavigate()
+  const [patientIdInput, setPatientIdInput] = useState('')
+  const [connectionStatus, setConnectionStatus] = useState('disconnected')
+  const [heartRate, setHeartRate] = useState(null)
+  const [history, setHistory] = useState([])
+  const [connectionError, setConnectionError] = useState('')
+  const connectionRef = useRef(null)
+
+  useEffect(() => {
+    if (!accessToken || !authProfile) {
+      navigate('/login')
+    }
+  }, [accessToken, authProfile, navigate])
+
+  const handleLogout = () => {
+    if (connectionRef.current) {
+      connectionRef.current.stop().catch(() => {})
+      connectionRef.current = null
+    }
+    if (onLogout) onLogout()
+    navigate('/login')
+  }
+
+  const connectToVitals = async () => {
+    const patientId = normalizePatientId(patientIdInput)
+    if (!patientId) {
+      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
+      return
+    }
+
+    const hubUrl = new URL('/hubs/vitals', DEFAULT_API_BASE).toString()
+    setConnectionStatus('connecting')
+    setConnectionError('')
+
+    if (connectionRef.current) {
+      await connectionRef.current.stop().catch(() => {})
+      connectionRef.current = null
+    }
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build()
+
+    connection.on('ReceiveVitals', (payload) => {
+      const bpm = payload?.heartRateBpm ?? null
+      setHeartRate(bpm)
+      setHistory((prev) => [{
+        time: new Date().toLocaleTimeString(),
+        heartRateBpm: bpm,
+      }, ...prev].slice(0, 12))
+    })
+
+    connection.onclose(() => setConnectionStatus('disconnected'))
+    connectionRef.current = connection
+
+    try {
+      await connection.start()
+      await connection.invoke('SubscribeToPatient', patientId)
+      setConnectionStatus('connected')
+    } catch (err) {
+      setConnectionStatus('error')
+      setConnectionError(err?.message || 'Failed to connect to vitals.')
+      await connection.stop().catch(() => {})
+      connectionRef.current = null
+    }
+  }
+
+  return (
+    <main>
+      <section className="section">
+        <div className="container">
+          <div className="dashboard-header">
+            <div>
+              <p className="eyebrow">Heart Rate Monitor</p>
+              <h2>Track pulse in real time</h2>
+              <p className="muted">Focused view for heart rate monitoring only.</p>
+            </div>
+            <button className="btn btn-outline" onClick={handleLogout}>Sign out</button>
+          </div>
+        </div>
+      </section>
+
+      <section className="section live">
+        <div className="container live-grid">
+          <div className="live-copy">
+            <p className="eyebrow">Heart rate</p>
+            <h2>Live BPM monitoring</h2>
+            <p>Connect a patient ID and watch the latest pulse update in real time.</p>
+            <div className={`live-status status-${connectionStatus}`}>
+              <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
+              <div>
+                <strong>{connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting' : 'Disconnected'}</strong>
+                <span className="live-status-note">{connectionStatus === 'connected' ? 'Receiving live pulse readings.' : 'Awaiting connection.'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="live-panel">
+            <div className="live-form">
+              <label>
+                Patient ID
+                <input type="text" value={patientIdInput} onChange={(e) => setPatientIdInput(e.target.value)} placeholder="ABC123" maxLength="6" required />
+              </label>
+              <button className="btn btn-primary" type="button" onClick={connectToVitals}>
+                Monitor heart rate
+              </button>
+
+              <div className="heart-rate-display">
+                <span className="heart-rate-label">Current BPM</span>
+                <strong className="heart-rate-value">{heartRate ?? '--'}</strong>
+              </div>
+
+              {connectionError ? <p className="live-error">{connectionError}</p> : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {history.length > 0 && (
+        <section className="section alt">
+          <div className="container">
+            <h2>Recent readings</h2>
+            <table className="vitals-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Heart Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((row, index) => (
+                  <tr key={index}>
+                    <td>{row.time}</td>
+                    <td>{row.heartRateBpm ?? '--'} bpm</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </main>
+  )
+}
