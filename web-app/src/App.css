@@ -560,6 +560,87 @@
   display: grid;
   gap: 0.2rem;
 }
+  .heart-rate-display {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(14, 165, 164, 0.14), rgba(255, 181, 99, 0.12));
+    border: 1px solid rgba(14, 165, 164, 0.22);
+    text-align: center;
+  }
+  .heart-rate-label {
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .heart-rate-value {
+    font-size: clamp(2.6rem, 7vw, 4.5rem);
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.9rem;
+  }
+
+  .sensor-card {
+    border-radius: 18px;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    display: grid;
+    gap: 0.4rem;
+    box-shadow: 0 10px 30px rgba(15, 27, 35, 0.06);
+  }
+
+  .sensor-card.tone-accent {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.12), rgba(255, 107, 53, 0.04));
+  }
+
+  .sensor-card.tone-teal {
+    background: linear-gradient(135deg, rgba(14, 165, 164, 0.15), rgba(14, 165, 164, 0.04));
+  }
+
+  .sensor-card.tone-warm {
+    background: linear-gradient(135deg, rgba(255, 181, 99, 0.18), rgba(255, 181, 99, 0.04));
+  }
+
+  .sensor-card.tone-amber {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.18), rgba(255, 193, 7, 0.05));
+  }
+
+  .sensor-card.tone-ink {
+    background: linear-gradient(135deg, rgba(15, 27, 35, 0.06), rgba(15, 27, 35, 0.03));
+  }
+
+  .sensor-card.tone-danger {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.14), rgba(229, 57, 53, 0.04));
+  }
+
+  .sensor-label {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+  }
+
+  .sensor-value {
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  .sensor-value small {
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+    margin-left: 0.35rem;
+  }
 
 .live-metric span {
   font-size: 0.8rem;
