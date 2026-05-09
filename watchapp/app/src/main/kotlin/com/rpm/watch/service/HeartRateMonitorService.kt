@@ -7,6 +7,10 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
@@ -30,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
+import kotlin.math.sqrt
 import javax.inject.Inject
 
 private const val TAG = "HRMonitorService"
@@ -49,6 +54,15 @@ class HeartRateMonitorService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var monitorJob: Job? = null
     private val binder = LocalBinder()
+    private var sensorManager: SensorManager? = null
+    private var sensorListener: SensorEventListener? = null
+
+    @Volatile private var baseStepCounter: Float? = null
+    @Volatile private var latestStepsCount: Int? = null
+    @Volatile private var latestTemperatureC: Float? = null
+    @Volatile private var latestCaloriesBurned: Float? = null
+    @Volatile private var fallDetectedUntilMs: Long = 0L
+    @Volatile private var isWearingNow: Boolean = true
 
     // ── Public state flows (read by ViewModel / UI) ───────────────────────────
     private val _heartRate   = MutableStateFlow(0)
@@ -66,6 +80,7 @@ class HeartRateMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        startDeviceSensors()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -80,6 +95,7 @@ class HeartRateMonitorService : Service() {
         super.onDestroy()
         monitorJob?.cancel()
         mqttManager.disconnect()
+        stopDeviceSensors()
         _svcStatus.value = ServiceStatus.IDLE
     }
 
@@ -156,6 +172,7 @@ class HeartRateMonitorService : Service() {
                         val reading = state.reading
                         _heartRate.value = reading.bpm
                         _hrStatus.value  = reading.status
+                        isWearingNow = reading.status != HrStatus.DEVICE_MOVING
                         updateNotification("HR: ${reading.bpm} bpm")
 
                         // Rate-limit MQTT publishing
@@ -185,15 +202,85 @@ class HeartRateMonitorService : Service() {
     }
 
     private fun publishReading(patientId: String, deviceId: String, bpm: Int, topic: String) {
+        val now = System.currentTimeMillis()
         val payload = VitalsPayload(
             patientId    = patientId,
             deviceId     = deviceId,
             heartRateBpm = bpm.toFloat(),
-            isWearing    = true
+            temperatureC = latestTemperatureC,
+            stepsCount = latestStepsCount,
+            caloriesBurned = latestCaloriesBurned,
+            fallDetected = now < fallDetectedUntilMs,
+            isWearing = isWearingNow
         )
         val json = Json.encodeToString(payload)
         mqttManager.publish(topic, json)
         Log.d(TAG, "Published HR $bpm bpm to $topic")
+    }
+
+    private fun startDeviceSensors() {
+        val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
+        sensorManager = sm
+
+        val stepSensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        val tempSensor = sm.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
+        val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                val e = event ?: return
+                when (e.sensor.type) {
+                    Sensor.TYPE_STEP_COUNTER -> {
+                        val raw = e.values.firstOrNull() ?: return
+                        val base = baseStepCounter
+                        if (base == null) {
+                            baseStepCounter = raw
+                            latestStepsCount = 0
+                            latestCaloriesBurned = 0f
+                        } else {
+                            val steps = (raw - base).toInt().coerceAtLeast(0)
+                            latestStepsCount = steps
+                            // lightweight estimate for watch-side telemetry
+                            latestCaloriesBurned = steps * 0.04f
+                        }
+                    }
+
+                    Sensor.TYPE_AMBIENT_TEMPERATURE -> {
+                        latestTemperatureC = e.values.firstOrNull()
+                    }
+
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        if (e.values.size < 3) return
+                        val x = e.values[0].toDouble()
+                        val y = e.values[1].toDouble()
+                        val z = e.values[2].toDouble()
+                        val gForce = sqrt(x * x + y * y + z * z)
+                        if (gForce > 25.0) {
+                            // mark fall detected for a short interval so backend/UI can catch it
+                            fallDetectedUntilMs = System.currentTimeMillis() + 10_000L
+                        }
+                    }
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+
+        sensorListener = listener
+        if (stepSensor != null) sm.registerListener(listener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        if (tempSensor != null) sm.registerListener(listener, tempSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        if (accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+    }
+
+    private fun stopDeviceSensors() {
+        val sm = sensorManager ?: return
+        val l = sensorListener ?: return
+        try {
+            sm.unregisterListener(l)
+        } catch (_: Exception) {
+        }
+        sensorListener = null
+        sensorManager = null
     }
 
     private fun normalizeGuid(value: String): String = try {

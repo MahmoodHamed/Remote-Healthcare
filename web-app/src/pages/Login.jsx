@@ -64,7 +64,7 @@ export default function Login({ onLoginSuccess }) {
       if (onLoginSuccess) {
         onLoginSuccess(data)
       }
-      navigate('/dashboard')
+      navigate('/monitor')
     } catch (err) {
       setError(err?.message || 'Login failed.')
     } finally {

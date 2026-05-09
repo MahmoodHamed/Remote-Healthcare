@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import './App.css'
 
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
+import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
+import PatientMonitor from './pages/PatientMonitor'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -13,30 +14,32 @@ function Header({ authProfile, onLogout }) {
   return (
     <header className="nav">
       <div className="container nav-inner">
-        <a className="brand" href="/" aria-label="Remote Care">
+        <Link className="brand" to="/" aria-label="Remote Care">
           <span className="brand-mark">RC</span>
           Remote Care
-        </a>
+        </Link>
 
         <nav className="nav-links">
           {authProfile ? (
             <>
-              <a href="/dashboard">Dashboard</a>
-              {authProfile?.role === 'Admin' && <a href="/dashboard#admin">Admin</a>}
+              <Link to="/dashboard">Dashboard</Link>
+              <Link to="/heart-rate">Heart rate</Link>
+              <Link to="/monitor">Patient monitor</Link>
+              {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Admin</Link>}
               <button className="nav-link-btn" onClick={onLogout} style={{ cursor: 'pointer' }}>
                 Sign out
               </button>
             </>
           ) : (
             <>
-              <a href="/login">Sign in</a>
-              <a href="/register">Register</a>
+              <Link to="/login">Sign in</Link>
+              <Link to="/register">Register</Link>
             </>
           )}
         </nav>
 
         <div className="nav-cta">
-          {!authProfile && <a className="btn btn-primary" href="/login">Sign in</a>}
+          {!authProfile && <Link className="btn btn-primary" to="/login">Sign in</Link>}
         </div>
       </div>
     </header>
@@ -62,22 +65,28 @@ function ProtectedRoute({ authProfile, children }) {
 }
 
 export default function App() {
-  const [authProfile, setAuthProfile] = useState(null)
-  const [accessToken, setAccessToken] = useState(null)
-
-  // Load auth state from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('authSession')
-    if (saved) {
-      try {
-        const session = JSON.parse(saved)
-        setAuthProfile(session.profile)
-        setAccessToken(session.token)
-      } catch (err) {
-        localStorage.removeItem('authSession')
-      }
+  const [authProfile, setAuthProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('authSession')
+      if (!saved) return null
+      const session = JSON.parse(saved)
+      return session?.profile ?? null
+    } catch (err) {
+      localStorage.removeItem('authSession')
+      return null
     }
-  }, [])
+  })
+  const [accessToken, setAccessToken] = useState(() => {
+    try {
+      const saved = localStorage.getItem('authSession')
+      if (!saved) return null
+      const session = JSON.parse(saved)
+      return session?.token ?? null
+    } catch (err) {
+      localStorage.removeItem('authSession')
+      return null
+    }
+  })
 
   const handleLoginSuccess = (data) => {
     const token = data?.tokens?.accessToken
@@ -119,6 +128,30 @@ export default function App() {
             element={
               <ProtectedRoute authProfile={authProfile}>
                 <Dashboard
+                  authProfile={authProfile}
+                  accessToken={accessToken}
+                  onLogout={handleLogout}
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/heart-rate"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <HeartRateMonitor
+                  authProfile={authProfile}
+                  accessToken={accessToken}
+                  onLogout={handleLogout}
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monitor"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <PatientMonitor
                   authProfile={authProfile}
                   accessToken={accessToken}
                   onLogout={handleLogout}
