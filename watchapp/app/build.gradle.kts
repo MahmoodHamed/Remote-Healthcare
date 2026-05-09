@@ -20,7 +20,7 @@ android {
         versionName            = "1.0.0"
 
         // MQTT broker settings – override per build variant or inject at runtime via DataStore
-        buildConfigField("String", "MQTT_HOST", "\"192.168.1.100\"")   // change to server IP
+        buildConfigField("String", "MQTT_HOST", "\"www.remote-care.tech\"")   // change to your server domain
         buildConfigField("int",    "MQTT_PORT", "1883")
         buildConfigField("String", "DEFAULT_PATIENT_ID", "\"00000000-0000-0000-0000-000000000001\"")
         buildConfigField("boolean", "LOCAL_SENSOR_ONLY", "false")
