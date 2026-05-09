@@ -2,8 +2,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.EntityFrameworkCore;
 using RPM.Application;
+using RPM.Application.Common.Interfaces;
 using RPM.Infrastructure;
+using RPM.Infrastructure.Persistence;
+using RPM.Domain.Entities;
+using RPM.Domain.Enums;
 using RPM.API;
 using RPM.API.Middlewares;
 using RPM.API.Hubs;
@@ -77,6 +82,34 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApiServices();
 
 var app = builder.Build();
+
+// Apply pending EF Core migrations on startup so required tables exist.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    db.Database.Migrate();
+
+    const string adminEmail = "mahmoodjob8@gmail.com";
+    const string adminPassword = "M1@a2@h3&m4&";
+
+    var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
+    if (admin is null)
+    {
+        admin = User.Create("Mahmood Job", adminEmail, "+1000000000", hasher.Hash(adminPassword), UserRole.Admin);
+        await db.Users.AddAsync(admin);
+    }
+    else
+    {
+        admin.UpdateProfile("Mahmood Job", "+1000000000");
+        admin.UpdateRole(UserRole.Admin);
+        admin.Activate();
+        admin.UpdatePasswordHash(hasher.Hash(adminPassword));
+        db.Users.Update(admin);
+    }
+
+    await db.SaveChangesAsync();
+}
 
 // Middleware pipeline
 app.UseMiddleware<GlobalExceptionMiddleware>();

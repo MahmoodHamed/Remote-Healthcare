@@ -62,7 +62,7 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
     {
         try
         {
-            var payload = Encoding.UTF8.GetString(e.ApplicationMessage.Payload.ToArray());
+            var payload = e.ApplicationMessage.ConvertPayloadToString();
             logger.LogDebug("MQTT message on {Topic}: {Payload}", e.ApplicationMessage.Topic, payload);
 
             var data = JsonSerializer.Deserialize<MqttVitalsPayload>(payload,

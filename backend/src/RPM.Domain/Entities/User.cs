@@ -35,6 +35,24 @@ public class User : BaseEntity
 
     public void UpdateFcmToken(string token) { FcmToken = token; SetUpdatedAt(); }
     public void UpdateAvatar(string url) { AvatarUrl = url; SetUpdatedAt(); }
+    public void UpdatePasswordHash(string passwordHash)
+    {
+        PasswordHash = passwordHash;
+        SetUpdatedAt();
+    }
+    public void UpdateProfile(string fullName, string phone)
+    {
+        FullName = fullName;
+        Phone = phone;
+        SetUpdatedAt();
+    }
+
+    public void UpdateRole(UserRole role)
+    {
+        Role = role;
+        SetUpdatedAt();
+    }
+
     public void Deactivate() { IsActive = false; SetUpdatedAt(); }
     public void Activate() { IsActive = true; SetUpdatedAt(); }
 }
