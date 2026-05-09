@@ -533,6 +533,14 @@
   background: var(--card);
 }
 
+.live-form select {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  background: var(--card);
+}
+
 .live-actions {
   display: flex;
   flex-wrap: wrap;
@@ -592,6 +600,74 @@
   font-size: 0.85rem;
 }
 
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.admin-list {
+  min-width: 0;
+}
+
+.admin-table {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(190px, 1.4fr) minmax(130px, 0.9fr) 120px 96px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.admin-row.inactive {
+  opacity: 0.72;
+}
+
+.admin-row input,
+.admin-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-row-actions {
+  justify-content: flex-end;
+}
+
+.admin-active-toggle {
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 0.25rem;
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .section.alt {
   background: rgba(255, 255, 255, 0.7);
   border-top: 1px solid var(--line);
@@ -610,6 +686,37 @@
 
 .section-head p {
   color: var(--ink-muted);
+}
+
+.auth-switch {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: rgba(15, 27, 35, 0.05);
+  border: 1px solid var(--line);
+}
+
+.auth-switch-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.auth-switch-btn.active {
+  color: var(--paper);
+  background: var(--ink);
+  box-shadow: 0 8px 24px rgba(15, 27, 35, 0.18);
+}
+
+.auth-hint {
+  margin-top: 0.35rem;
 }
 
 .eyebrow {

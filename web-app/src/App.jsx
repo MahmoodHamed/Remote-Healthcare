@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import './App.css'
 
@@ -6,19 +6,24 @@ const roles = [
   {
     id: 'patient',
     title: 'Patient',
+    roleName: 'Patient',
     description: 'Pair your watch and review your own vitals.',
   },
   {
     id: 'doctor',
     title: 'Doctor',
+    roleName: 'Doctor',
     description: 'Monitor assigned patients and receive live alerts.',
   },
   {
     id: 'family',
     title: 'Family',
+    roleName: 'Relative',
     description: 'Follow live vitals for your loved one.',
   },
 ]
+
+const adminRoles = ['Admin', 'Doctor', 'Patient', 'Relative']
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -193,6 +198,7 @@ const parseErrorMessage = async (response) => {
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authView, setAuthView] = useState('sign-in')
   const [activeRole, setActiveRole] = useState('patient')
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE)
   const [patientIdInput, setPatientIdInput] = useState('')
@@ -202,11 +208,27 @@ function App() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginDeviceInfo, setLoginDeviceInfo] = useState('web-app')
+  const [registerFullName, setRegisterFullName] = useState('')
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerPhone, setRegisterPhone] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [registerLicenseNumber, setRegisterLicenseNumber] = useState('')
+  const [registerSpecialization, setRegisterSpecialization] = useState('General')
   const [autoConnectOnLogin, setAutoConnectOnLogin] = useState(true)
   const [authStatus, setAuthStatus] = useState('signed-out')
   const [authError, setAuthError] = useState('')
   const [authProfile, setAuthProfile] = useState(null)
   const [authExpiresAt, setAuthExpiresAt] = useState(null)
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [adminError, setAdminError] = useState('')
+  const [adminCreate, setAdminCreate] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'Patient',
+  })
   const [connectionStatus, setConnectionStatus] = useState('disconnected')
   const [connectionError, setConnectionError] = useState('')
   const [vitals, setVitals] = useState(null)
@@ -220,6 +242,145 @@ function App() {
       connectionRef.current = null
     }
   }, [])
+
+  const isAdmin = authProfile?.role === 'Admin'
+
+  const apiUrl = useCallback((path) => {
+    try {
+      return new URL(path, apiBaseUrl.trim()).toString()
+    } catch {
+      return ''
+    }
+  }, [apiBaseUrl])
+
+  const fetchAdminUsers = useCallback(async (tokenOverride) => {
+    const token = (tokenOverride ?? accessToken).trim()
+    const url = apiUrl('/api/admin/users')
+    if (!token || !url) return
+
+    setAdminLoading(true)
+    setAdminError('')
+
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response)
+        throw new Error(message || `Failed to load users (${response.status}).`)
+      }
+
+      const data = await response.json()
+      setAdminUsers(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setAdminError(err?.message || 'Failed to load users.')
+    } finally {
+      setAdminLoading(false)
+    }
+  }, [accessToken, apiUrl])
+
+  const saveAdminUser = async (user) => {
+    const token = accessToken.trim()
+    const url = apiUrl(`/api/admin/users/${user.id}`)
+    if (!token || !url) return
+
+    setAdminError('')
+
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role,
+          isActive: user.isActive,
+        }),
+      })
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response)
+        throw new Error(message || `Failed to update user (${response.status}).`)
+      }
+
+      await fetchAdminUsers()
+    } catch (err) {
+      setAdminError(err?.message || 'Failed to update user.')
+    }
+  }
+
+  const toggleAdminUser = async (user) => {
+    await saveAdminUser({ ...user, isActive: !user.isActive })
+  }
+
+  const deleteAdminUser = async (userId) => {
+    const token = accessToken.trim()
+    const url = apiUrl(`/api/admin/users/${userId}`)
+    if (!token || !url) return
+
+    setAdminError('')
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok && response.status !== 204) {
+        const message = await parseErrorMessage(response)
+        throw new Error(message || `Failed to delete user (${response.status}).`)
+      }
+
+      await fetchAdminUsers()
+    } catch (err) {
+      setAdminError(err?.message || 'Failed to delete user.')
+    }
+  }
+
+  const createAdminUser = async () => {
+    const token = accessToken.trim()
+    const url = apiUrl('/api/admin/users')
+    const payload = {
+      fullName: adminCreate.fullName.trim(),
+      email: adminCreate.email.trim(),
+      phone: adminCreate.phone.trim(),
+      password: adminCreate.password,
+      role: adminCreate.role,
+    }
+
+    if (!token || !url) return
+    if (!payload.fullName || !payload.email || !payload.phone || !payload.password) {
+      setAdminError('Fill all create-user fields.')
+      return
+    }
+
+    setAdminError('')
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response)
+        throw new Error(message || `Failed to create user (${response.status}).`)
+      }
+
+      setAdminCreate({ fullName: '', email: '', phone: '', password: '', role: 'Patient' })
+      await fetchAdminUsers()
+    } catch (err) {
+      setAdminError(err?.message || 'Failed to create user.')
+    }
+  }
 
   const connectToVitalsHub = async (options = {}) => {
     const base = (options.baseOverride ?? apiBaseUrl).trim()
@@ -327,6 +488,17 @@ function App() {
     setConnectionStatus('disconnected')
   }
 
+  const setAuthSession = (data) => {
+    const token = data?.tokens?.accessToken
+    if (!token) throw new Error('Access token missing from response.')
+
+    setAccessToken(token)
+    setAuthProfile(data?.user ?? null)
+    setAuthExpiresAt(data?.tokens?.expiresAt ?? null)
+    setAuthStatus('signed-in')
+    return token
+  }
+
   const loginToApi = async () => {
     const base = apiBaseUrl.trim()
     const email = loginEmail.trim()
@@ -373,13 +545,7 @@ function App() {
       }
 
       const data = await response.json()
-      const token = data?.tokens?.accessToken
-      if (!token) throw new Error('Access token missing from response.')
-
-      setAccessToken(token)
-      setAuthProfile(data?.user ?? null)
-      setAuthExpiresAt(data?.tokens?.expiresAt ?? null)
-      setAuthStatus('signed-in')
+      const token = setAuthSession(data)
       setLoginPassword('')
 
       if (autoConnectOnLogin && patientIdInput.trim()) {
@@ -395,11 +561,82 @@ function App() {
     }
   }
 
+  const registerToApi = async () => {
+    const base = apiBaseUrl.trim()
+    const fullName = registerFullName.trim()
+    const email = registerEmail.trim()
+    const phone = registerPhone.trim()
+    const password = registerPassword
+
+    if (!base || !fullName || !email || !phone || !password) {
+      setAuthStatus('error')
+      setAuthError('Full name, email, phone, password, and API base URL are required.')
+      return
+    }
+
+    const registerUrl = (() => {
+      try {
+        return new URL('/api/auth/register', base).toString()
+      } catch {
+        return ''
+      }
+    })()
+
+    if (!registerUrl) {
+      setAuthStatus('error')
+      setAuthError('Invalid API base URL.')
+      return
+    }
+
+    setAuthStatus('loading')
+    setAuthError('')
+    setConnectionError('')
+
+    try {
+      const response = await fetch(registerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          email,
+          phone,
+          password,
+          role: activeRoleName,
+          licenseNumber: activeRole === 'doctor' ? registerLicenseNumber.trim() || null : null,
+          specialization: activeRole === 'doctor' ? registerSpecialization.trim() || null : null,
+        }),
+      })
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response)
+        throw new Error(message || `Register failed (${response.status}).`)
+      }
+
+      const data = await response.json()
+      setAuthSession(data)
+      setRegisterPassword('')
+
+      if (autoConnectOnLogin && patientIdInput.trim()) {
+        await connectToVitalsHub({
+          tokenOverride: data?.tokens?.accessToken,
+          baseOverride: base,
+          patientOverride: patientIdInput,
+        })
+      }
+    } catch (err) {
+      setAuthStatus('error')
+      setAuthError(err?.message || 'Register failed.')
+    }
+  }
+
   const signOut = async () => {
     await disconnectFromVitalsHub()
     setAccessToken('')
     setAuthProfile(null)
     setAuthExpiresAt(null)
+    setAdminUsers([])
+    setAdminError('')
+    setAdminCreate({ fullName: '', email: '', phone: '', password: '', role: 'Patient' })
     setAuthStatus('signed-out')
     setAuthError('')
     setConnectionError('')
@@ -412,6 +649,7 @@ function App() {
   const isSignedIn = authStatus === 'signed-in'
   const displayPatientId = patientIdInput.trim() || vitals?.patientId || ''
   const activeRoleLabel = roles.find((role) => role.id === activeRole)?.title || 'User'
+  const activeRoleName = roles.find((role) => role.id === activeRole)?.roleName || 'Patient'
   const statusLabel = {
     connected: 'Connected to SignalR',
     connecting: 'Connecting to SignalR',
@@ -420,9 +658,9 @@ function App() {
   }[connectionStatus]
   const authStatusLabel = {
     'signed-out': 'Signed out',
-    loading: 'Signing in...',
+    loading: authView === 'register' ? 'Registering...' : 'Signing in...',
     'signed-in': 'Signed in',
-    error: 'Sign-in error',
+    error: authView === 'register' ? 'Register error' : 'Sign-in error',
   }[authStatus]
   const hasBp = vitals && (
     (vitals.systolicBp !== null && vitals.systolicBp !== undefined) ||
@@ -434,6 +672,12 @@ function App() {
   const wearingValue = vitals ? (vitals.isWearing ? 'Yes' : 'No') : '--'
   const fallValue = vitals ? (vitals.fallDetected ? 'Yes' : 'No') : '--'
 
+  useEffect(() => {
+    if (isAdmin && authStatus === 'signed-in') {
+      fetchAdminUsers().catch(() => {})
+    }
+  }, [isAdmin, authStatus, fetchAdminUsers])
+
   return (
     <div className={`page ${menuOpen ? 'menu-open' : ''}`}>
       <header className="nav">
@@ -443,12 +687,14 @@ function App() {
             Remote Care
           </a>
           <nav className="nav-links">
-            <a href="#login">Sign in</a>
+            <a href="#auth" onClick={() => setAuthView('sign-in')}>Sign in</a>
+            <a href="#auth" onClick={() => setAuthView('register')}>Register</a>
             <a href="#link">Link watch</a>
             <a href="#vitals">Live vitals</a>
+            {isAdmin ? <a href="#admin">Admin</a> : null}
           </nav>
           <div className="nav-cta">
-            <a className="btn btn-primary" href="#login">Sign in</a>
+            <a className="btn btn-primary" href="#auth" onClick={() => setAuthView('sign-in')}>Sign in</a>
           </div>
           <button
             className="nav-toggle"
@@ -463,22 +709,24 @@ function App() {
           </button>
         </div>
         <div id="nav-drawer" className="nav-drawer">
-          <a href="#login" onClick={() => setMenuOpen(false)}>Sign in</a>
+          <a href="#auth" onClick={() => { setAuthView('sign-in'); setMenuOpen(false) }}>Sign in</a>
+          <a href="#auth" onClick={() => { setAuthView('register'); setMenuOpen(false) }}>Register</a>
           <a href="#link" onClick={() => setMenuOpen(false)}>Link watch</a>
           <a href="#vitals" onClick={() => setMenuOpen(false)}>Live vitals</a>
-          <a className="btn btn-primary" href="#login" onClick={() => setMenuOpen(false)}>
+          {isAdmin ? <a href="#admin" onClick={() => setMenuOpen(false)}>Admin</a> : null}
+          <a className="btn btn-primary" href="#auth" onClick={() => { setAuthView('sign-in'); setMenuOpen(false) }}>
             Sign in
           </a>
         </div>
       </header>
 
       <main>
-        <section className="section simple-hero" id="login">
+        <section className="section simple-hero" id="auth">
           <div className="container">
             <div className="section-head">
               <p className="eyebrow">Access</p>
               <h1>Remote Care Console</h1>
-              <p>Sign in as a patient, doctor, or family member to access live vitals.</p>
+              <p>Create an account or sign in to access live vitals.</p>
             </div>
             <div className="role-grid">
               {roles.map((role) => (
@@ -494,67 +742,176 @@ function App() {
               ))}
             </div>
 
+            <div className="auth-switch" role="tablist" aria-label="Authentication views">
+              <button
+                type="button"
+                className={`auth-switch-btn ${authView === 'sign-in' ? 'active' : ''}`}
+                onClick={() => setAuthView('sign-in')}
+              >
+                Sign in page
+              </button>
+              <button
+                type="button"
+                className={`auth-switch-btn ${authView === 'register' ? 'active' : ''}`}
+                onClick={() => setAuthView('register')}
+              >
+                Register page
+              </button>
+            </div>
+
             <div className="live-panel">
               <div className="live-auth-head">
                 <div>
-                  <strong>Sign in</strong>
+                  <strong>{authView === 'sign-in' ? 'Sign in' : 'Register'}</strong>
                   <p className="muted">Selected role: {activeRoleLabel}</p>
                 </div>
                 <span className={`live-auth-status status-${authStatus}`}>{authStatusLabel}</span>
               </div>
-              <form className="live-form" onSubmit={(event) => {
-                event.preventDefault()
-                loginToApi()
-              }}>
-                <label>
-                  Work email
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(event) => setLoginEmail(event.target.value)}
-                    placeholder="jane@clinic.com"
-                    autoComplete="email"
-                    required
-                  />
-                </label>
-                <label>
-                  Password
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(event) => setLoginPassword(event.target.value)}
-                    placeholder="Enter password"
-                    autoComplete="current-password"
-                    required
-                  />
-                </label>
-                <label>
-                  Device info (optional)
-                  <input
-                    type="text"
-                    value={loginDeviceInfo}
-                    onChange={(event) => setLoginDeviceInfo(event.target.value)}
-                    placeholder="web-app"
-                    autoComplete="off"
-                  />
-                </label>
-                <label className="live-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={autoConnectOnLogin}
-                    onChange={(event) => setAutoConnectOnLogin(event.target.checked)}
-                  />
-                  Auto-connect to vitals after sign in
-                </label>
-                <div className="live-actions">
-                  <button className="btn btn-primary" type="submit" disabled={authStatus === 'loading'}>
-                    {authStatus === 'loading' ? 'Signing in...' : 'Sign in'}
-                  </button>
-                  <button className="btn btn-outline" type="button" onClick={signOut} disabled={!isSignedIn}>
-                    Sign out
-                  </button>
-                </div>
-              </form>
+              {authView === 'sign-in' ? (
+                <form className="live-form" onSubmit={(event) => {
+                  event.preventDefault()
+                  loginToApi()
+                }}>
+                  <label>
+                    Work email
+                    <input
+                      type="email"
+                      value={loginEmail}
+                      onChange={(event) => setLoginEmail(event.target.value)}
+                      placeholder="jane@clinic.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(event) => setLoginPassword(event.target.value)}
+                      placeholder="Enter password"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Device info (optional)
+                    <input
+                      type="text"
+                      value={loginDeviceInfo}
+                      onChange={(event) => setLoginDeviceInfo(event.target.value)}
+                      placeholder="web-app"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="live-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={autoConnectOnLogin}
+                      onChange={(event) => setAutoConnectOnLogin(event.target.checked)}
+                    />
+                    Auto-connect to vitals after sign in
+                  </label>
+                  <div className="live-actions">
+                    <button className="btn btn-primary" type="submit" disabled={authStatus === 'loading'}>
+                      {authStatus === 'loading' ? 'Signing in...' : 'Sign in'}
+                    </button>
+                    <button className="btn btn-outline" type="button" onClick={signOut} disabled={!isSignedIn}>
+                      Sign out
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form className="live-form" onSubmit={(event) => {
+                  event.preventDefault()
+                  registerToApi()
+                }}>
+                  <label>
+                    Full name
+                    <input
+                      type="text"
+                      value={registerFullName}
+                      onChange={(event) => setRegisterFullName(event.target.value)}
+                      placeholder="Mahmood Job"
+                      autoComplete="name"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Work email
+                    <input
+                      type="email"
+                      value={registerEmail}
+                      onChange={(event) => setRegisterEmail(event.target.value)}
+                      placeholder="jane@clinic.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Phone
+                    <input
+                      type="tel"
+                      value={registerPhone}
+                      onChange={(event) => setRegisterPhone(event.target.value)}
+                      placeholder="+9647700000000"
+                      autoComplete="tel"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={registerPassword}
+                      onChange={(event) => setRegisterPassword(event.target.value)}
+                      placeholder="Create a strong password"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </label>
+                  {activeRole === 'doctor' ? (
+                    <>
+                      <label>
+                        License number
+                        <input
+                          type="text"
+                          value={registerLicenseNumber}
+                          onChange={(event) => setRegisterLicenseNumber(event.target.value)}
+                          placeholder="MED-12345"
+                          autoComplete="off"
+                        />
+                      </label>
+                      <label>
+                        Specialization
+                        <input
+                          type="text"
+                          value={registerSpecialization}
+                          onChange={(event) => setRegisterSpecialization(event.target.value)}
+                          placeholder="General"
+                          autoComplete="off"
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                  <label className="live-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={autoConnectOnLogin}
+                      onChange={(event) => setAutoConnectOnLogin(event.target.checked)}
+                    />
+                    Auto-connect to vitals after register
+                  </label>
+                  <div className="live-actions">
+                    <button className="btn btn-primary" type="submit" disabled={authStatus === 'loading'}>
+                      {authStatus === 'loading' ? 'Creating account...' : 'Register'}
+                    </button>
+                    <button className="btn btn-outline" type="button" onClick={signOut} disabled={!isSignedIn}>
+                      Sign out
+                    </button>
+                  </div>
+                </form>
+              )}
               {authError ? <p className="live-error">{authError}</p> : null}
               {isSignedIn ? (
                 <div className="live-auth-meta">
@@ -563,9 +920,158 @@ function App() {
                   <span>Token expires: {formatTimestamp(authExpiresAt)}</span>
                 </div>
               ) : null}
+              <p className="muted auth-hint">
+                {authView === 'sign-in'
+                  ? 'Need an account? Switch to the register page above.'
+                  : 'Already have an account? Switch back to the sign-in page.'}
+              </p>
             </div>
           </div>
         </section>
+
+        {isAdmin ? (
+          <section className="section alt" id="admin">
+            <div className="container">
+              <div className="section-head">
+                <p className="eyebrow">Admin</p>
+                <h2>User management</h2>
+                <p>List, create, update, activate, and deactivate users.</p>
+              </div>
+
+              <div className="admin-grid">
+                <div className="live-panel">
+                  <div className="live-auth-head">
+                    <div>
+                      <strong>Create user</strong>
+                      <p className="muted">Signed in as admin</p>
+                    </div>
+                    <span className="live-auth-status status-signed-in">Admin</span>
+                  </div>
+
+                  <div className="live-form">
+                    <label>
+                      Full name
+                      <input
+                        type="text"
+                        value={adminCreate.fullName}
+                        onChange={(event) => setAdminCreate((prev) => ({ ...prev, fullName: event.target.value }))}
+                        placeholder="New User"
+                      />
+                    </label>
+                    <label>
+                      Email
+                      <input
+                        type="email"
+                        value={adminCreate.email}
+                        onChange={(event) => setAdminCreate((prev) => ({ ...prev, email: event.target.value }))}
+                        placeholder="user@remote-care.tech"
+                      />
+                    </label>
+                    <label>
+                      Phone
+                      <input
+                        type="tel"
+                        value={adminCreate.phone}
+                        onChange={(event) => setAdminCreate((prev) => ({ ...prev, phone: event.target.value }))}
+                        placeholder="+9647700000000"
+                      />
+                    </label>
+                    <label>
+                      Password
+                      <input
+                        type="text"
+                        value={adminCreate.password}
+                        onChange={(event) => setAdminCreate((prev) => ({ ...prev, password: event.target.value }))}
+                        placeholder="Temp password"
+                      />
+                    </label>
+                    <label>
+                      Role
+                      <select
+                        value={adminCreate.role}
+                        onChange={(event) => setAdminCreate((prev) => ({ ...prev, role: event.target.value }))}
+                      >
+                        {adminRoles.map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="live-actions">
+                      <button className="btn btn-primary" type="button" onClick={createAdminUser} disabled={adminLoading}>
+                        Create user
+                      </button>
+                      <button className="btn btn-outline" type="button" onClick={() => fetchAdminUsers()} disabled={adminLoading}>
+                        Refresh list
+                      </button>
+                    </div>
+                  </div>
+
+                  {adminError ? <p className="live-error">{adminError}</p> : null}
+                  <p className="muted auth-hint">Admin seed: mahmoodjob8@gmail.com</p>
+                </div>
+
+                <div className="admin-list live-panel">
+                  <div className="live-auth-head">
+                    <div>
+                      <strong>All users</strong>
+                      <p className="muted">{adminLoading ? 'Loading...' : `${adminUsers.length} users`}</p>
+                    </div>
+                  </div>
+
+                  <div className="admin-table">
+                    {adminUsers.map((user) => (
+                      <div className={`admin-row ${user.isActive ? '' : 'inactive'}`} key={user.id}>
+                        <input
+                          type="text"
+                          value={user.fullName}
+                          onChange={(event) => setAdminUsers((prev) => prev.map((item) => item.id === user.id ? { ...item, fullName: event.target.value } : item))}
+                        />
+                        <input
+                          type="text"
+                          value={user.email}
+                          readOnly
+                        />
+                        <input
+                          type="text"
+                          value={user.phone || ''}
+                          onChange={(event) => setAdminUsers((prev) => prev.map((item) => item.id === user.id ? { ...item, phone: event.target.value } : item))}
+                        />
+                        <select
+                          value={user.role}
+                          onChange={(event) => setAdminUsers((prev) => prev.map((item) => item.id === user.id ? { ...item, role: event.target.value } : item))}
+                        >
+                          {adminRoles.map((role) => (
+                            <option key={role} value={role}>{role}</option>
+                          ))}
+                        </select>
+                        <label className="live-checkbox admin-active-toggle">
+                          <input
+                            type="checkbox"
+                            checked={user.isActive}
+                            onChange={(event) => setAdminUsers((prev) => prev.map((item) => item.id === user.id ? { ...item, isActive: event.target.checked } : item))}
+                          />
+                          Active
+                        </label>
+                        <div className="live-actions admin-row-actions">
+                          <button className="btn btn-primary" type="button" onClick={() => saveAdminUser(user)}>
+                            Save
+                          </button>
+                          <button className="btn btn-outline" type="button" onClick={() => toggleAdminUser(user)}>
+                            {user.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button className="btn btn-ghost" type="button" onClick={() => deleteAdminUser(user.id)}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {!adminUsers.length && !adminLoading ? <p className="live-empty">No users loaded yet.</p> : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="section alt" id="link">
           <div className="container link-grid">
