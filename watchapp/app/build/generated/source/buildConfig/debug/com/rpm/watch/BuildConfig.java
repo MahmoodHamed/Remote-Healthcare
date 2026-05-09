@@ -10,11 +10,11 @@ public final class BuildConfig {
   public static final int VERSION_CODE = 1;
   public static final String VERSION_NAME = "1.0.0";
   // Field from default config.
-  public static final String DEFAULT_PATIENT_ID = "00000000-0000-0000-0000-000000000001";
+  public static final String DEFAULT_PATIENT_ID = "ABC123";
   // Field from default config.
   public static final boolean LOCAL_SENSOR_ONLY = false;
   // Field from default config.
-  public static final String MQTT_HOST = "192.168.1.100";
+  public static final String MQTT_HOST = "www.remote-care.tech";
   // Field from default config.
   public static final int MQTT_PORT = 1883;
 }
