@@ -22,7 +22,8 @@ android {
         // MQTT broker settings – override per build variant or inject at runtime via DataStore
         buildConfigField("String", "MQTT_HOST", "\"192.168.1.100\"")   // change to server IP
         buildConfigField("int",    "MQTT_PORT", "1883")
-        buildConfigField("String", "DEFAULT_PATIENT_ID", "\"00000000-0000-0000-0000-000000000001\"")
+        // 6-char patient code (A-Z, 0-9). The app will derive a deterministic UUID for MQTT.
+        buildConfigField("String", "DEFAULT_PATIENT_ID", "\"ABC123\"")
         buildConfigField("boolean", "LOCAL_SENSOR_ONLY", "false")
     }
 
