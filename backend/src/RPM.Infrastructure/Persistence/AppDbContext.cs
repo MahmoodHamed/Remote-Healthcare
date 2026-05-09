@@ -40,12 +40,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         var result = await base.SaveChangesAsync(ct);
 
         // Dispatch after save to ensure IDs are assigned
-        foreach (var entity in entities)
+        if (_mediator != null)
         {
-            var events = entity.DomainEvents.ToList();
-            entity.ClearDomainEvents();
-            foreach (var evt in events)
-                await _mediator.Publish(evt, ct);
+            foreach (var entity in entities)
+            {
+                var events = entity.DomainEvents.ToList();
+                entity.ClearDomainEvents();
+                foreach (var evt in events)
+                    await _mediator.Publish(evt, ct);
+            }
         }
 
         return result;
