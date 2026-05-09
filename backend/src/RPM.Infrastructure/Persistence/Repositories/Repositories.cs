@@ -12,6 +12,9 @@ public class UserRepository(AppDbContext db) : IUserRepository
     public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
         db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant(), ct);
 
+    public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default) =>
+        await db.Users.OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
+
     public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default) =>
         db.Users.AnyAsync(u => u.Email == email.ToLowerInvariant(), ct);
 
