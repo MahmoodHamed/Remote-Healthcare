@@ -8,7 +8,7 @@ import Register from './pages/Register'
 import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
 import PatientMonitor from './pages/PatientMonitor'
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 function Header({ authProfile, onLogout }) {
   return (

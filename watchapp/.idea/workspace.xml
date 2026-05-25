@@ -10,75 +10,82 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a2eba33e-c8bb-4b62-830d-f30196c0e5d1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/9.2.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.2.1/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/appsettings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.exe" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.API.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Application.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Application.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Domain.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Domain.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Infrastructure.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Infrastructure.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Infrastructure.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/RPM.Infrastructure.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/bin/Debug/net10.0/appsettings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.AssemblyReference.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.AssemblyReference.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.CoreCompileInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.CoreCompileInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.FileListAbsolute.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.csproj.FileListAbsolute.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/apphost.exe" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/apphost.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/ref/RPM.API.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/ref/RPM.API.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/refint/RPM.API.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/refint/RPM.API.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rjsmcshtml.dswa.cache.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rjsmcshtml.dswa.cache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rjsmrazor.dswa.cache.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rjsmrazor.dswa.cache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rpswa.dswa.cache.json" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/rpswa.dswa.cache.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Application.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Application.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Domain.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/bin/Debug/net10.0/RPM.Domain.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.AssemblyReference.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.AssemblyReference.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.CoreCompileInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.CoreCompileInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.FileListAbsolute.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.csproj.FileListAbsolute.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/ref/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/ref/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/refint/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/refint/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/bin/Debug/net10.0/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/bin/Debug/net10.0/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/bin/Debug/net10.0/RPM.Domain.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/bin/Debug/net10.0/RPM.Domain.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.csproj.FileListAbsolute.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.csproj.FileListAbsolute.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/ref/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/ref/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/refint/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/refint/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Application.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Application.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Application.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Application.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Domain.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Domain.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Domain.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Domain.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Infrastructure.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Infrastructure.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Infrastructure.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/bin/Debug/net10.0/RPM.Infrastructure.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.csproj.AssemblyReference.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.csproj.AssemblyReference.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.csproj.FileListAbsolute.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.csproj.FileListAbsolute.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/ref/RPM.Infrastructure.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/ref/RPM.Infrastructure.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/refint/RPM.Infrastructure.dll" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/refint/RPM.Infrastructure.dll" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.2.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.2.1/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/fileHashes.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.2.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/linked-resources-binary-format-debug.ap_" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/linked-resources-binary-format-debug.ap_" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/manifest_merge_blame_file/debug/processDebugMainManifest/manifest-merger-blame-debug-report.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/manifest_merge_blame_file/debug/processDebugMainManifest/manifest-merger-blame-debug-report.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/inputs/source-to-output.tab.values.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-attributes.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/class-fq-name-to-source.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/constants.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.keystream.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab.values.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/internal-name-to-source.tab_i" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/package-parts.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/proto.tab.values.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/source-to-classes.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/subtypes.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/counters.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/file-to-id.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.keystream.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/id-to-file.tab_i" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.keystream.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.len" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.at" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.s" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab.values.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/lookups/lookups.tab_i" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/last-build.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/cacheable/last-build.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/kotlin/compileDebugKotlin/classpath-snapshot/shrunk-classpath-snapshot.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/hiltJavaCompileDebug/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/hiltJavaCompileDebug/previous-compilation-data.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$Companion.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$Companion.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$LocalBinder.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$LocalBinder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$startMonitoring$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$startMonitoring$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$startMonitoring$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService$startMonitoring$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/HeartRateMonitorService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/ServiceStatus.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/rpm/watch/service/ServiceStatus.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../web-app/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../web-app/src/App.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +107,7 @@
       <entry key="agent-panel" value="GPT-5.3-Codex" />
     </selectedModels>
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=RFGYC0PB1RK]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[Default::serial=172.20.10.3:43329;connection=ad5bfde8]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -125,27 +132,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Android App.app.executor": "Run",
-    "Gradle.Configure Daemon JVM Criteria.executor": "Run",
-    "GradleDaemonJvmCriteriaMigrationNotification.isNotificationDisabled": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/mahmo/source/Projects/Remote-Patiant-Monitoring/watchapp",
-    "project.structure.last.edited": "Suggestions",
-    "project.structure.proportion": "0.17",
-    "project.structure.side.proportion": "0.2"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Configure Daemon JVM Criteria.executor&quot;: &quot;Run&quot;,
+    &quot;GradleDaemonJvmCriteriaMigrationNotification.isNotificationDisabled&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/mahmo/source/Projects/Remote-Patiant-Monitoring/watchapp&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Suggestions&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.17&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration default="true" type="AndroidDeclarativeWatchFaceConfigurationType" factoryName="AndroidDeclarativeWatchFaceConfigurationFactory" activateToolWindowBeforeRun="false">
       <module name="RPMWatch.app" />

@@ -17,3 +17,4 @@ C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Infrast
 C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Infrastructure\obj\Debug\net10.0\RPM.Infrastructure.pdb
 C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Infrastructure\obj\Debug\net10.0\RPM.Infrastructure.genruntimeconfig.cache
 C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Infrastructure\obj\Debug\net10.0\ref\RPM.Infrastructure.dll
+C:\Users\mahmo\source\Projects\Remote-Patiant-Monitoring\backend\src\RPM.Infrastructure\obj\Debug\net10.0\RPM.Infrastructure.sourcelink.json
