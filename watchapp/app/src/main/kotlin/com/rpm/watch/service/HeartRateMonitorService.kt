@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.security.MessageDigest
 import java.util.UUID
 import kotlin.math.sqrt
 import javax.inject.Inject
@@ -286,7 +287,20 @@ class HeartRateMonitorService : Service() {
     private fun normalizeGuid(value: String): String = try {
         UUID.fromString(value).toString()
     } catch (_: Exception) {
-        UUID.nameUUIDFromBytes(value.toByteArray(Charsets.UTF_8)).toString()
+        // Match backend/web normalization exactly:
+        // MD5(UTF8(value)) with UUID version/variant bits and direct byte formatting.
+        val bytes = MessageDigest.getInstance("MD5").digest(value.toByteArray(Charsets.UTF_8))
+        bytes[6] = ((bytes[6].toInt() and 0x0f) or 0x30).toByte()
+        bytes[8] = ((bytes[8].toInt() and 0x3f) or 0x80).toByte()
+
+        fun byteHex(b: Byte): String = "%02x".format(b.toInt() and 0xff)
+
+        buildString(36) {
+            for (i in bytes.indices) {
+                if (i == 4 || i == 6 || i == 8 || i == 10) append('-')
+                append(byteHex(bytes[i]))
+            }
+        }
     }
 
     // ── Notification helpers ──────────────────────────────────────────────────
