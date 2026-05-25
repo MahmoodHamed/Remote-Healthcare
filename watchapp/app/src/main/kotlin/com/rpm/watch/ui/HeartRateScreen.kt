@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,24 +27,27 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
+import com.rpm.watch.MonitoringMode
 import com.rpm.watch.WatchUiState
 import com.rpm.watch.WatchViewModel
 import com.rpm.watch.health.HrStatus
 import com.rpm.watch.service.ServiceStatus
+import java.util.Locale
 
 @Composable
 fun HeartRateScreen(viewModel: WatchViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     HeartRateContent(state = state, onToggle = {
         if (state.isMonitoring) viewModel.stopMonitoring()
-        else viewModel.startMonitoring()
-    })
+        else viewModel.startMonitoring(state.selectedMode)
+    }, onModeSelected = viewModel::selectMode)
 }
 
 @Composable
 fun HeartRateContent(
     state: WatchUiState,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onModeSelected: (MonitoringMode) -> Unit
 ) {
     Scaffold(
         timeText  = { TimeText() },
@@ -56,8 +60,24 @@ fun HeartRateContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Choose sensor",
+                fontSize = 11.sp,
+                color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
 
-            // ── Heart rate value ──────────────────────────────────────────────
+            Spacer(Modifier.height(4.dp))
+
+            ModeSelector(
+                selectedMode = state.selectedMode,
+                enabled = !state.isMonitoring,
+                onModeSelected = onModeSelected
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            // ── Live value ────────────────────────────────────────────────────
             if (state.serviceStatus == ServiceStatus.CONNECTING) {
                 CircularProgressIndicator(
                     modifier         = Modifier.size(40.dp),
@@ -70,20 +90,20 @@ fun HeartRateContent(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text       = "❤",
+                        text       = modeIcon(state.selectedMode),
                         fontSize   = 22.sp,
-                        color      = heartColor(state.hrStatus),
+                        color      = modeColor(state),
                         modifier   = Modifier.padding(end = 4.dp)
                     )
                     Text(
-                        text       = if (state.heartRate > 0) "${state.heartRate}" else "--",
+                        text       = displayValue(state),
                         fontSize   = 42.sp,
                         fontWeight = FontWeight.Bold,
-                        color      = heartColor(state.hrStatus),
+                        color      = modeColor(state),
                         textAlign  = TextAlign.Center
                     )
                     Text(
-                        text     = " bpm",
+                        text     = " ${modeUnit(state.selectedMode)}",
                         fontSize = 14.sp,
                         color    = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
                         modifier = Modifier.align(Alignment.Bottom).padding(bottom = 6.dp)
@@ -123,17 +143,96 @@ fun HeartRateContent(
     }
 }
 
+@Composable
+private fun ModeSelector(
+    selectedMode: MonitoringMode,
+    enabled: Boolean,
+    onModeSelected: (MonitoringMode) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ModeButton(
+            label = "Heart Rate",
+            active = selectedMode == MonitoringMode.HEART_RATE,
+            enabled = enabled,
+            onClick = { onModeSelected(MonitoringMode.HEART_RATE) }
+        )
+        ModeButton(
+            label = "Temperature",
+            active = selectedMode == MonitoringMode.TEMPERATURE,
+            enabled = enabled,
+            onClick = { onModeSelected(MonitoringMode.TEMPERATURE) }
+        )
+        ModeButton(
+            label = "SpO2",
+            active = selectedMode == MonitoringMode.SPO2,
+            enabled = enabled,
+            onClick = { onModeSelected(MonitoringMode.SPO2) }
+        )
+    }
+}
+
+@Composable
+private fun ModeButton(
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = if (active) MaterialTheme.colors.primary else MaterialTheme.colors.surface
+        ),
+        modifier = Modifier.fillMaxWidth().height(32.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = if (active) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onSurface
+        )
+    }
+}
+
+private fun displayValue(state: WatchUiState): String = when (state.selectedMode) {
+    MonitoringMode.HEART_RATE -> if (state.heartRate > 0) state.heartRate.toString() else "--"
+    MonitoringMode.TEMPERATURE -> state.temperatureC?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
+    MonitoringMode.SPO2 -> state.spO2Percent?.let { String.format(Locale.US, "%.0f", it) } ?: "--"
+}
+
+private fun modeUnit(mode: MonitoringMode): String = when (mode) {
+    MonitoringMode.HEART_RATE -> "bpm"
+    MonitoringMode.TEMPERATURE -> "°C"
+    MonitoringMode.SPO2 -> "%"
+}
+
+private fun modeIcon(mode: MonitoringMode): String = when (mode) {
+    MonitoringMode.HEART_RATE -> "❤"
+    MonitoringMode.TEMPERATURE -> "T"
+    MonitoringMode.SPO2 -> "O2"
+}
+
+private fun modeColor(state: WatchUiState): Color = when (state.selectedMode) {
+    MonitoringMode.HEART_RATE -> heartColor(state.hrStatus)
+    MonitoringMode.TEMPERATURE -> Color(0xFF1E88E5)
+    MonitoringMode.SPO2 -> Color(0xFF43A047)
+}
+
 private fun buildStatusText(state: WatchUiState): String {
     if (state.serviceStatus == ServiceStatus.ERROR && state.errorMessage.isNotBlank()) {
         return state.errorMessage
     }
 
-    val sensorStr = when (state.hrStatus) {
-        HrStatus.GOOD         -> "Good"
-        HrStatus.MOVING       -> "Moving"
-        HrStatus.DEVICE_MOVING -> "Still"
-        HrStatus.LOW_PASS     -> "Low"
-        HrStatus.INITIAL      -> "Place watch firmly"
+    val sensorStr = when (state.selectedMode) {
+        MonitoringMode.HEART_RATE -> when (state.hrStatus) {
+            HrStatus.GOOD         -> "Good"
+            HrStatus.MOVING       -> "Moving"
+            HrStatus.DEVICE_MOVING -> "Still"
+            HrStatus.LOW_PASS     -> "Low"
+            HrStatus.INITIAL      -> "Place watch firmly"
+        }
+        MonitoringMode.TEMPERATURE -> if (state.temperatureC == null) "Waiting for temperature" else "Temperature active"
+        MonitoringMode.SPO2 -> if (state.spO2Percent == null) "Waiting for SpO2" else "SpO2 active"
     }
     return if (state.isMonitoring) sensorStr else "Tap Start to monitor"
 }

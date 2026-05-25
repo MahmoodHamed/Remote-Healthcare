@@ -18,11 +18,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class MonitoringMode {
+    HEART_RATE,
+    TEMPERATURE,
+    SPO2
+}
+
 data class WatchUiState(
     val heartRate: Int = 0,
+    val temperatureC: Float? = null,
+    val spO2Percent: Float? = null,
     val hrStatus: HrStatus = HrStatus.INITIAL,
     val serviceStatus: ServiceStatus = ServiceStatus.IDLE,
     val patientId: String = "",
+    val selectedMode: MonitoringMode = MonitoringMode.HEART_RATE,
     val isMonitoring: Boolean = false,
     val errorMessage: String = ""
 )
@@ -34,25 +43,45 @@ class WatchViewModel @Inject constructor(
 ) : ViewModel() {
 
     // Exposed via service companion singleton
-    private val _heartRate   = MutableStateFlow(0)
-    private val _hrStatus    = MutableStateFlow(HrStatus.INITIAL)
-    private val _svcStatus   = MutableStateFlow(ServiceStatus.IDLE)
-    private val _patientId   = MutableStateFlow("")
+    private val _heartRate = MutableStateFlow(0)
+    private val _temperatureC = MutableStateFlow<Float?>(null)
+    private val _spO2Percent = MutableStateFlow<Float?>(null)
+    private val _hrStatus = MutableStateFlow(HrStatus.INITIAL)
+    private val _svcStatus = MutableStateFlow(ServiceStatus.IDLE)
+    private val _patientId = MutableStateFlow("")
+    private val _selectedMode = MutableStateFlow(MonitoringMode.HEART_RATE)
     private val _isMonitoring = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow("")
 
     val uiState: StateFlow<WatchUiState> = combine(
-        _heartRate,
-        _hrStatus,
-        _svcStatus,
-        _isMonitoring,
-        _errorMessage
-    ) { hr, hrSt, svcSt, localMonitoring, errMsg ->
+        listOf(
+            _heartRate,
+            _temperatureC,
+            _spO2Percent,
+            _hrStatus,
+            _svcStatus,
+            _selectedMode,
+            _isMonitoring,
+            _errorMessage
+        )
+    ) { values ->
+        val hr = values[0] as Int
+        val temp = values[1] as Float?
+        val spo2 = values[2] as Float?
+        val hrSt = values[3] as HrStatus
+        val svcSt = values[4] as ServiceStatus
+        val mode = values[5] as MonitoringMode
+        val localMonitoring = values[6] as Boolean
+        val errMsg = values[7] as String
+
         WatchUiState(
             heartRate     = hr,
+            temperatureC  = temp,
+            spO2Percent   = spo2,
             hrStatus      = hrSt,
             serviceStatus = svcSt,
             patientId     = _patientId.value,
+            selectedMode  = mode,
             isMonitoring  = localMonitoring || svcSt == ServiceStatus.MEASURING || svcSt == ServiceStatus.CONNECTING,
             errorMessage  = errMsg
         )
@@ -70,6 +99,12 @@ class WatchViewModel @Inject constructor(
             service.heartRate.collect { _heartRate.value = it }
         }
         viewModelScope.launch {
+            service.temperatureC.collect { _temperatureC.value = it }
+        }
+        viewModelScope.launch {
+            service.spO2Percent.collect { _spO2Percent.value = it }
+        }
+        viewModelScope.launch {
             service.hrStatus.collect { _hrStatus.value = it }
         }
         viewModelScope.launch {
@@ -80,9 +115,14 @@ class WatchViewModel @Inject constructor(
         }
     }
 
-    fun startMonitoring() {
+    fun selectMode(mode: MonitoringMode) {
+        _selectedMode.value = mode
+    }
+
+    fun startMonitoring(mode: MonitoringMode = _selectedMode.value) {
         try {
-            context.startForegroundService(HeartRateMonitorService.startIntent(context))
+            _selectedMode.value = mode
+            context.startForegroundService(HeartRateMonitorService.startIntent(context, mode))
             _isMonitoring.value = true
             _errorMessage.value = ""
         } catch (e: Exception) {

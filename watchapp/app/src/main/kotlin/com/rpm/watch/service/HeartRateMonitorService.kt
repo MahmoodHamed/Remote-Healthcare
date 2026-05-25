@@ -17,10 +17,12 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.rpm.watch.BuildConfig
+import com.rpm.watch.MonitoringMode
 import com.rpm.watch.MainActivity
 import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.health.HeartRateTrackerManager
 import com.rpm.watch.health.HrStatus
+import com.rpm.watch.health.VitalReading
 import com.rpm.watch.health.TrackerState
 import com.rpm.watch.mqtt.MqttManager
 import com.rpm.watch.mqtt.VitalsPayload
@@ -30,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -61,21 +64,28 @@ class HeartRateMonitorService : Service() {
     private val binder = LocalBinder()
     private var sensorManager: SensorManager? = null
     private var sensorListener: SensorEventListener? = null
+    private var currentMode: MonitoringMode = MonitoringMode.HEART_RATE
 
+    @Volatile private var latestHeartRate: Int? = null
     @Volatile private var baseStepCounter: Float? = null
     @Volatile private var latestStepsCount: Int? = null
     @Volatile private var latestTemperatureC: Float? = null
+    @Volatile private var latestSpO2Percent: Float? = null
     @Volatile private var latestCaloriesBurned: Float? = null
     @Volatile private var fallDetectedUntilMs: Long = 0L
     @Volatile private var isWearingNow: Boolean = true
 
     // ── Public state flows (read by ViewModel / UI) ───────────────────────────
     private val _heartRate   = MutableStateFlow(0)
+    private val _temperatureC = MutableStateFlow<Float?>(null)
+    private val _spO2Percent = MutableStateFlow<Float?>(null)
     private val _hrStatus    = MutableStateFlow(HrStatus.INITIAL)
     private val _svcStatus   = MutableStateFlow(ServiceStatus.IDLE)
     private val _lastError   = MutableStateFlow("")
 
     val heartRate:  StateFlow<Int>           = _heartRate
+    val temperatureC: StateFlow<Float?>      = _temperatureC
+    val spO2Percent: StateFlow<Float?>       = _spO2Percent
     val hrStatus:   StateFlow<HrStatus>      = _hrStatus
     val svcStatus:  StateFlow<ServiceStatus> = _svcStatus
     val lastError:  StateFlow<String>        = _lastError
@@ -90,7 +100,7 @@ class HeartRateMonitorService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startMonitoring()
+            ACTION_START -> startMonitoring(readMode(intent))
             ACTION_STOP  -> stopSelf()
         }
         return START_STICKY
@@ -112,13 +122,15 @@ class HeartRateMonitorService : Service() {
 
     // ── Monitoring logic ──────────────────────────────────────────────────────
 
-    private fun startMonitoring() {
+    private fun startMonitoring(mode: MonitoringMode) {
+        currentMode = mode
+
         if (monitorJob?.isActive == true) {
-            promoteToForeground("Monitoring…")
+            promoteToForeground("Monitoring ${mode.displayLabel()}…")
             return
         }
 
-        promoteToForeground("Starting…")
+        promoteToForeground("Starting ${mode.displayLabel()}…")
         _svcStatus.value = ServiceStatus.CONNECTING
         _lastError.value = ""
 
@@ -166,59 +178,58 @@ class HeartRateMonitorService : Service() {
                 Log.i(TAG, "LOCAL_SENSOR_ONLY enabled: skipping MQTT connect")
             }
 
-            // 3. Start Samsung Health / heart rate flow
+            // 3. Start the selected sensor flow(s)
             val topic = "vitals/$patientId/data"
-            var lastPublishMs = 0L
+            launch {
+                hrTrackerManager.monitoringFlow(mode).collect { state ->
+                    when (state) {
+                        is TrackerState.Connecting -> {
+                            _svcStatus.value = ServiceStatus.CONNECTING
+                            _lastError.value = ""
+                            updateNotification("Connecting to ${mode.displayLabel()}…")
+                        }
 
-            hrTrackerManager.heartRateFlow().collect { state ->
-                when (state) {
-                    is TrackerState.Connecting -> {
-                        _svcStatus.value = ServiceStatus.CONNECTING
-                        _lastError.value = ""
-                        updateNotification("Connecting to sensor…")
-                    }
+                        is TrackerState.Measuring -> {
+                            _svcStatus.value = ServiceStatus.MEASURING
+                            _lastError.value = ""
+                            applyReading(mode, state.reading)
+                            updateNotification(statusMessage(mode, state.reading))
+                        }
 
-                    is TrackerState.Measuring -> {
-                        _svcStatus.value = ServiceStatus.MEASURING
-                        _lastError.value = ""
-                        val reading = state.reading
-                        _heartRate.value = reading.bpm
-                        _hrStatus.value  = reading.status
-                        isWearingNow = reading.status != HrStatus.DEVICE_MOVING
-                        updateNotification("HR: ${reading.bpm} bpm")
+                        is TrackerState.Error -> {
+                            _svcStatus.value = ServiceStatus.ERROR
+                            _lastError.value = state.message
+                            updateNotification("Sensor error: ${state.message}")
+                            delay(5_000L)
+                        }
 
-                        // Rate-limit MQTT publishing
-                        val now = System.currentTimeMillis()
-                        if (!localSensorOnly && now - lastPublishMs >= MQTT_PUBLISH_INTERVAL_MS) {
-                            lastPublishMs = now
-                            publishReading(patientId, deviceId, reading.bpm, topic)
+                        is TrackerState.Disconnected -> {
+                            _svcStatus.value = ServiceStatus.IDLE
+                            _lastError.value = ""
+                            updateNotification("Sensor disconnected")
                         }
                     }
+                }
+            }
 
-                    is TrackerState.Error -> {
-                        _svcStatus.value = ServiceStatus.ERROR
-                        _lastError.value = state.message
-                        updateNotification("Sensor error: ${state.message}")
-                        // Retry after delay
-                        delay(5_000L)
-                    }
-
-                    is TrackerState.Disconnected -> {
-                        _svcStatus.value = ServiceStatus.IDLE
-                        _lastError.value = ""
-                        updateNotification("Sensor disconnected")
+            launch {
+                while (isActive) {
+                    delay(MQTT_PUBLISH_INTERVAL_MS)
+                    if (!localSensorOnly) {
+                        publishReading(patientId, deviceId, topic)
                     }
                 }
             }
         }
     }
 
-    private fun publishReading(patientId: String, deviceId: String, bpm: Int, topic: String) {
+    private fun publishReading(patientId: String, deviceId: String, topic: String) {
         val now = System.currentTimeMillis()
         val payload = VitalsPayload(
             patientId    = patientId,
             deviceId     = deviceId,
-            heartRateBpm = bpm.toFloat(),
+            heartRateBpm = latestHeartRate?.toFloat(),
+            spO2Percent = latestSpO2Percent,
             temperatureC = latestTemperatureC,
             stepsCount = latestStepsCount,
             caloriesBurned = latestCaloriesBurned,
@@ -227,7 +238,44 @@ class HeartRateMonitorService : Service() {
         )
         val json = Json.encodeToString(payload)
         mqttManager.publish(topic, json)
-        Log.d(TAG, "Published HR $bpm bpm to $topic")
+        Log.d(TAG, "Published vitals to $topic")
+    }
+
+    private fun applyReading(mode: MonitoringMode, reading: VitalReading) {
+        when (mode) {
+            MonitoringMode.HEART_RATE -> {
+                val bpm = reading.heartRateBpm ?: return
+                latestHeartRate = bpm
+                _heartRate.value = bpm
+                _hrStatus.value = reading.status
+                isWearingNow = reading.status != HrStatus.DEVICE_MOVING
+            }
+
+            MonitoringMode.SPO2 -> {
+                latestSpO2Percent = reading.spO2Percent
+                _spO2Percent.value = reading.spO2Percent
+            }
+
+            MonitoringMode.TEMPERATURE -> {
+                latestTemperatureC = reading.temperatureC
+                _temperatureC.value = reading.temperatureC
+            }
+        }
+    }
+
+    private fun statusMessage(mode: MonitoringMode, reading: VitalReading): String = when (mode) {
+        MonitoringMode.HEART_RATE -> {
+            val bpm = reading.heartRateBpm?.toInt()
+            if (bpm != null) "HR: $bpm bpm" else "Measuring heart rate…"
+        }
+        MonitoringMode.SPO2 -> {
+            val spo2 = reading.spO2Percent
+            if (spo2 != null) "SpO2: ${spo2.toInt()}%" else "Measuring SpO2…"
+        }
+        MonitoringMode.TEMPERATURE -> {
+            val temp = reading.temperatureC
+            if (temp != null) "Temp: ${String.format(java.util.Locale.US, "%.1f", temp)} °C" else "Measuring temperature…"
+        }
     }
 
     private fun startDeviceSensors() {
@@ -235,14 +283,17 @@ class HeartRateMonitorService : Service() {
         sensorManager = sm
 
         val stepSensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-        val tempSensor = sm.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
+        val tempSensorType = resolveSensorType("TYPE_SKIN_TEMPERATURE", "TYPE_AMBIENT_TEMPERATURE")
+        val spo2SensorType = resolveSensorType("TYPE_OXYGEN_SATURATION", "TYPE_SPO2")
+        val tempSensor = tempSensorType?.let { sm.getDefaultSensor(it) }
+        val spo2Sensor = spo2SensorType?.let { sm.getDefaultSensor(it) }
         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 val e = event ?: return
-                when (e.sensor.type) {
-                    Sensor.TYPE_STEP_COUNTER -> {
+                when {
+                    e.sensor.type == Sensor.TYPE_STEP_COUNTER -> {
                         val raw = e.values.firstOrNull() ?: return
                         val base = baseStepCounter
                         if (base == null) {
@@ -257,11 +308,19 @@ class HeartRateMonitorService : Service() {
                         }
                     }
 
-                    Sensor.TYPE_AMBIENT_TEMPERATURE -> {
+                    tempSensorType != null && e.sensor.type == tempSensorType -> {
                         latestTemperatureC = e.values.firstOrNull()
+                        _temperatureC.value = latestTemperatureC
+                        _svcStatus.value = ServiceStatus.MEASURING
                     }
 
-                    Sensor.TYPE_ACCELEROMETER -> {
+                    spo2SensorType != null && e.sensor.type == spo2SensorType -> {
+                        latestSpO2Percent = e.values.firstOrNull()
+                        _spO2Percent.value = latestSpO2Percent
+                        _svcStatus.value = ServiceStatus.MEASURING
+                    }
+
+                    e.sensor.type == Sensor.TYPE_ACCELEROMETER -> {
                         if (e.values.size < 3) return
                         val x = e.values[0].toDouble()
                         val y = e.values[1].toDouble()
@@ -281,7 +340,30 @@ class HeartRateMonitorService : Service() {
         sensorListener = listener
         if (stepSensor != null) sm.registerListener(listener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
         if (tempSensor != null) sm.registerListener(listener, tempSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        if (spo2Sensor != null) sm.registerListener(listener, spo2Sensor, SensorManager.SENSOR_DELAY_NORMAL)
         if (accelSensor != null) sm.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+    }
+
+    private fun resolveSensorType(vararg names: String): Int? {
+        for (name in names) {
+            try {
+                return Sensor::class.java.getField(name).getInt(null)
+            } catch (_: Exception) {
+            }
+        }
+        return null
+    }
+
+    private fun MonitoringMode.displayLabel(): String = when (this) {
+        MonitoringMode.HEART_RATE -> "Heart Rate"
+        MonitoringMode.TEMPERATURE -> "Temperature"
+        MonitoringMode.SPO2 -> "SpO2"
+    }
+
+    private fun readMode(intent: Intent): MonitoringMode {
+        val modeName = intent.getStringExtra(EXTRA_MODE)
+        return runCatching { MonitoringMode.valueOf(modeName ?: "HEART_RATE") }
+            .getOrDefault(MonitoringMode.HEART_RATE)
     }
 
     private fun stopDeviceSensors() {
@@ -370,9 +452,13 @@ class HeartRateMonitorService : Service() {
     companion object {
         const val ACTION_START = "com.rpm.watch.START_HR"
         const val ACTION_STOP  = "com.rpm.watch.STOP_HR"
+        const val EXTRA_MODE = "com.rpm.watch.EXTRA_MODE"
 
-        fun startIntent(context: Context) =
-            Intent(context, HeartRateMonitorService::class.java).apply { action = ACTION_START }
+        fun startIntent(context: Context, mode: MonitoringMode) =
+            Intent(context, HeartRateMonitorService::class.java).apply {
+                action = ACTION_START
+                putExtra(EXTRA_MODE, mode.name)
+            }
 
         fun stopIntent(context: Context) =
             Intent(context, HeartRateMonitorService::class.java).apply { action = ACTION_STOP }
