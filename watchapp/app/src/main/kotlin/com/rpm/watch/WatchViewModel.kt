@@ -57,9 +57,21 @@ class WatchViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, WatchUiState())
 
+    private val _mqttHost = MutableStateFlow("")
+    private val _mqttPort = MutableStateFlow(1883)
+
+    val mqttHost: StateFlow<String> = _mqttHost
+    val mqttPort: StateFlow<Int> = _mqttPort
+
     init {
         viewModelScope.launch {
             dataStore.patientId.collect { id -> _patientId.value = id ?: "" }
+        }
+        viewModelScope.launch {
+            dataStore.mqttHost.collect { host -> _mqttHost.value = host }
+        }
+        viewModelScope.launch {
+            dataStore.mqttPort.collect { port -> _mqttPort.value = port }
         }
     }
 
@@ -91,5 +103,12 @@ class WatchViewModel @Inject constructor(
 
     fun savePatientId(id: String) {
         viewModelScope.launch { dataStore.savePatientId(id) }
+    }
+
+    fun saveConfig(patientId: String, mqttHost: String, mqttPort: Int) {
+        viewModelScope.launch {
+            if (patientId.isNotBlank()) dataStore.savePatientId(patientId)
+            if (mqttHost.isNotBlank()) dataStore.saveMqttConfig(mqttHost, mqttPort)
+        }
     }
 }

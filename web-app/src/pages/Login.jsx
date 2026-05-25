@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { getApiBase } from '../utils/apiBase'
 
 const parseErrorMessage = async (response) => {
   try {
@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
     setError('')
 
     try {
-      const base = DEFAULT_API_BASE.trim()
+      const base = getApiBase().trim()
       if (!base || !email.trim() || !password) {
         throw new Error('Email and password are required.')
       }
@@ -57,6 +57,9 @@ export default function Login({ onLoginSuccess }) {
 
       if (!response.ok) {
         const message = await parseErrorMessage(response)
+        if (response.status === 401) {
+          throw new Error(message || 'Invalid email or password.')
+        }
         throw new Error(message || `Login failed (${response.status}).`)
       }
 

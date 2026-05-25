@@ -1,26 +1,66 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { normalizePatientId } from '../utils/patientId'
-
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { clearAuthSession, getAccessToken, isTokenExpired } from '../utils/authSession'
+import { buildVitalsHubConnection, startVitalsHub } from '../utils/signalr'
+import { fetchLatestVitals, mapVitalsPayload } from '../utils/vitals'
 
 export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
   const navigate = useNavigate()
-  const [patientIdInput, setPatientIdInput] = useState('')
+  const [patientIdInput, setPatientIdInput] = useState(() => localStorage.getItem('rpmPatientId') || '')
   const [connectionStatus, setConnectionStatus] = useState('disconnected')
   const [connectionError, setConnectionError] = useState('')
   const [latestVitals, setLatestVitals] = useState(null)
   const [timeline, setTimeline] = useState([])
   const connectionRef = useRef(null)
+  const pollRef = useRef(null)
+  const activePatientRef = useRef('')
+
+  const applyVitals = (vitals) => {
+    if (!vitals) return
+    setLatestVitals(vitals)
+    const stamp = new Date(vitals.recordedAt).toLocaleTimeString()
+    setTimeline((prev) => {
+      if (prev[0]?.recordedAt === vitals.recordedAt) return prev
+      return [{ stamp, ...vitals }, ...prev].slice(0, 12)
+    })
+  }
+
+  const loadLatestVitals = async (patientId) => {
+    const token = getAccessToken() || accessToken
+    if (!token) return
+    try {
+      const vitals = await fetchLatestVitals(patientId, token)
+      applyVitals(vitals)
+    } catch (err) {
+      if (err?.status === 401) handleUnauthorized()
+    }
+  }
 
   useEffect(() => {
-    if (!accessToken || !authProfile) {
-      navigate('/login')
+    const token = getAccessToken() || accessToken
+    if (!token || isTokenExpired(token) || !authProfile) {
+      clearAuthSession()
+      onLogout?.()
+      navigate('/login', { replace: true })
     }
-  }, [accessToken, authProfile, navigate])
+  }, [accessToken, authProfile, navigate, onLogout])
+
+  const handleUnauthorized = () => {
+    clearAuthSession()
+    onLogout?.()
+    setConnectionError('Session expired. Please sign in again.')
+    navigate('/login', { replace: true })
+  }
+
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    if (connectionRef.current) connectionRef.current.stop().catch(() => {})
+  }, [])
 
   const handleLogout = () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = null
     if (connectionRef.current) {
       connectionRef.current.stop().catch(() => {})
       connectionRef.current = null
@@ -36,7 +76,6 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
       return
     }
 
-    const hubUrl = new URL('/hubs/vitals', DEFAULT_API_BASE).toString()
     setConnectionStatus('connecting')
     setConnectionError('')
 
@@ -45,38 +84,25 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
       connectionRef.current = null
     }
 
-    const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build()
+    const shortPatientId = patientIdInput.trim().toUpperCase()
+    activePatientRef.current = shortPatientId
+    localStorage.setItem('rpmPatientId', shortPatientId)
 
-    connection.on('ReceiveVitals', (payload) => {
-      if (!payload || typeof payload !== 'object') return
+    if (pollRef.current) clearInterval(pollRef.current)
+    await loadLatestVitals(shortPatientId)
+    pollRef.current = setInterval(() => {
+      loadLatestVitals(activePatientRef.current)
+    }, 5000)
 
-      const vitals = {
-        heartRateBpm: payload.heartRateBpm ?? null,
-        spO2Percent: payload.spO2Percent ?? null,
-        systolicBp: payload.systolicBp ?? null,
-        diastolicBp: payload.diastolicBp ?? null,
-        temperatureC: payload.temperatureC ?? null,
-        stepsCount: payload.stepsCount ?? null,
-        caloriesBurned: payload.caloriesBurned ?? null,
-        fallDetected: Boolean(payload.fallDetected),
-        isWearing: payload.isWearing !== false,
-        recordedAt: payload.recordedAt ?? new Date().toISOString(),
-      }
-
-      setLatestVitals(vitals)
-      const stamp = new Date(vitals.recordedAt).toLocaleTimeString()
-      setTimeline((prev) => [{ stamp, ...vitals }, ...prev].slice(0, 12))
+    const connection = buildVitalsHubConnection({
+      onVitals: (payload) => applyVitals(mapVitalsPayload(payload)),
     })
 
     connection.onreconnecting(() => setConnectionStatus('connecting'))
     connection.onreconnected(async () => {
       setConnectionStatus('connected')
       try {
-        await connection.invoke('SubscribeToPatient', patientId)
+        await connection.invoke('SubscribeToPatient', patientIdInput.trim().toUpperCase())
       } catch (err) {
         setConnectionError(err?.message || 'Failed to re-subscribe.')
       }
@@ -86,8 +112,7 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
     connectionRef.current = connection
 
     try {
-      await connection.start()
-      await connection.invoke('SubscribeToPatient', patientId)
+      await startVitalsHub(connection, shortPatientId, { onUnauthorized: handleUnauthorized })
       setConnectionStatus('connected')
     } catch (err) {
       setConnectionStatus('error')

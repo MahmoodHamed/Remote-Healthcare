@@ -4,7 +4,7 @@ The watch app already publishes heart-rate telemetry to the RPM MQTT broker. Use
 
 ## Broker settings
 
-- MQTT host: the server IP or hostname running Mosquitto
+- MQTT host: `remote-care.tech` (domain for this project — do not use the shared server IP)
 - MQTT port: `1883` for local/dev deployments
 - Topic: `vitals/{patientId}/data`
 

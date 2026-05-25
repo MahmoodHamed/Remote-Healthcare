@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { getApiBase } from '../utils/apiBase'
 
 const roles = [
   {
@@ -65,7 +65,7 @@ export default function Register({ onRegisterSuccess }) {
     setError('')
 
     try {
-      const base = DEFAULT_API_BASE.trim()
+      const base = getApiBase().trim()
       if (!base || !fullName.trim() || !email.trim() || !phone.trim() || !password) {
         throw new Error('All fields are required.')
       }

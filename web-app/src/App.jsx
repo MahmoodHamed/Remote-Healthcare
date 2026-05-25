@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
 import PatientMonitor from './pages/PatientMonitor'
+import LinkWatch from './pages/LinkWatch'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -25,6 +26,7 @@ function Header({ authProfile, onLogout }) {
               <Link to="/dashboard">Dashboard</Link>
               <Link to="/heart-rate">Heart rate</Link>
               <Link to="/monitor">Patient monitor</Link>
+              <Link to="/link-watch">Link watch</Link>
               {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Admin</Link>}
               <button className="nav-link-btn" onClick={onLogout} style={{ cursor: 'pointer' }}>
                 Sign out
@@ -156,6 +158,14 @@ export default function App() {
                   accessToken={accessToken}
                   onLogout={handleLogout}
                 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/link-watch"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <LinkWatch authProfile={authProfile} />
               </ProtectedRoute>
             }
           />

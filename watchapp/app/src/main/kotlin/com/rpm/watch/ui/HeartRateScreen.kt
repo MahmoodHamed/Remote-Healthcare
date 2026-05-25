@@ -32,18 +32,23 @@ import com.rpm.watch.health.HrStatus
 import com.rpm.watch.service.ServiceStatus
 
 @Composable
-fun HeartRateScreen(viewModel: WatchViewModel) {
+fun HeartRateScreen(viewModel: WatchViewModel, onOpenSettings: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HeartRateContent(state = state, onToggle = {
-        if (state.isMonitoring) viewModel.stopMonitoring()
-        else viewModel.startMonitoring()
-    })
+    HeartRateContent(
+        state = state,
+        onToggle = {
+            if (state.isMonitoring) viewModel.stopMonitoring()
+            else viewModel.startMonitoring()
+        },
+        onOpenSettings = onOpenSettings
+    )
 }
 
 @Composable
 fun HeartRateContent(
     state: WatchUiState,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     Scaffold(
         timeText  = { TimeText() },
@@ -101,7 +106,17 @@ fun HeartRateContent(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(10.dp))
+            if (state.patientId.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "ID: ${state.patientId}",
+                    fontSize = 9.sp,
+                    color = Color(0xFF757575),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
 
             // ── Toggle button ─────────────────────────────────────────────────
             Button(
@@ -118,6 +133,15 @@ fun HeartRateContent(
                     text     = if (state.isMonitoring) "Stop" else "Start",
                     fontSize = 13.sp
                 )
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            Button(
+                onClick = onOpenSettings,
+                modifier = Modifier.size(width = 90.dp, height = 30.dp)
+            ) {
+                Text(text = "Setup", fontSize = 11.sp)
             }
         }
     }

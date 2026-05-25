@@ -42,7 +42,8 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
                 await uow.SaveChangesAsync(ct);
             }
 
-            var placeholder = Domain.Entities.Device.Create(profile.Id, "unknown", "unknown", string.Empty);
+            var mqttClientId = $"rpm-watch-{cmd.DeviceId:D}";
+            var placeholder = Domain.Entities.Device.Create(profile.Id, "RPM Watch", "Samsung Watch", mqttClientId);
             // set Device Id to incoming device GUID so vitals reference match
             var idProp = typeof(Domain.Entities.Device).GetProperty("Id");
             if (idProp != null)

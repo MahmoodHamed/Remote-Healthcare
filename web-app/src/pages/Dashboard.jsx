@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { normalizePatientId } from '../utils/patientId'
-
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { clearAuthSession, getAccessToken, isTokenExpired } from '../utils/authSession'
+import { getApiBase } from '../utils/apiBase'
+import { buildVitalsHubConnection, startVitalsHub } from '../utils/signalr'
 
 export default function Dashboard({ authProfile, accessToken, onLogout }) {
   const navigate = useNavigate()
@@ -20,10 +20,20 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
   const isAdmin = authProfile?.role === 'Admin'
 
   useEffect(() => {
-    if (!accessToken || !authProfile) {
-      navigate('/login')
+    const token = getAccessToken() || accessToken
+    if (!token || isTokenExpired(token) || !authProfile) {
+      clearAuthSession()
+      onLogout?.()
+      navigate('/login', { replace: true })
     }
-  }, [accessToken, authProfile, navigate])
+  }, [accessToken, authProfile, navigate, onLogout])
+
+  const handleUnauthorized = () => {
+    clearAuthSession()
+    onLogout?.()
+    setConnectionError('Session expired. Please sign in again.')
+    navigate('/login', { replace: true })
+  }
 
   const handleLogout = () => {
     if (connectionRef.current) {
@@ -46,7 +56,6 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
       return
     }
 
-    const hubUrl = new URL('/hubs/vitals', DEFAULT_API_BASE).toString()
     setConnectionStatus('connecting')
     setConnectionError('')
 
@@ -55,27 +64,23 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
       connectionRef.current = null
     }
 
-    const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build()
+    const connection = buildVitalsHubConnection({
+      onVitals: (payload) => {
+        if (!payload || typeof payload !== 'object') return
 
-    connection.on('ReceiveVitals', (payload) => {
-      if (!payload || typeof payload !== 'object') return
+        const normalized = {
+          heartRateBpm: payload.heartRateBpm ?? null,
+          spO2Percent: payload.spO2Percent ?? null,
+          systolicBp: payload.systolicBp ?? null,
+          diastolicBp: payload.diastolicBp ?? null,
+          temperatureC: payload.temperatureC ?? null,
+          recordedAt: payload.recordedAt ?? null,
+        }
 
-      const normalized = {
-        heartRateBpm: payload.heartRateBpm ?? null,
-        spO2Percent: payload.spO2Percent ?? null,
-        systolicBp: payload.systolicBp ?? null,
-        diastolicBp: payload.diastolicBp ?? null,
-        temperatureC: payload.temperatureC ?? null,
-        recordedAt: payload.recordedAt ?? null,
-      }
-
-      setVitals(normalized)
-      const time = normalized.recordedAt ? new Date(normalized.recordedAt).toLocaleTimeString() : 'n/a'
-      setVitalsHistory((prev) => [{ time, ...normalized }, ...prev].slice(0, 12))
+        setVitals(normalized)
+        const time = normalized.recordedAt ? new Date(normalized.recordedAt).toLocaleTimeString() : 'n/a'
+        setVitalsHistory((prev) => [{ time, ...normalized }, ...prev].slice(0, 12))
+      },
     })
 
     connection.onreconnecting(() => setConnectionStatus('connecting'))
@@ -92,8 +97,7 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
     connectionRef.current = connection
 
     try {
-      await connection.start()
-      await connection.invoke('SubscribeToPatient', patientId)
+      await startVitalsHub(connection, patientId, { onUnauthorized: handleUnauthorized })
       setConnectionStatus('connected')
     } catch (err) {
       setConnectionStatus('error')
@@ -107,8 +111,9 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
     if (!isAdmin) return
     setAdminLoading(true)
     try {
-      const response = await fetch(new URL('/api/admin/users', DEFAULT_API_BASE).toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const token = getAccessToken() || accessToken
+      const response = await fetch(new URL('/api/admin/users', getApiBase()).toString(), {
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!response.ok) throw new Error(`Failed to fetch users (${response.status}).`)
       const data = await response.json()
@@ -280,10 +285,20 @@ export function HeartRateMonitor({ authProfile, accessToken, onLogout }) {
   const connectionRef = useRef(null)
 
   useEffect(() => {
-    if (!accessToken || !authProfile) {
-      navigate('/login')
+    const token = getAccessToken() || accessToken
+    if (!token || isTokenExpired(token) || !authProfile) {
+      clearAuthSession()
+      onLogout?.()
+      navigate('/login', { replace: true })
     }
-  }, [accessToken, authProfile, navigate])
+  }, [accessToken, authProfile, navigate, onLogout])
+
+  const handleUnauthorized = () => {
+    clearAuthSession()
+    onLogout?.()
+    setConnectionError('Session expired. Please sign in again.')
+    navigate('/login', { replace: true })
+  }
 
   const handleLogout = () => {
     if (connectionRef.current) {
@@ -301,7 +316,6 @@ export function HeartRateMonitor({ authProfile, accessToken, onLogout }) {
       return
     }
 
-    const hubUrl = new URL('/hubs/vitals', DEFAULT_API_BASE).toString()
     setConnectionStatus('connecting')
     setConnectionError('')
 
@@ -310,27 +324,22 @@ export function HeartRateMonitor({ authProfile, accessToken, onLogout }) {
       connectionRef.current = null
     }
 
-    const connection = new HubConnectionBuilder()
-      .withUrl(hubUrl, { accessTokenFactory: () => accessToken })
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build()
-
-    connection.on('ReceiveVitals', (payload) => {
-      const bpm = payload?.heartRateBpm ?? null
-      setHeartRate(bpm)
-      setHistory((prev) => [{
-        time: new Date().toLocaleTimeString(),
-        heartRateBpm: bpm,
-      }, ...prev].slice(0, 12))
+    const connection = buildVitalsHubConnection({
+      onVitals: (payload) => {
+        const bpm = payload?.heartRateBpm ?? null
+        setHeartRate(bpm)
+        setHistory((prev) => [{
+          time: new Date().toLocaleTimeString(),
+          heartRateBpm: bpm,
+        }, ...prev].slice(0, 12))
+      },
     })
 
     connection.onclose(() => setConnectionStatus('disconnected'))
     connectionRef.current = connection
 
     try {
-      await connection.start()
-      await connection.invoke('SubscribeToPatient', patientId)
+      await startVitalsHub(connection, patientId, { onUnauthorized: handleUnauthorized })
       setConnectionStatus('connected')
     } catch (err) {
       setConnectionStatus('error')

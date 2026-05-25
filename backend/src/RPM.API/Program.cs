@@ -56,17 +56,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = true, ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidateAudience = true, ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true, ClockSkew = TimeSpan.Zero
+            ValidateLifetime = true, ClockSkew = TimeSpan.FromMinutes(2)
         };
-        // Support SignalR JWT from query string
+        // SignalR: Bearer header (negotiate) + access_token query (WebSocket)
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
-                var accessToken = ctx.Request.Query["access_token"];
                 var path = ctx.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                    ctx.Token = accessToken;
+                if (!path.StartsWithSegments("/hubs")) return Task.CompletedTask;
+
+                var queryToken = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(queryToken))
+                {
+                    ctx.Token = queryToken;
+                    return Task.CompletedTask;
+                }
+
+                var authHeader = ctx.Request.Headers.Authorization.ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    ctx.Token = authHeader["Bearer ".Length..].Trim();
+
                 return Task.CompletedTask;
             }
         };
