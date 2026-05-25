@@ -2,6 +2,7 @@ package com.rpm.watch
 
 import android.Manifest
 import android.content.ComponentName
+import android.os.Build
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
@@ -21,10 +22,11 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: WatchViewModel by viewModels()
 
-    // ── BODY_SENSORS permission ───────────────────────────────────────────────
-    private val requestPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) bindToService()
+    // ── Runtime permissions ───────────────────────────────────────────────────
+    private val requestPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            val bodySensorsGranted = results[Manifest.permission.BODY_SENSORS] == true
+            if (bodySensorsGranted) bindToService()
         }
 
     // ── Service binding (for state injection into ViewModel) ──────────────────
@@ -62,7 +64,23 @@ class MainActivity : ComponentActivity() {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun checkAndRequestPermissions() {
-        requestPermission.launch(Manifest.permission.BODY_SENSORS)
+        val needed = buildList {
+            add(Manifest.permission.BODY_SENSORS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+                add(Manifest.permission.BODY_SENSORS_BACKGROUND)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+        }.filter { permission ->
+            checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (needed.isEmpty()) {
+            bindToService()
+        } else {
+            requestPermissions.launch(needed.toTypedArray())
+        }
     }
 
     private fun bindToService() {

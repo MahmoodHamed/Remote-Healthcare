@@ -1,6 +1,7 @@
 package com.rpm.watch
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.watch.data.WatchDataStore
@@ -80,8 +81,16 @@ class WatchViewModel @Inject constructor(
     }
 
     fun startMonitoring() {
-        context.startForegroundService(HeartRateMonitorService.startIntent(context))
-        _isMonitoring.value = true
+        try {
+            context.startForegroundService(HeartRateMonitorService.startIntent(context))
+            _isMonitoring.value = true
+            _errorMessage.value = ""
+        } catch (e: Exception) {
+            Log.e("WatchViewModel", "Failed to start monitoring", e)
+            _isMonitoring.value = false
+            _errorMessage.value = e.message ?: "Could not start monitoring"
+            _svcStatus.value = ServiceStatus.ERROR
+        }
     }
 
     fun stopMonitoring() {

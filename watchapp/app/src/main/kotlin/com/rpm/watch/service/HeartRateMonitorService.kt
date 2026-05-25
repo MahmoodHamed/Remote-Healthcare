@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -31,6 +33,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
@@ -42,6 +45,7 @@ private const val TAG = "HRMonitorService"
 private const val CHANNEL_ID = "rpm_watch_hr"
 private const val NOTIFICATION_ID = 1
 private const val MQTT_PUBLISH_INTERVAL_MS = 5_000L  // publish at most once every 5 s
+private const val MQTT_CONNECT_TIMEOUT_MS = 8_000L
 
 enum class ServiceStatus { IDLE, CONNECTING, MEASURING, ERROR }
 
@@ -109,9 +113,12 @@ class HeartRateMonitorService : Service() {
     // ── Monitoring logic ──────────────────────────────────────────────────────
 
     private fun startMonitoring() {
-        if (monitorJob?.isActive == true) return
+        if (monitorJob?.isActive == true) {
+            promoteToForeground("Monitoring…")
+            return
+        }
 
-        startForeground(NOTIFICATION_ID, buildNotification("Starting…"))
+        promoteToForeground("Starting…")
         _svcStatus.value = ServiceStatus.CONNECTING
         _lastError.value = ""
 
@@ -138,18 +145,22 @@ class HeartRateMonitorService : Service() {
 
             // After the check above, patientId is smart-cast to String (non-null)
 
-            // 2. Connect MQTT (skip completely in local sensor-only mode)
+            // 2. Connect MQTT in parallel — must not block heart-rate startup
             if (!localSensorOnly) {
-                try {
-                    mqttManager.connect(
-                        host     = mqttHost,
-                        port     = mqttPort,
-                        clientId = "rpm-watch-$deviceId"
-                    )
-                    Log.i(TAG, "MQTT connected")
-                } catch (e: Exception) {
-                    Log.w(TAG, "MQTT unavailable, continuing local sensor mode: ${e.message}")
-                    updateNotification("Starting sensor mode…")
+                serviceScope.launch {
+                    try {
+                        withTimeout(MQTT_CONNECT_TIMEOUT_MS) {
+                            mqttManager.connect(
+                                host     = mqttHost,
+                                port     = mqttPort,
+                                clientId = "rpm-watch-$deviceId"
+                            )
+                        }
+                        Log.i(TAG, "MQTT connected")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "MQTT unavailable, continuing local sensor mode: ${e.message}")
+                        updateNotification("Sensor mode (no MQTT)")
+                    }
                 }
             } else {
                 Log.i(TAG, "LOCAL_SENSOR_ONLY enabled: skipping MQTT connect")
@@ -316,6 +327,22 @@ class HeartRateMonitorService : Service() {
         }
         getSystemService(NotificationManager::class.java)
             .createNotificationChannel(channel)
+    }
+
+    /** API 34+ requires foreground service types matching the manifest declaration. */
+    private fun promoteToForeground(text: String) {
+        val notification = buildNotification(text)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     private fun buildNotification(text: String): Notification {
