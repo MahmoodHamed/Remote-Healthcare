@@ -48,6 +48,9 @@ public class VitalRepository(AppDbContext db) : IVitalRepository
 
     public async Task AddAsync(VitalRecord record, CancellationToken ct = default) =>
         await db.VitalRecords.AddAsync(record, ct);
+
+    public async Task AddRangeAsync(IEnumerable<VitalRecord> records, CancellationToken ct = default) =>
+        await db.VitalRecords.AddRangeAsync(records, ct);
 }
 
 public class AlertRepository(AppDbContext db) : IAlertRepository

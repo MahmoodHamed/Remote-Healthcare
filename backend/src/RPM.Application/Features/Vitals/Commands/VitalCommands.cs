@@ -9,6 +9,8 @@ public record IngestVitalCommand(
     float? TemperatureC, int? Steps,
     float? Calories, bool FallDetected, bool IsWearing) : IRequest<VitalRecordDto>;
 
+public record IngestVitalsBatchCommand(IReadOnlyCollection<VitalIngestionDto> Readings) : IRequest<int>;
+
 public record UpdateAlertThresholdCommand(
     Guid PatientId, float MinHeartRate, float MaxHeartRate,
     float MinSpO2, float MaxSystolicBp, float MaxDiastolicBp, float MaxTemperatureC) : IRequest;

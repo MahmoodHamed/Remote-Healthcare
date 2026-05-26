@@ -45,6 +45,10 @@ const parseErrorMessage = async (response) => {
   return ''
 }
 
+const normalizePhone = (value) => value.replace(/[^0-9+]/g, '')
+const isStrongPassword = (value) =>
+  value.length >= 8 && /[A-Z]/.test(value) && /[0-9]/.test(value)
+
 export default function Register({ onRegisterSuccess }) {
   const navigate = useNavigate()
   const [activeRole, setActiveRole] = useState('patient')
@@ -66,8 +70,15 @@ export default function Register({ onRegisterSuccess }) {
 
     try {
       const base = getApiBase().trim()
-      if (!base || !fullName.trim() || !email.trim() || !phone.trim() || !password) {
+      const normalizedPhone = normalizePhone(phone.trim())
+      const trimmedPassword = password.trim()
+
+      if (!base || !fullName.trim() || !email.trim() || !normalizedPhone || !trimmedPassword) {
         throw new Error('All fields are required.')
+      }
+
+      if (!isStrongPassword(trimmedPassword)) {
+        throw new Error('Password must be at least 8 characters and include an uppercase letter and a digit.')
       }
 
       const registerUrl = new URL('/api/auth/register', base).toString()
@@ -78,8 +89,8 @@ export default function Register({ onRegisterSuccess }) {
         body: JSON.stringify({
           fullName: fullName.trim(),
           email: email.trim(),
-          phone: phone.trim(),
-          password,
+          phone: normalizedPhone,
+          password: trimmedPassword,
           role: activeRoleName,
           licenseNumber: activeRole === 'doctor' ? licenseNumber.trim() || null : null,
           specialization: activeRole === 'doctor' ? specialization.trim() || null : null,

@@ -39,7 +39,9 @@ export default function Login({ onLoginSuccess }) {
 
     try {
       const base = getApiBase().trim()
-      if (!base || !email.trim() || !password) {
+      const normalizedEmail = email.trim().toLowerCase()
+
+      if (!base || !normalizedEmail || !password) {
         throw new Error('Email and password are required.')
       }
 
@@ -49,7 +51,7 @@ export default function Login({ onLoginSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
           deviceInfo: deviceInfo.trim() || 'web-app',
         }),

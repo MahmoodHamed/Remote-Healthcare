@@ -7,4 +7,5 @@ public interface IVitalRepository
     Task<VitalRecord?> GetLatestByPatientIdAsync(Guid patientId, CancellationToken ct = default);
     Task<long> CountByPatientIdAsync(Guid patientId, DateTime from, DateTime to, CancellationToken ct = default);
     Task AddAsync(VitalRecord record, CancellationToken ct = default);
+    Task AddRangeAsync(IEnumerable<VitalRecord> records, CancellationToken ct = default);
 }

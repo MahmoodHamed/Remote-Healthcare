@@ -8,7 +8,7 @@ using RPM.Domain.Enums;
 using RPM.Domain.Interfaces;
 namespace RPM.Application.Features.Vitals.Handlers;
 
-public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
+public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub, ICacheService cache)
     : IRequestHandler<IngestVitalCommand, VitalRecordDto>
 {
     public async Task<VitalRecordDto> Handle(IngestVitalCommand cmd, CancellationToken ct)
@@ -63,11 +63,101 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
         await uow.SaveChangesAsync(ct);
 
         var dto = MapToDto(record);
+        await cache.SetAsync(LatestVitalsKey(cmd.PatientId), dto, TimeSpan.FromHours(6), ct);
         // Broadcast real-time
         await hub.BroadcastVitalsAsync(cmd.PatientId, dto, ct);
 
         return dto;
     }
+
+    private static string LatestVitalsKey(Guid patientId) => $"patient:{patientId:D}:latest_vitals";
+
+    private static VitalRecordDto MapToDto(VitalRecord r) =>
+        new(r.Id, r.PatientId, r.DeviceId, r.HeartRateBpm, r.SpO2Percent,
+            r.SystolicBp, r.DiastolicBp, r.TemperatureC, r.StepsCount,
+            r.FallDetected, r.IsWearing, r.RecordedAt);
+}
+
+public class IngestVitalsBatchCommandHandler(IUnitOfWork uow, IVitalsHubService hub, ICacheService cache)
+    : IRequestHandler<IngestVitalsBatchCommand, int>
+{
+    public async Task<int> Handle(IngestVitalsBatchCommand cmd, CancellationToken ct)
+    {
+        if (cmd.Readings.Count == 0) return 0;
+
+        var createdUsers = new HashSet<Guid>();
+        var createdProfiles = new Dictionary<Guid, PatientProfile>();
+        var createdDevices = new HashSet<Guid>();
+        var records = new List<VitalRecord>(cmd.Readings.Count);
+
+        foreach (var reading in cmd.Readings)
+        {
+            var existingDevice = await uow.Devices.GetByIdAsync(reading.DeviceId, ct);
+            if (existingDevice is null && createdDevices.Add(reading.DeviceId))
+            {
+                var profile = await EnsurePatientProfileAsync(reading.PatientId, createdUsers, createdProfiles, ct);
+                var mqttClientId = $"rpm-watch-{reading.DeviceId:D}";
+                var placeholder = Domain.Entities.Device.Create(profile.Id, "RPM Watch", "Samsung Watch", mqttClientId);
+                var idProp = typeof(Domain.Entities.Device).GetProperty("Id");
+                if (idProp != null)
+                {
+                    idProp.SetValue(placeholder, reading.DeviceId);
+                }
+
+                await uow.Devices.AddAsync(placeholder, ct);
+            }
+
+            records.Add(VitalRecord.Create(reading.PatientId, reading.DeviceId,
+                reading.HeartRateBpm, reading.SpO2Percent, reading.SystolicBp, reading.DiastolicBp,
+                reading.TemperatureC, reading.Steps, reading.Calories, reading.FallDetected, reading.IsWearing));
+        }
+
+        await uow.Vitals.AddRangeAsync(records, ct);
+        await uow.SaveChangesAsync(ct);
+
+        foreach (var record in records)
+        {
+            var dto = MapToDto(record);
+            await cache.SetAsync(LatestVitalsKey(record.PatientId), dto, TimeSpan.FromHours(6), ct);
+            await hub.BroadcastVitalsAsync(record.PatientId, dto, ct);
+        }
+
+        return records.Count;
+    }
+
+    private async Task<PatientProfile> EnsurePatientProfileAsync(
+        Guid patientId,
+        HashSet<Guid> createdUsers,
+        Dictionary<Guid, PatientProfile> createdProfiles,
+        CancellationToken ct)
+    {
+        if (createdProfiles.TryGetValue(patientId, out var cachedProfile))
+            return cachedProfile;
+
+        var profile = await uow.Patients.GetByUserIdAsync(patientId, ct);
+        if (profile is not null) return profile;
+
+        var existingUser = await uow.Users.GetByIdAsync(patientId, ct);
+        if (existingUser is null && createdUsers.Add(patientId))
+        {
+            var shortLabel = patientId.ToString();
+            var placeholderUser = Domain.Entities.User.Create($"Patient {shortLabel}", $"patient+{shortLabel}@local", string.Empty, string.Empty, Domain.Enums.UserRole.Patient);
+            var idPropUser = typeof(Domain.Entities.User).GetProperty("Id");
+            if (idPropUser != null)
+            {
+                idPropUser.SetValue(placeholderUser, patientId);
+            }
+
+            await uow.Users.AddAsync(placeholderUser, ct);
+        }
+
+        profile = Domain.Entities.PatientProfile.Create(patientId);
+        createdProfiles[patientId] = profile;
+        await uow.Patients.AddPatientProfileAsync(profile, ct);
+        return profile;
+    }
+
+    private static string LatestVitalsKey(Guid patientId) => $"patient:{patientId:D}:latest_vitals";
 
     private static VitalRecordDto MapToDto(VitalRecord r) =>
         new(r.Id, r.PatientId, r.DeviceId, r.HeartRateBpm, r.SpO2Percent,

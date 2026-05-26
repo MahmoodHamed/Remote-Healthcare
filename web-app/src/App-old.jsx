@@ -502,7 +502,7 @@ function App() {
 
   const loginToApi = async () => {
     const base = apiBaseUrl.trim()
-    const email = loginEmail.trim()
+    const email = loginEmail.trim().toLowerCase()
     const password = loginPassword
 
     if (!base || !email || !password) {
@@ -566,12 +566,20 @@ function App() {
     const base = apiBaseUrl.trim()
     const fullName = registerFullName.trim()
     const email = registerEmail.trim()
-    const phone = registerPhone.trim()
-    const password = registerPassword
+    const phone = registerPhone.trim().replace(/[^0-9+]/g, '')
+    const password = registerPassword.trim()
+
+    const isStrongPassword = (value) => value.length >= 8 && /[A-Z]/.test(value) && /[0-9]/.test(value)
 
     if (!base || !fullName || !email || !phone || !password) {
       setAuthStatus('error')
       setAuthError('Full name, email, phone, password, and API base URL are required.')
+      return
+    }
+
+    if (!isStrongPassword(password)) {
+      setAuthStatus('error')
+      setAuthError('Password must be at least 8 characters and include an uppercase letter and a digit.')
       return
     }
 

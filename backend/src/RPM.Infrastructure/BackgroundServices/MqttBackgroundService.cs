@@ -1,12 +1,14 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
+using System.Threading.Channels;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
+using RPM.Application.DTOs.Vitals;
 using RPM.Application.Features.Vitals.Commands;
 
 namespace RPM.Infrastructure.BackgroundServices;
@@ -15,9 +17,19 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
     : BackgroundService
 {
     private IMqttClient? _client;
+    private readonly Channel<VitalIngestionDto> _queue = Channel.CreateBounded<VitalIngestionDto>(new BoundedChannelOptions(5000)
+    {
+        SingleReader = true,
+        SingleWriter = false,
+        FullMode = BoundedChannelFullMode.Wait
+    });
+    private CancellationToken _stoppingToken;
+    private const int MaxBatchSize = 100;
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(5);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _stoppingToken = stoppingToken;
         var factory = new MqttClientFactory();
         _client = factory.CreateMqttClient();
 
@@ -28,6 +40,8 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
             .Build();
 
         _client.ApplicationMessageReceivedAsync += OnMessageReceived;
+
+        var consumerTask = ConsumeQueueAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -56,6 +70,8 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
 
             await Task.Delay(10000, stoppingToken);
         }
+
+        await consumerTask;
     }
 
     private async Task OnMessageReceived(MqttApplicationMessageReceivedEventArgs e)
@@ -85,18 +101,53 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
                 return;
             }
 
-            var cmd = new IngestVitalCommand(
+            var queued = _queue.Writer.TryWrite(new VitalIngestionDto(
                 patientId.Value, deviceId.Value,
                 data.HeartRateBpm, data.SpO2Percent,
                 data.SystolicBp, data.DiastolicBp,
                 data.TemperatureC, data.StepsCount,
-                data.CaloriesBurned, data.FallDetected, data.IsWearing);
+                data.CaloriesBurned, data.FallDetected, data.IsWearing));
 
-            await mediator.Send(cmd);
+            if (!queued)
+                await _queue.Writer.WriteAsync(new VitalIngestionDto(
+                    patientId.Value, deviceId.Value,
+                    data.HeartRateBpm, data.SpO2Percent,
+                    data.SystolicBp, data.DiastolicBp,
+                    data.TemperatureC, data.StepsCount,
+                    data.CaloriesBurned, data.FallDetected, data.IsWearing), _stoppingToken);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing MQTT vital message");
+        }
+    }
+
+    private async Task ConsumeQueueAsync(CancellationToken stoppingToken)
+    {
+        var batch = new List<VitalIngestionDto>(MaxBatchSize);
+
+        while (await _queue.Reader.WaitToReadAsync(stoppingToken))
+        {
+            batch.Clear();
+            batch.Add(await _queue.Reader.ReadAsync(stoppingToken));
+            var flushDeadline = DateTime.UtcNow.Add(FlushInterval);
+
+            while (batch.Count < MaxBatchSize)
+            {
+                while (batch.Count < MaxBatchSize && _queue.Reader.TryRead(out var next))
+                    batch.Add(next);
+
+                if (batch.Count >= MaxBatchSize)
+                    break;
+
+                var remaining = flushDeadline - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                    break;
+
+                await Task.Delay(remaining, stoppingToken);
+            }
+
+            await mediator.Send(new IngestVitalsBatchCommand(batch.ToArray()), stoppingToken);
         }
     }
 
@@ -149,13 +200,7 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
     {
         if (_client?.IsConnected == true)
             await _client.DisconnectAsync(cancellationToken: ct);
+        _queue.Writer.TryComplete();
         await base.StopAsync(ct);
     }
 }
-
-public record MqttVitalsPayload(
-    string PatientId, string DeviceId,
-    float? HeartRateBpm, float? SpO2Percent,
-    float? SystolicBp, float? DiastolicBp,
-    float? TemperatureC, int? StepsCount,
-    float? CaloriesBurned, bool FallDetected, bool IsWearing);

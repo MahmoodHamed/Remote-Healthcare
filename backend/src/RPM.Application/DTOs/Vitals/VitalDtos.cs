@@ -1,4 +1,11 @@
 ﻿namespace RPM.Application.DTOs.Vitals;
+public record VitalIngestionDto(
+    Guid PatientId, Guid DeviceId,
+    float? HeartRateBpm, float? SpO2Percent,
+    float? SystolicBp, float? DiastolicBp,
+    float? TemperatureC, int? Steps,
+    float? Calories, bool FallDetected, bool IsWearing);
+
 public record VitalRecordDto(
     Guid Id, Guid PatientId, Guid DeviceId,
     float? HeartRateBpm, float? SpO2Percent,
