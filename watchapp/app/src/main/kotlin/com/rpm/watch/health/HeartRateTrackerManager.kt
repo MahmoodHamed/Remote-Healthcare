@@ -70,6 +70,9 @@ class HeartRateTrackerManager @Inject constructor(
         val trackerEventListener = object : HealthTracker.TrackerEventListener {
             override fun onDataReceived(dataPoints: List<DataPoint>) {
                 dataPoints.forEach { dp ->
+                    // Debug: dump any available ValueKey fields and their values for diagnostics
+                    logDataPointContents(dp)
+
                     val reading = when (mode) {
                         MonitoringMode.HEART_RATE -> VitalReading(
                             heartRateBpm = dp.getValue(ValueKey.HeartRateSet.HEART_RATE)?.coerceAtLeast(0),
@@ -281,6 +284,31 @@ class HeartRateTrackerManager @Inject constructor(
 
         return fields.maxByOrNull { score(it.name) }?.let { field ->
             runCatching { field.get(null) as? ValueKey<*> }.getOrNull()
+        }
+    }
+
+    private fun logDataPointContents(dp: DataPoint) {
+        try {
+            val nestedNames = listOf("HeartRateSet", "SpO2Set", "SkinTemperatureSet", "PpgSet")
+            for (n in nestedNames) {
+                val cls = runCatching {
+                    Class.forName("com.samsung.android.service.health.tracking.data.ValueKey\$$n")
+                }.getOrNull() ?: continue
+
+                val fields = cls.fields.filter { field ->
+                    ValueKey::class.java.isAssignableFrom(field.type) && java.lang.reflect.Modifier.isStatic(field.modifiers)
+                }
+
+                for (f in fields) {
+                    val vk = runCatching { f.get(null) as? ValueKey<*> }.getOrNull() ?: continue
+                    val v = runCatching { dp.getValue(vk) }.getOrNull()
+                    if (v != null) {
+                        Log.d(TAG, "DataPoint ${n}.${f.name} = $v")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to dump DataPoint contents: ${e.message}")
         }
     }
 

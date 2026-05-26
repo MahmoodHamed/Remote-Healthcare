@@ -238,7 +238,7 @@ class HeartRateMonitorService : Service() {
         )
         val json = Json.encodeToString(payload)
         mqttManager.publish(topic, json)
-        Log.d(TAG, "Published vitals to $topic")
+        Log.d(TAG, "Published vitals to $topic; payload=$json; hr=${latestHeartRate}, spo2=${latestSpO2Percent}, temp=${latestTemperatureC}")
     }
 
     private fun applyReading(mode: MonitoringMode, reading: VitalReading) {
@@ -249,16 +249,19 @@ class HeartRateMonitorService : Service() {
                 _heartRate.value = bpm
                 _hrStatus.value = reading.status
                 isWearingNow = reading.status != HrStatus.DEVICE_MOVING
+                Log.d(TAG, "Applied heart rate reading: $bpm, status=${reading.status}")
             }
 
             MonitoringMode.SPO2 -> {
                 latestSpO2Percent = reading.spO2Percent
                 _spO2Percent.value = reading.spO2Percent
+                Log.d(TAG, "Applied SpO2 reading: ${reading.spO2Percent}")
             }
 
             MonitoringMode.TEMPERATURE -> {
                 latestTemperatureC = reading.temperatureC
                 _temperatureC.value = reading.temperatureC
+                Log.d(TAG, "Applied temperature reading: ${reading.temperatureC}")
             }
         }
     }
@@ -285,8 +288,10 @@ class HeartRateMonitorService : Service() {
         val stepSensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         val tempSensorType = resolveSensorType("TYPE_SKIN_TEMPERATURE", "TYPE_AMBIENT_TEMPERATURE")
         val spo2SensorType = resolveSensorType("TYPE_OXYGEN_SATURATION", "TYPE_SPO2")
+        Log.d(TAG, "Resolved sensor types: temp=$tempSensorType spo2=$spo2SensorType")
         val tempSensor = tempSensorType?.let { sm.getDefaultSensor(it) }
         val spo2Sensor = spo2SensorType?.let { sm.getDefaultSensor(it) }
+        Log.d(TAG, "Platform sensors present: tempSensor=${tempSensor != null}, spo2Sensor=${spo2Sensor != null}")
         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         val listener = object : SensorEventListener {
