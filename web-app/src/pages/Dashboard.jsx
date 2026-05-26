@@ -107,9 +107,8 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
     if (!isAdmin) return
     setAdminLoading(true)
     try {
-      const response = await fetch(new URL('/api/admin/users', DEFAULT_API_BASE).toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
+      const client = await import('../api/client')
+      const response = await client.default.apiFetch('/api/admin/users')
       if (!response.ok) throw new Error(`Failed to fetch users (${response.status}).`)
       const data = await response.json()
       setAdminUsers(Array.isArray(data) ? data : [])

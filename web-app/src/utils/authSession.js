@@ -19,21 +19,24 @@ export const loadAuthSession = () => {
 
   return {
     accessToken: session.accessToken ?? session.token ?? null,
+    refreshToken: session.refreshToken ?? null,
     profile: session.profile ?? null,
   }
 }
 
-export const saveAuthSession = ({ accessToken, profile }) => {
+export const saveAuthSession = ({ accessToken, refreshToken = null, profile }) => {
   if (typeof localStorage === 'undefined') return
 
   localStorage.setItem(
     AUTH_SESSION_KEY,
-    JSON.stringify({ accessToken, profile })
+    JSON.stringify({ accessToken, refreshToken, profile })
   )
+  try { window.dispatchEvent(new CustomEvent('authSessionChanged', { detail: { accessToken, refreshToken, profile } })) } catch {}
 }
 
 export const clearAuthSession = () => {
   if (typeof localStorage === 'undefined') return
 
   localStorage.removeItem(AUTH_SESSION_KEY)
+  try { window.dispatchEvent(new CustomEvent('authSessionChanged', { detail: null })) } catch {}
 }

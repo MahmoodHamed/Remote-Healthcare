@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import './App.css'
 
@@ -71,23 +71,40 @@ export default function App() {
     return loadAuthSession()?.accessToken ?? null
   })
 
+  useEffect(() => {
+    const handler = (e) => {
+      const detail = e?.detail
+      if (!detail) {
+        setAccessToken(null)
+        setAuthProfile(null)
+        return
+      }
+      setAccessToken(detail.accessToken ?? null)
+      setAuthProfile(detail.profile ?? null)
+    }
+    window.addEventListener('authSessionChanged', handler)
+    return () => window.removeEventListener('authSessionChanged', handler)
+  }, [])
+
   const handleLoginSuccess = (data) => {
     const accessToken = data?.tokens?.accessToken
+    const refreshToken = data?.tokens?.refreshToken
     const user = data?.user
     if (accessToken && user) {
       setAccessToken(accessToken)
       setAuthProfile(user)
-      saveAuthSession({ accessToken, profile: user })
+      saveAuthSession({ accessToken, refreshToken, profile: user })
     }
   }
 
   const handleRegisterSuccess = (data) => {
     const accessToken = data?.tokens?.accessToken
+    const refreshToken = data?.tokens?.refreshToken
     const user = data?.user
     if (accessToken && user) {
       setAccessToken(accessToken)
       setAuthProfile(user)
-      saveAuthSession({ accessToken, profile: user })
+      saveAuthSession({ accessToken, refreshToken, profile: user })
     }
   }
 
