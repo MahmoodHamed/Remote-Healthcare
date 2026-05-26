@@ -56,13 +56,53 @@ data class VitalRecordDto(
     val id: String,
     val patientId: String,
     val recordedAt: String,
+
+    // Cardio
     val heartRateBpm: Float? = null,
+    val heartRateVariabilityMs: Float? = null,
+    val restingHeartRateBpm: Float? = null,
+    val maxHeartRateBpm: Float? = null,
+
+    // Respiratory
     val spO2Percent: Float? = null,
+    val respirationRateBpm: Float? = null,
+
+    // Blood pressure
     val systolicBp: Float? = null,
     val diastolicBp: Float? = null,
+
+    // Temperature
     val temperatureC: Float? = null,
+    val skinTemperatureC: Float? = null,
+
+    // Activity & energy
     val stepsCount: Int? = null,
     val caloriesBurned: Float? = null,
+    val distanceMeters: Float? = null,
+    val floorsClimbed: Int? = null,
+    val activeMinutes: Int? = null,
+
+    // Sleep & stress
+    val stressScore: Float? = null,
+    val sleepScore: Float? = null,
+    val sleepDurationMinutes: Int? = null,
+
+    // Body composition
+    val bodyFatPercent: Float? = null,
+    val muscleMassKg: Float? = null,
+    val bodyWaterPercent: Float? = null,
+    val basalMetabolicRate: Float? = null,
+
+    // ECG
+    val ecgAverageHeartRate: Float? = null,
+    val ecgClassification: String? = null,
+    val ecgWaveformJson: String? = null,
+
+    // Glucose
+    val bloodGlucoseMgDl: Float? = null,
+
+    // Safety & wear status
+    val batteryLevel: Float? = null,
     val fallDetected: Boolean = false,
     val isWearing: Boolean = true
 )
@@ -81,8 +121,39 @@ data class AlertThresholdDto(
     val minHeartRateBpm: Float? = null,
     val minSpO2Percent: Float? = null,
     val maxTemperatureC: Float? = null,
-    val maxSystolicBp: Float? = null
+    val maxSkinTemperatureC: Float? = null,
+    val maxSystolicBp: Float? = null,
+    val minRespirationRate: Float? = null,
+    val maxRespirationRate: Float? = null,
+    val maxStressScore: Float? = null,
+    val minBloodGlucoseMgDl: Float? = null,
+    val maxBloodGlucoseMgDl: Float? = null
 )
+
+
+// ── Notifications ─────────────────────────────────────────────────────────
+
+@Serializable
+data class NotificationDto(
+    val id: String,
+    val title: String,
+    val body: String,
+    val isRead: Boolean,
+    val sentAt: String,
+    val alertId: String? = null,
+    val dataPayload: String? = null
+)
+
+@Serializable
+data class NotificationsPagedDto(
+    val items: List<NotificationDto>,
+    val unreadCount: Int,
+    val page: Int,
+    val pageSize: Int
+)
+
+@Serializable
+data class UnreadCountDto(val count: Int)
 
 
 // ── Alerts ────────────────────────────────────────────────────────────────

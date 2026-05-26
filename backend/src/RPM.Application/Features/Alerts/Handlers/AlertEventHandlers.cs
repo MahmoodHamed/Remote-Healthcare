@@ -14,29 +14,39 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
         var alert = await uow.Alerts.GetByIdAsync(evt.AlertId, ct);
         if (alert is null) return;
 
-        // Get doctor and relatives to notify
         var patient = await uow.Patients.GetByPatientUserIdAsync(evt.PatientId, ct);
+        var patientUser = await uow.Users.GetByIdAsync(evt.PatientId, ct);
         var tokens = new List<string>();
+        var recipientUserIds = new HashSet<Guid>();
 
         if (patient is not null)
         {
             foreach (var assignment in patient.DoctorAssignments.Where(a => a.Status == RelationshipAssignmentStatus.Active))
             {
-                var doc = await uow.Users.GetByIdAsync(assignment.DoctorId, ct);
-                if (doc?.FcmToken != null) tokens.Add(doc.FcmToken);
+                var doctor = await uow.Users.GetByIdAsync(assignment.DoctorId, ct);
+                if (doctor is null) continue;
+                recipientUserIds.Add(doctor.Id);
+                if (!string.IsNullOrWhiteSpace(doctor.FcmToken)) tokens.Add(doctor.FcmToken!);
             }
             foreach (var link in patient.RelativeLinks)
             {
                 var rel = await uow.Users.GetByIdAsync(link.RelativeUserId, ct);
-                if (rel?.FcmToken != null) tokens.Add(rel.FcmToken);
+                if (rel is null) continue;
+                recipientUserIds.Add(rel.Id);
+                if (!string.IsNullOrWhiteSpace(rel.FcmToken)) tokens.Add(rel.FcmToken!);
             }
         }
 
+        var title = evt.Severity switch
+        {
+            AlertSeverity.Critical => $"CRITICAL: {patientUser?.FullName ?? "patient"}",
+            AlertSeverity.High => $"Urgent alert: {patientUser?.FullName ?? "patient"}",
+            _ => $"Alert: {patientUser?.FullName ?? "patient"}"
+        };
+
         if (tokens.Count > 0)
         {
-            var title = evt.Severity == AlertSeverity.Critical ? "🚨 CRITICAL Alert" : "⚠️ Patient Alert";
-            var body = alert.Message;
-            await notif.SendPushToManyAsync(tokens, title, body,
+            await notif.SendPushToManyAsync(tokens, title, alert.Message,
                 new Dictionary<string, string>
                 {
                     ["alertId"] = evt.AlertId.ToString(),
@@ -46,12 +56,30 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
                 }, ct);
         }
 
-        // Real-time hub broadcast
-        await hub.BroadcastAlertAsync(evt.PatientId, new { alert.Id, alert.Message, alert.Type, alert.Severity }, ct);
+        await hub.BroadcastAlertAsync(evt.PatientId, new
+        {
+            alert.Id,
+            alert.Message,
+            Type = alert.Type.ToString(),
+            Severity = alert.Severity.ToString(),
+            alert.TriggeredAt,
+            PatientId = evt.PatientId,
+            PatientName = patientUser?.FullName
+        }, ct);
 
-        // Persist notification record
-        var notifRecord = Notification.Create(evt.PatientId, "Patient Alert", alert.Message, evt.AlertId);
-        await uow.Users.AddNotificationAsync(notifRecord, ct);
+        // Persist a notification row per recipient (doctors + relatives) so the dashboards
+        // can render an inbox of past alerts even if the FCM push was missed.
+        var dataPayload = $"{{\"alertId\":\"{evt.AlertId}\",\"patientId\":\"{evt.PatientId}\",\"type\":\"{evt.Type}\",\"severity\":\"{evt.Severity}\"}}";
+        foreach (var recipientId in recipientUserIds)
+        {
+            var record = Notification.Create(recipientId, title, alert.Message, evt.AlertId, dataPayload);
+            await uow.Users.AddNotificationAsync(record, ct);
+        }
+
+        // Always also keep one notification on the patient's own timeline for personal history.
+        var patientRecord = Notification.Create(evt.PatientId, title, alert.Message, evt.AlertId, dataPayload);
+        await uow.Users.AddNotificationAsync(patientRecord, ct);
+
         await uow.SaveChangesAsync(ct);
     }
 }
@@ -73,26 +101,67 @@ public class VitalRecordedEventHandler(IUnitOfWork uow)
         {
             if (record.HeartRateBpm > threshold.MaxHeartRate)
                 alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighHeartRate, AlertSeverity.High,
-                    $"Heart rate is {record.HeartRateBpm} bpm - above maximum {threshold.MaxHeartRate} bpm"));
+                    $"Heart rate {record.HeartRateBpm:F0} bpm exceeds maximum {threshold.MaxHeartRate:F0} bpm."));
             else if (record.HeartRateBpm < threshold.MinHeartRate)
                 alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowHeartRate, AlertSeverity.High,
-                    $"Heart rate is {record.HeartRateBpm} bpm - below minimum {threshold.MinHeartRate} bpm"));
+                    $"Heart rate {record.HeartRateBpm:F0} bpm below minimum {threshold.MinHeartRate:F0} bpm."));
         }
+
         if (record.SpO2Percent.HasValue && record.SpO2Percent < threshold.MinSpO2)
             alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowSpO2, AlertSeverity.Critical,
-                $"SpO2 is {record.SpO2Percent}% - below minimum {threshold.MinSpO2}%"));
+                $"SpO2 {record.SpO2Percent:F1}% below minimum {threshold.MinSpO2:F0}%."));
 
         if (record.FallDetected)
             alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.FallDetected, AlertSeverity.Critical,
-                "Fall detected! Patient may need immediate assistance."));
+                "Fall detected. Patient may need immediate assistance."));
 
         if (record.SystolicBp.HasValue && record.SystolicBp > threshold.MaxSystolicBp)
             alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighBloodPressure, AlertSeverity.High,
-                $"Systolic BP is {record.SystolicBp} mmHg - above maximum {threshold.MaxSystolicBp} mmHg"));
+                $"Systolic BP {record.SystolicBp:F0} mmHg exceeds maximum {threshold.MaxSystolicBp:F0} mmHg."));
 
         if (record.TemperatureC.HasValue && record.TemperatureC > threshold.MaxTemperatureC)
             alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighTemperature, AlertSeverity.Medium,
-                $"Temperature is {record.TemperatureC}°C - above maximum {threshold.MaxTemperatureC}°C"));
+                $"Body temperature {record.TemperatureC:F1}°C exceeds maximum {threshold.MaxTemperatureC:F1}°C."));
+
+        if (record.SkinTemperatureC.HasValue && record.SkinTemperatureC > threshold.MaxSkinTemperatureC)
+            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighSkinTemperature, AlertSeverity.Medium,
+                $"Skin temperature {record.SkinTemperatureC:F1}°C above expected {threshold.MaxSkinTemperatureC:F1}°C."));
+
+        if (record.RespirationRateBpm.HasValue)
+        {
+            if (record.RespirationRateBpm < threshold.MinRespirationRate)
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.AbnormalRespirationRate, AlertSeverity.Medium,
+                    $"Respiration rate {record.RespirationRateBpm:F0}/min below minimum {threshold.MinRespirationRate:F0}/min."));
+            else if (record.RespirationRateBpm > threshold.MaxRespirationRate)
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.AbnormalRespirationRate, AlertSeverity.Medium,
+                    $"Respiration rate {record.RespirationRateBpm:F0}/min exceeds maximum {threshold.MaxRespirationRate:F0}/min."));
+        }
+
+        if (record.StressScore.HasValue && record.StressScore > threshold.MaxStressScore)
+            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighStress, AlertSeverity.Low,
+                $"Stress score {record.StressScore:F0} above threshold {threshold.MaxStressScore:F0}."));
+
+        if (record.BloodGlucoseMgDl.HasValue)
+        {
+            if (record.BloodGlucoseMgDl < threshold.MinBloodGlucoseMgDl)
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowBloodGlucose, AlertSeverity.High,
+                    $"Blood glucose {record.BloodGlucoseMgDl:F0} mg/dL below minimum {threshold.MinBloodGlucoseMgDl:F0} mg/dL."));
+            else if (record.BloodGlucoseMgDl > threshold.MaxBloodGlucoseMgDl)
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighBloodGlucose, AlertSeverity.High,
+                    $"Blood glucose {record.BloodGlucoseMgDl:F0} mg/dL exceeds maximum {threshold.MaxBloodGlucoseMgDl:F0} mg/dL."));
+        }
+
+        if (!string.IsNullOrWhiteSpace(record.EcgClassification) &&
+            !record.EcgClassification.Equals("Sinus Rhythm", StringComparison.OrdinalIgnoreCase) &&
+            !record.EcgClassification.Equals("Normal", StringComparison.OrdinalIgnoreCase))
+        {
+            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.AbnormalEcg, AlertSeverity.High,
+                $"ECG reported {record.EcgClassification}."));
+        }
+
+        if (record.BatteryLevel.HasValue && record.BatteryLevel < 15)
+            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowBattery, AlertSeverity.Low,
+                $"Watch battery is low: {record.BatteryLevel:F0}%."));
 
         foreach (var alert in alerts)
             await uow.Alerts.AddAsync(alert, ct);

@@ -92,3 +92,23 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         b.HasIndex(x => x.TokenHash);
     }
 }
+
+public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
+{
+    public void Configure(EntityTypeBuilder<Notification> b)
+    {
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Title).IsRequired().HasMaxLength(160);
+        b.Property(x => x.Body).IsRequired();
+        b.HasIndex(x => new { x.UserId, x.IsRead, x.SentAt });
+    }
+}
+
+public class DoctorPatientAssignmentConfiguration : IEntityTypeConfiguration<DoctorPatientAssignment>
+{
+    public void Configure(EntityTypeBuilder<DoctorPatientAssignment> b)
+    {
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.DoctorId, x.PatientId }).IsUnique();
+    }
+}

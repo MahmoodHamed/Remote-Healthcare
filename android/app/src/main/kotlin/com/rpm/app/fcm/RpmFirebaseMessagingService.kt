@@ -9,8 +9,23 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.rpm.app.MainActivity
+import com.rpm.app.data.local.TokenDataStore
+import com.rpm.app.data.remote.api.RpmApiService
+import com.rpm.app.data.remote.dto.UpdateFcmTokenRequest
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class RpmFirebaseMessagingService : FirebaseMessagingService() {
+
+    @Inject lateinit var api: RpmApiService
+    @Inject lateinit var tokenStore: TokenDataStore
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "RPM Alert"
@@ -20,7 +35,12 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
-        // TODO: save token and call API to update FCM token
+        scope.launch {
+            val accessToken = tokenStore.getAccessToken()
+            if (!accessToken.isNullOrBlank()) {
+                runCatching { api.updateFcmToken(UpdateFcmTokenRequest(token)) }
+            }
+        }
     }
 
     private fun showNotification(title: String, body: String) {

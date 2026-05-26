@@ -10,5 +10,12 @@ public enum AlertType
     HighTemperature,
     NoActivity,
     DeviceOffline,
-    DeviceNotWorn
+    DeviceNotWorn,
+    HighSkinTemperature,
+    AbnormalRespirationRate,
+    HighStress,
+    HighBloodGlucose,
+    LowBloodGlucose,
+    AbnormalEcg,
+    LowBattery
 }

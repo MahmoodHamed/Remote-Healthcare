@@ -1,145 +1,128 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { api } from '../utils/api'
+import { setAuthSession, homeRouteForRole } from '../utils/auth'
 
-import { getApiBase } from '../utils/apiBase'
-
-const parseErrorMessage = async (response) => {
-  try {
-    const data = await response.json()
-    if (!data) return ''
-    if (typeof data === 'string') return data
-    if (typeof data.message === 'string') return data.message
-    if (typeof data.title === 'string') return data.title
-    if (data.errors && typeof data.errors === 'object') {
-      const [firstKey] = Object.keys(data.errors)
-      if (firstKey) {
-        const detail = data.errors[firstKey]
-        if (Array.isArray(detail) && detail[0]) return `${firstKey}: ${detail[0]}`
-        if (typeof detail === 'string') return `${firstKey}: ${detail}`
-      }
-    }
-  } catch {
-    return ''
-  }
-  return ''
-}
-
-export default function Login({ onLoginSuccess }) {
+export default function Login({ onSignedIn }) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const presetRole = params.get('as') === 'doctor' ? 'doctor' : 'patient'
+
+  const [tab, setTab] = useState(presetRole)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [deviceInfo, setDeviceInfo] = useState('web-app')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+  const submit = async (event) => {
+    event.preventDefault()
     setError('')
-
+    setBusy(true)
     try {
-      const base = getApiBase().trim()
-      const normalizedEmail = email.trim().toLowerCase()
-
-      if (!base || !normalizedEmail || !password) {
-        throw new Error('Email and password are required.')
+      const response = await api.post(
+        '/api/auth/login',
+        { email, password, deviceInfo: 'web' },
+        { auth: false },
+      )
+      const user = setAuthSession(response)
+      if (!user) throw new Error('Unexpected response from server.')
+      if (user.role === 'Admin') {
+        setError('Use the admin sign-in page to access the hospital console.')
+        return
       }
-
-      const loginUrl = new URL('/api/auth/login', base).toString()
-
-      const response = await fetch(loginUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password,
-          deviceInfo: deviceInfo.trim() || 'web-app',
-        }),
-      })
-
-      if (!response.ok) {
-        const message = await parseErrorMessage(response)
-        if (response.status === 401) {
-          throw new Error(message || 'Invalid email or password.')
-        }
-        throw new Error(message || `Login failed (${response.status}).`)
-      }
-
-      const data = await response.json()
-      if (onLoginSuccess) {
-        onLoginSuccess(data)
-      }
-      navigate('/monitor')
+      onSignedIn?.(user)
+      navigate(homeRouteForRole(user.role), { replace: true })
     } catch (err) {
-      setError(err?.message || 'Login failed.')
+      setError(err.message || 'Sign-in failed.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
   return (
-    <main>
-      <section className="section simple-hero">
-        <div className="container">
-          <div className="section-head">
-            <p className="eyebrow">Access</p>
-            <h2>Sign in to Remote Care</h2>
-            <p className="muted">Enter your work email and password to access the dashboard.</p>
+    <div className="auth-shell">
+      <div className="auth-side">
+        <div className="auth-card">
+          <Link to="/" className="brand" style={{ marginBottom: '1.25rem' }}>
+            <span className="brand-mark">RC</span>
+            Remote Care
+          </Link>
+          <h1>Welcome back</h1>
+          <p className="auth-sub">Sign in to your patient or doctor workspace.</p>
+
+          <div className="auth-tabs" role="tablist">
+            <button
+              type="button"
+              className={`auth-tab ${tab === 'patient' ? 'active' : ''}`}
+              role="tab"
+              aria-selected={tab === 'patient'}
+              onClick={() => setTab('patient')}
+            >
+              Patient
+            </button>
+            <button
+              type="button"
+              className={`auth-tab ${tab === 'doctor' ? 'active' : ''}`}
+              role="tab"
+              aria-selected={tab === 'doctor'}
+              onClick={() => setTab('doctor')}
+            >
+              Doctor
+            </button>
           </div>
 
-          <div className="live-panel" style={{ maxWidth: '500px', margin: '2rem auto' }}>
-            <form className="live-form" onSubmit={handleLogin}>
-              <label>
-                Work email
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane@clinic.com"
-                  autoComplete="email"
-                  required
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  autoComplete="current-password"
-                  required
-                />
-              </label>
-              <label>
-                Device info (optional)
-                <input
-                  type="text"
-                  value={deviceInfo}
-                  onChange={(e) => setDeviceInfo(e.target.value)}
-                  placeholder="web-app"
-                  autoComplete="off"
-                />
-              </label>
+          <form className="form" onSubmit={submit} noValidate>
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Your password"
+                autoComplete="current-password"
+              />
+            </label>
+            {error && <div className="form-error">{error}</div>}
+            <button className="btn btn-primary btn-block" disabled={busy}>
+              {busy ? 'Signing in…' : `Sign in as ${tab}`}
+            </button>
+          </form>
 
-              <div className="live-actions">
-                <button className="btn btn-primary" type="submit" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-                <Link className="btn btn-outline" to="/">
-                  Back
-                </Link>
-              </div>
-
-              {error ? <p className="live-error">{error}</p> : null}
-
-              <p className="muted auth-hint">
-                Don't have an account? <Link to="/register">Create one</Link>
-              </p>
-            </form>
+          <div className="auth-foot">
+            {tab === 'doctor' ? (
+              <>Need a doctor account? <Link to="/register/doctor">Apply for access</Link></>
+            ) : (
+              <>New here? <Link to="/register/patient">Create a patient account</Link></>
+            )}
+            <div style={{ marginTop: '0.5rem' }}>
+              Hospital administrator? <Link to="/admin/login">Admin sign in</Link>
+            </div>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <aside className="auth-art">
+        <div className="auth-art-content">
+          <span className="pill">Clinician console</span>
+          <h2>Care that follows the patient everywhere.</h2>
+          <p>
+            Doctors and patients use the same secure platform. The data your watch streams shows up in the doctor’s
+            workspace in real time, with alerts when thresholds are crossed.
+          </p>
+        </div>
+      </aside>
+    </div>
   )
 }

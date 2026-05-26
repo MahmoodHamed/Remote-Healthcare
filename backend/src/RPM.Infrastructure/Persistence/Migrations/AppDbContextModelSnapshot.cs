@@ -96,7 +96,25 @@ namespace RPM.Infrastructure.Persistence.Migrations
                     b.Property<float>("MaxTemperatureC")
                         .HasColumnType("real");
 
+                    b.Property<float>("MaxSkinTemperatureC")
+                        .HasColumnType("real");
+
                     b.Property<float>("MinHeartRate")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MinRespirationRate")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MaxRespirationRate")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MaxStressScore")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MinBloodGlucoseMgDl")
+                        .HasColumnType("real");
+
+                    b.Property<float>("MaxBloodGlucoseMgDl")
                         .HasColumnType("real");
 
                     b.Property<float>("MinSpO2")
@@ -267,6 +285,9 @@ namespace RPM.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PatientId");
 
+                    b.HasIndex("DoctorId", "PatientId")
+                        .IsUnique();
+
                     b.ToTable("DoctorPatientAssignments");
                 });
 
@@ -411,7 +432,8 @@ namespace RPM.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -424,6 +446,8 @@ namespace RPM.Infrastructure.Persistence.Migrations
                     b.HasIndex("AlertId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "IsRead", "SentAt");
 
                     b.ToTable("Notifications");
                 });
@@ -653,6 +677,66 @@ namespace RPM.Infrastructure.Persistence.Migrations
                         .HasColumnType("real");
 
                     b.Property<float?>("TemperatureC")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("SkinTemperatureC")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("HeartRateVariabilityMs")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("RestingHeartRateBpm")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("MaxHeartRateBpm")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("RespirationRateBpm")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("DistanceMeters")
+                        .HasColumnType("real");
+
+                    b.Property<int?>("FloorsClimbed")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ActiveMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<float?>("StressScore")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("SleepScore")
+                        .HasColumnType("real");
+
+                    b.Property<int?>("SleepDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<float?>("BodyFatPercent")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("MuscleMassKg")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("BodyWaterPercent")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("BasalMetabolicRate")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("EcgAverageHeartRate")
+                        .HasColumnType("real");
+
+                    b.Property<string>("EcgClassification")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EcgWaveformJson")
+                        .HasColumnType("text");
+
+                    b.Property<float?>("BloodGlucoseMgDl")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("BatteryLevel")
                         .HasColumnType("real");
 
                     b.Property<DateTime?>("UpdatedAt")

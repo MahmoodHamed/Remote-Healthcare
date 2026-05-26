@@ -7,6 +7,7 @@ import androidx.navigation.compose.*
 import com.rpm.app.ui.feature.alerts.AlertsScreen
 import com.rpm.app.ui.feature.auth.*
 import com.rpm.app.ui.feature.chat.*
+import com.rpm.app.ui.feature.notifications.NotificationsScreen
 import com.rpm.app.ui.feature.patients.*
 
 object Routes {
@@ -17,6 +18,7 @@ object Routes {
     const val ALERTS              = "alerts?patientId={patientId}"
     const val CONVERSATION_LIST   = "conversations"
     const val CHAT_ROOM           = "conversations/{conversationId}"
+    const val NOTIFICATIONS       = "notifications"
 
     fun patientDetail(id: String) = "patients/$id"
     fun alerts(patientId: String? = null) = if (patientId != null) "alerts?patientId=$patientId" else "alerts"
@@ -61,6 +63,7 @@ fun RpmNavHost() {
         composable(Routes.PATIENT_LIST) {
             PatientListScreen(
                 onPatientClick = { navController.navigate(Routes.patientDetail(it)) },
+                onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Routes.LOGIN) {
@@ -104,6 +107,11 @@ fun RpmNavHost() {
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
         ) {
             ChatRoomScreen(onBack = { navController.popBackStack() })
+        }
+
+        // ── Notifications ─────────────────────────────────────────────────
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

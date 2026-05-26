@@ -19,6 +19,7 @@ import com.rpm.app.data.remote.dto.PatientSummaryDto
 fun PatientListScreen(
     onPatientClick: (patientId: String) -> Unit,
     onLogout: () -> Unit,
+    onOpenNotifications: () -> Unit = {},
     viewModel: PatientListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -28,6 +29,9 @@ fun PatientListScreen(
             TopAppBar(
                 title = { Text("My Patients") },
                 actions = {
+                    IconButton(onClick = onOpenNotifications) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                    }
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }

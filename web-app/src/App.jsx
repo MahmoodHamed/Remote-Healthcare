@@ -1,208 +1,127 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
-import PatientMonitor from './pages/PatientMonitor'
-import LinkWatch from './pages/LinkWatch'
+import { readProfile, logout as clearSession, homeRouteForRole } from './utils/auth'
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import Landing from './pages/Landing.jsx'
+import Login from './pages/Login.jsx'
+import RegisterPicker from './pages/RegisterPicker.jsx'
+import RegisterPatient from './pages/RegisterPatient.jsx'
+import RegisterDoctor from './pages/RegisterDoctor.jsx'
+import AdminLogin from './pages/AdminLogin.jsx'
 
-const roleRoutes = {
-  Admin: [
-    { to: '/dashboard', label: 'Admin dashboard' },
-    { to: '/monitor', label: 'Live monitor' },
-    { to: '/heart-rate', label: 'Heart rate' },
-    { to: '/link-watch', label: 'Watch setup' },
-  ],
-  Doctor: [
-    { to: '/dashboard', label: 'Doctor dashboard' },
-    { to: '/monitor', label: 'Patient monitor' },
-    { to: '/heart-rate', label: 'Heart rate' },
-  ],
-  Patient: [
-    { to: '/dashboard', label: 'My dashboard' },
-    { to: '/monitor', label: 'My vitals' },
-    { to: '/link-watch', label: 'Link watch' },
-  ],
+import AdminLayout from './layouts/AdminLayout.jsx'
+import DoctorLayout from './layouts/DoctorLayout.jsx'
+import PatientLayout from './layouts/PatientLayout.jsx'
+
+import AdminOverview from './pages/admin/AdminOverview.jsx'
+import AdminDoctors from './pages/admin/AdminDoctors.jsx'
+import AdminDoctorDetail from './pages/admin/AdminDoctorDetail.jsx'
+import AdminPatients from './pages/admin/AdminPatients.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+
+import DoctorDashboard from './pages/doctor/DoctorDashboard.jsx'
+import DoctorPatients from './pages/doctor/DoctorPatients.jsx'
+import DoctorPatientDetail from './pages/doctor/DoctorPatientDetail.jsx'
+import DoctorNotifications from './pages/doctor/DoctorNotifications.jsx'
+
+import PatientDashboard from './pages/patient/PatientDashboard.jsx'
+import PatientWatch from './pages/patient/PatientWatch.jsx'
+import PatientNotifications from './pages/patient/PatientNotifications.jsx'
+
+const AuthContext = ({ children }) => children
+
+function ProtectedRoute({ role, profile, children }) {
+  if (!profile) return <Navigate to="/login" replace />
+  if (role && profile.role !== role) return <Navigate to={homeRouteForRole(profile.role)} replace />
+  return children
 }
 
-const normalizeRoleClass = (role) => {
-  if (role === 'Admin') return 'role-admin'
-  if (role === 'Doctor') return 'role-doctor'
-  return 'role-patient'
-}
-
-function Header({ authProfile, onLogout }) {
-  const navItems = roleRoutes[authProfile?.role] || roleRoutes.Patient
-
-  return (
-    <header className="nav">
-      <div className="container nav-inner">
-        <Link className="brand" to="/" aria-label="Remote Care">
-          <span className="brand-mark">RC</span>
-          Remote Care
-        </Link>
-
-        <nav className="nav-links">
-          {authProfile ? (
-            <>
-              {navItems.map((item) => (
-                <Link key={item.to} to={item.to}>{item.label}</Link>
-              ))}
-              {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Users</Link>}
-              <span className={`role-badge role-badge-${normalizeRoleClass(authProfile?.role)}`}>
-                {authProfile?.role}
-              </span>
-              <button className="nav-link-btn" onClick={onLogout} style={{ cursor: 'pointer' }}>
-                Sign out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login">Sign in</Link>
-              <Link to="/register">Register</Link>
-            </>
-          )}
-        </nav>
-
-        <div className="nav-cta">
-          {!authProfile && <Link className="btn btn-primary" to="/login">Sign in</Link>}
-        </div>
-      </div>
-    </header>
-  )
-}
-
-function Footer() {
-  return (
-    <footer className="footer">
-      <div className="container">
-        <p>&copy; 2026 Remote Care. Secure remote patient monitoring system.</p>
-      </div>
-    </footer>
-  )
-}
-
-// Protected Route - redirect to login if not authenticated
-function ProtectedRoute({ authProfile, children }) {
-  if (!authProfile) {
-    return <Navigate to="/login" replace />
-  }
+function AdminProtected({ profile, children }) {
+  if (!profile) return <Navigate to="/admin/login" replace />
+  if (profile.role !== 'Admin') return <Navigate to={homeRouteForRole(profile.role)} replace />
   return children
 }
 
 export default function App() {
-  const [authProfile, setAuthProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('authSession')
-      if (!saved) return null
-      const session = JSON.parse(saved)
-      return session?.profile ?? null
-    } catch (err) {
-      localStorage.removeItem('authSession')
-      return null
-    }
-  })
-  const [accessToken, setAccessToken] = useState(() => {
-    try {
-      const saved = localStorage.getItem('authSession')
-      if (!saved) return null
-      const session = JSON.parse(saved)
-      return session?.token ?? null
-    } catch (err) {
-      localStorage.removeItem('authSession')
-      return null
-    }
-  })
+  const [profile, setProfile] = useState(() => readProfile())
 
-  const handleLoginSuccess = (data) => {
-    const token = data?.tokens?.accessToken
-    const user = data?.user
-    if (token && user) {
-      setAccessToken(token)
-      setAuthProfile(user)
-      localStorage.setItem('authSession', JSON.stringify({ token, profile: user }))
-    }
-  }
+  useEffect(() => {
+    const handler = () => setProfile(readProfile())
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
 
-  const handleRegisterSuccess = (data) => {
-    const token = data?.tokens?.accessToken
-    const user = data?.user
-    if (token && user) {
-      setAccessToken(token)
-      setAuthProfile(user)
-      localStorage.setItem('authSession', JSON.stringify({ token, profile: user }))
-    }
-  }
-
+  const handleSignedIn = (user) => setProfile(user)
   const handleLogout = () => {
-    setAccessToken(null)
-    setAuthProfile(null)
-    localStorage.removeItem('authSession')
+    clearSession()
+    setProfile(null)
   }
 
   return (
     <BrowserRouter>
-      <div className={`page ${normalizeRoleClass(authProfile?.role)}`}>
-        <Header authProfile={authProfile} onLogout={handleLogout} />
-
+      <AuthContext>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-          <Route path="/register" element={<Register onRegisterSuccess={handleRegisterSuccess} />} />
+          {/* Public */}
+          <Route path="/" element={<Landing profile={profile} />} />
+          <Route path="/login" element={<Login onSignedIn={handleSignedIn} />} />
+          <Route path="/register" element={<RegisterPicker />} />
+          <Route path="/register/patient" element={<RegisterPatient onSignedIn={handleSignedIn} />} />
+          <Route path="/register/doctor" element={<RegisterDoctor onSignedIn={handleSignedIn} />} />
+          <Route path="/admin/login" element={<AdminLogin onSignedIn={handleSignedIn} />} />
+
+          {/* Admin */}
           <Route
-            path="/dashboard"
+            path="/admin"
             element={
-              <ProtectedRoute authProfile={authProfile}>
-                <Dashboard
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
+              <AdminProtected profile={profile}>
+                <AdminLayout profile={profile} onLogout={handleLogout} />
+              </AdminProtected>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="doctors" element={<AdminDoctors />} />
+            <Route path="doctors/:doctorId" element={<AdminDoctorDetail />} />
+            <Route path="patients" element={<AdminPatients />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+
+          {/* Doctor */}
+          <Route
+            path="/doctor"
+            element={
+              <ProtectedRoute role="Doctor" profile={profile}>
+                <DoctorLayout profile={profile} onLogout={handleLogout} />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DoctorDashboard />} />
+            <Route path="patients" element={<DoctorPatients />} />
+            <Route path="patients/:patientUserId" element={<DoctorPatientDetail />} />
+            <Route path="notifications" element={<DoctorNotifications />} />
+          </Route>
+
+          {/* Patient */}
           <Route
-            path="/heart-rate"
+            path="/patient"
             element={
-              <ProtectedRoute authProfile={authProfile}>
-                <HeartRateMonitor
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
+              <ProtectedRoute role="Patient" profile={profile}>
+                <PatientLayout profile={profile} onLogout={handleLogout} />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/monitor"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <PatientMonitor
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/link-watch"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <LinkWatch authProfile={authProfile} />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<PatientDashboard />} />
+            <Route path="watch" element={<PatientWatch />} />
+            <Route path="notifications" element={<PatientNotifications />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-
-        <Footer />
-      </div>
+      </AuthContext>
     </BrowserRouter>
   )
 }

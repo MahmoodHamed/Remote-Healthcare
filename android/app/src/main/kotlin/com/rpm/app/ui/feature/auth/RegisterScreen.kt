@@ -27,8 +27,8 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    var role     by remember { mutableStateOf("Doctor") }
-    val roles    = listOf("Doctor", "Patient", "Relative")
+    var role     by remember { mutableStateOf("Patient") }
+    val roles    = listOf("Patient", "Doctor")
 
     Scaffold(topBar = { TopAppBar(title = { Text("Create Account") }) }) { padding ->
         Column(
@@ -96,7 +96,12 @@ fun RegisterScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.register(email, password, fullName, role) },
+                onClick = {
+                    when (role) {
+                        "Doctor" -> viewModel.registerDoctor(email, password, fullName)
+                        else -> viewModel.registerPatient(email, password, fullName)
+                    }
+                },
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth()
             ) {

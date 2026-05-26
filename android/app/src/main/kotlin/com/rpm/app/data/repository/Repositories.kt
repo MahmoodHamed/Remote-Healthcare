@@ -61,6 +61,22 @@ class ChatRepository @Inject constructor(private val api: RpmApiService) {
         safeCall { api.deleteMessage(messageId) }
 }
 
+class NotificationsRepository @Inject constructor(private val api: RpmApiService) {
+
+    suspend fun getNotifications(page: Int = 1): Resource<NotificationsPagedDto> =
+        safeCall { api.getNotifications(page) }
+
+    suspend fun getUnreadCount(): Resource<Int> = when (val r = safeCall { api.getUnreadCount() }) {
+        is Resource.Success -> Resource.Success(r.data.count)
+        is Resource.Error -> Resource.Error(r.message)
+        Resource.Loading -> Resource.Loading
+    }
+
+    suspend fun markRead(id: String): Resource<Unit> = safeCall { api.markNotificationRead(id) }
+
+    suspend fun markAllRead(): Resource<Unit> = safeCall { api.markAllNotificationsRead() }
+}
+
 // ── Shared helper ─────────────────────────────────────────────────────────
 private suspend fun <T> safeCall(call: suspend () -> retrofit2.Response<T>): Resource<T> {
     return try {

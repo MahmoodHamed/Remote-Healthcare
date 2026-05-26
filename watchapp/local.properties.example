@@ -1,0 +1,6 @@
+# Copy to local.properties (not committed). Point to your Android SDK.
+# Linux server example:
+sdk.dir=/opt/android-sdk
+#
+# Windows example:
+# sdk.dir=C\:\\Users\\YOUR_USER\\AppData\\Local\\Android\\Sdk

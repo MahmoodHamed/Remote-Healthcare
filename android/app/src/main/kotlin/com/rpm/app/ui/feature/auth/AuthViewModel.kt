@@ -43,30 +43,33 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun login(email: String, password: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = authRepository.login(email, password, fcmToken = null)) {
-                is Resource.Success -> _uiState.value = AuthUiState(
-                    isLoggedIn = true,
-                    userRole = result.data.user.role
-                )
-                is Resource.Error   -> _uiState.value = AuthUiState(error = result.message)
-                Resource.Loading    -> {}
-            }
-        }
-    }
+    fun login(email: String, password: String) = runAuth { authRepository.login(email, password, null) }
 
-    fun register(email: String, password: String, fullName: String, role: String) {
+    fun adminLogin(email: String, password: String) =
+        runAuth { authRepository.adminLogin(email, password, null) }
+
+    fun registerPatient(email: String, password: String, fullName: String) =
+        runAuth { authRepository.registerPatient(email, password, fullName, null) }
+
+    fun registerDoctor(email: String, password: String, fullName: String) =
+        runAuth { authRepository.registerDoctor(email, password, fullName, null) }
+
+    fun register(email: String, password: String, fullName: String, role: String) =
+        runAuth { authRepository.register(email, password, fullName, role, null) }
+
+    private fun runAuth(block: suspend () -> Resource<com.rpm.app.data.remote.dto.LoginResponseDto>) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = authRepository.register(email, password, fullName, role, null)) {
+            when (val result = block()) {
                 is Resource.Success -> _uiState.value = AuthUiState(
                     isLoggedIn = true,
-                    userRole = result.data.user.role
+                    userRole = result.data.user.role,
                 )
-                is Resource.Error   -> _uiState.value = AuthUiState(error = result.message)
-                Resource.Loading    -> {}
+                is Resource.Error -> _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = result.message,
+                )
+                Resource.Loading -> {}
             }
         }
     }

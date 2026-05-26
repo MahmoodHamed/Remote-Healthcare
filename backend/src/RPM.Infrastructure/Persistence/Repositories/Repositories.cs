@@ -163,6 +163,25 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
     public Task<DoctorProfile?> GetDoctorProfileByUserIdAsync(Guid userId, CancellationToken ct = default) =>
         db.DoctorProfiles.FirstOrDefaultAsync(d => d.UserId == userId, ct);
 
+    public async Task<IReadOnlyList<DoctorProfile>> GetAllDoctorsAsync(CancellationToken ct = default) =>
+        await db.DoctorProfiles
+            .Include(d => d.User)
+            .Include(d => d.PatientAssignments)
+            .OrderBy(d => d.User.FullName)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<PatientProfile>> GetAllPatientsAsync(CancellationToken ct = default) =>
+        await db.PatientProfiles
+            .Include(p => p.User)
+            .Include(p => p.DoctorAssignments).ThenInclude(a => a.Doctor)
+            .OrderBy(p => p.User.FullName)
+            .ToListAsync(ct);
+
+    public Task<DoctorPatientAssignment?> GetAssignmentAsync(Guid doctorUserId, Guid patientProfileId, CancellationToken ct = default) =>
+        db.DoctorPatientAssignments.FirstOrDefaultAsync(a => a.DoctorId == doctorUserId && a.PatientId == patientProfileId, ct);
+
+    public void UpdateAssignment(DoctorPatientAssignment assignment) => db.DoctorPatientAssignments.Update(assignment);
+
     public async Task AddPatientProfileAsync(PatientProfile profile, CancellationToken ct = default) =>
         await db.PatientProfiles.AddAsync(profile, ct);
 
@@ -176,4 +195,29 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
         await db.PatientRelativeLinks.AddAsync(link, ct);
 
     public void Update(PatientProfile profile) => db.PatientProfiles.Update(profile);
+}
+
+public class NotificationRepository(AppDbContext db) : INotificationRepository
+{
+    public Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+
+    public async Task<IReadOnlyList<Notification>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken ct = default) =>
+        await db.Notifications
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+    public Task<int> GetUnreadCountAsync(Guid userId, CancellationToken ct = default) =>
+        db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, ct);
+
+    public async Task MarkAllReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        var rows = await db.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync(ct);
+        foreach (var n in rows) n.MarkRead();
+    }
+
+    public void Update(Notification notification) => db.Notifications.Update(notification);
 }

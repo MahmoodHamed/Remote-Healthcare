@@ -85,10 +85,22 @@ fun PatientDetailScreen(
                                     Text("Latest Vitals", style = MaterialTheme.typography.titleMedium)
                                     Spacer(Modifier.height(8.dp))
                                     v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+                                    v.heartRateVariabilityMs?.let { VitalRow("HRV", String.format("%.1f ms", it)) }
                                     v.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-                                    v.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
+                                    v.respirationRateBpm?.let { VitalRow("Respiration", "${it.toInt()} /min") }
+                                    v.temperatureC?.let { VitalRow("Body Temp", String.format("%.1f °C", it)) }
+                                    v.skinTemperatureC?.let { VitalRow("Skin Temp", String.format("%.1f °C", it)) }
                                     if (v.systolicBp != null && v.diastolicBp != null)
                                         VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
+                                    v.stressScore?.let { VitalRow("Stress", "${it.toInt()}/100") }
+                                    v.sleepScore?.let { VitalRow("Sleep score", "${it.toInt()}/100") }
+                                    v.stepsCount?.let { VitalRow("Steps", "$it") }
+                                    v.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
+                                    v.distanceMeters?.let { VitalRow("Distance", String.format("%.0f m", it)) }
+                                    v.ecgClassification?.let { VitalRow("ECG", it) }
+                                    v.bloodGlucoseMgDl?.let { VitalRow("Glucose", String.format("%.0f mg/dL", it)) }
+                                    v.bodyFatPercent?.let { VitalRow("Body Fat", String.format("%.1f %%", it)) }
+                                    v.batteryLevel?.let { VitalRow("Watch battery", "${it.toInt()}%") }
                                     VitalRow("Wearing Watch", if (v.isWearing) "Yes" else "No")
                                     if (v.fallDetected)
                                         Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
@@ -116,10 +128,18 @@ private fun RealtimeVitalsCard(rv: RealTimeVitals) {
             }
             Spacer(Modifier.height(8.dp))
             rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+            rv.heartRateVariabilityMs?.let { VitalRow("HRV", String.format("%.1f ms", it)) }
             rv.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-            rv.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
+            rv.respirationRateBpm?.let { VitalRow("Respiration", "${it.toInt()} /min") }
+            rv.temperatureC?.let { VitalRow("Body Temp", String.format("%.1f °C", it)) }
+            rv.skinTemperatureC?.let { VitalRow("Skin Temp", String.format("%.1f °C", it)) }
             if (rv.systolicBp != null && rv.diastolicBp != null)
                 VitalRow("Blood Pressure", "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg")
+            rv.stressScore?.let { VitalRow("Stress", "${it.toInt()}/100") }
+            rv.stepsCount?.let { VitalRow("Steps", "$it") }
+            rv.ecgClassification?.let { VitalRow("ECG", it) }
+            rv.bloodGlucoseMgDl?.let { VitalRow("Glucose", String.format("%.0f mg/dL", it)) }
+            rv.batteryLevel?.let { VitalRow("Watch battery", "${it.toInt()}%") }
             if (rv.fallDetected)
                 Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
         }

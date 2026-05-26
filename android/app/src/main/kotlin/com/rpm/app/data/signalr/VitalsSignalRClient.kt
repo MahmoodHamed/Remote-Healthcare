@@ -13,13 +13,25 @@ import javax.inject.Singleton
 /** JSON payload received from VitalsHub "ReceiveVitals" */
 data class RealTimeVitals(
     val patientId: String,
-    val heartRateBpm: Float?,
-    val spO2Percent: Float?,
-    val systolicBp: Float?,
-    val diastolicBp: Float?,
-    val temperatureC: Float?,
-    val fallDetected: Boolean,
-    val recordedAt: String
+    val heartRateBpm: Float? = null,
+    val heartRateVariabilityMs: Float? = null,
+    val spO2Percent: Float? = null,
+    val respirationRateBpm: Float? = null,
+    val systolicBp: Float? = null,
+    val diastolicBp: Float? = null,
+    val temperatureC: Float? = null,
+    val skinTemperatureC: Float? = null,
+    val stressScore: Float? = null,
+    val sleepScore: Float? = null,
+    val stepsCount: Int? = null,
+    val caloriesBurned: Float? = null,
+    val distanceMeters: Float? = null,
+    val ecgClassification: String? = null,
+    val bloodGlucoseMgDl: Float? = null,
+    val batteryLevel: Float? = null,
+    val fallDetected: Boolean = false,
+    val isWearing: Boolean = true,
+    val recordedAt: String = "",
 )
 
 data class RealTimeAlert(

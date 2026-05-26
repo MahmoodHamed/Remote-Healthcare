@@ -7,11 +7,20 @@ import retrofit2.http.*
 interface RpmApiService {
 
     // ── Auth ──────────────────────────────────────────────────────────────
+    @POST("api/auth/register/patient")
+    suspend fun registerPatient(@Body request: RegisterRequest): Response<LoginResponseDto>
+
+    @POST("api/auth/register/doctor")
+    suspend fun registerDoctor(@Body request: RegisterRequest): Response<LoginResponseDto>
+
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<LoginResponseDto>
 
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponseDto>
+
+    @POST("api/auth/admin/login")
+    suspend fun adminLogin(@Body request: LoginRequest): Response<LoginResponseDto>
 
     @POST("api/auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthTokensDto>
@@ -106,4 +115,20 @@ interface RpmApiService {
 
     @DELETE("api/chat/messages/{messageId}")
     suspend fun deleteMessage(@Path("messageId") messageId: String): Response<Unit>
+
+    // ── Notifications ─────────────────────────────────────────────────────
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 30
+    ): Response<NotificationsPagedDto>
+
+    @GET("api/notifications/unread-count")
+    suspend fun getUnreadCount(): Response<UnreadCountDto>
+
+    @PATCH("api/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: String): Response<Unit>
+
+    @PATCH("api/notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<Unit>
 }

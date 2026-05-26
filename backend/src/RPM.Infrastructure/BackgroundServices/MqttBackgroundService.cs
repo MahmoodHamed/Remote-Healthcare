@@ -101,20 +101,35 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
                 return;
             }
 
-            var queued = _queue.Writer.TryWrite(new VitalIngestionDto(
+            var dto = new VitalIngestionDto(
                 patientId.Value, deviceId.Value,
                 data.HeartRateBpm, data.SpO2Percent,
                 data.SystolicBp, data.DiastolicBp,
                 data.TemperatureC, data.StepsCount,
-                data.CaloriesBurned, data.FallDetected, data.IsWearing));
+                data.CaloriesBurned, data.FallDetected, data.IsWearing,
+                data.SkinTemperatureC,
+                data.HeartRateVariabilityMs,
+                data.RestingHeartRateBpm,
+                data.MaxHeartRateBpm,
+                data.RespirationRateBpm,
+                data.DistanceMeters,
+                data.FloorsClimbed,
+                data.ActiveMinutes,
+                data.StressScore,
+                data.SleepScore,
+                data.SleepDurationMinutes,
+                data.BodyFatPercent,
+                data.MuscleMassKg,
+                data.BodyWaterPercent,
+                data.BasalMetabolicRate,
+                data.EcgAverageHeartRate,
+                data.EcgClassification,
+                data.EcgWaveformJson,
+                data.BloodGlucoseMgDl,
+                data.BatteryLevel);
 
-            if (!queued)
-                await _queue.Writer.WriteAsync(new VitalIngestionDto(
-                    patientId.Value, deviceId.Value,
-                    data.HeartRateBpm, data.SpO2Percent,
-                    data.SystolicBp, data.DiastolicBp,
-                    data.TemperatureC, data.StepsCount,
-                    data.CaloriesBurned, data.FallDetected, data.IsWearing), _stoppingToken);
+            if (!_queue.Writer.TryWrite(dto))
+                await _queue.Writer.WriteAsync(dto, _stoppingToken);
         }
         catch (Exception ex)
         {

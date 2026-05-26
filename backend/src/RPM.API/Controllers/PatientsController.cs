@@ -17,45 +17,91 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
     {
         var patients = await uow.Patients.GetByDoctorIdAsync(currentUser.UserId, ct);
         var result = patients.Select(p => new PatientSummaryDto(
-            p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
-            p.DateOfBirth, p.BloodType?.ToString()));
+            p.UserId,
+            p.Id,
+            p.User.FullName,
+            p.User.Email,
+            p.User.Phone,
+            p.User.AvatarUrl,
+            p.DateOfBirth,
+            p.BloodType?.ToString(),
+            p.User.IsActive));
         return Ok(result);
     }
 
-    [HttpGet("{userId}")]
+    [HttpGet("{userId:guid}")]
     public async Task<IActionResult> GetPatient(Guid userId, CancellationToken ct)
     {
-        var profile = await uow.Patients.GetByUserIdAsync(userId, ct);
+        var profile = await uow.Patients.GetByPatientUserIdAsync(userId, ct);
         if (profile is null) return NotFound();
 
         var latest = await uow.Vitals.GetLatestByPatientIdAsync(userId, ct);
+        var doctorDtos = new List<DoctorAssignmentDto>();
+        foreach (var assignment in profile.DoctorAssignments)
+        {
+            var doctorUser = await uow.Users.GetByIdAsync(assignment.DoctorId, ct);
+            var doctorProfile = await uow.Patients.GetDoctorProfileByUserIdAsync(assignment.DoctorId, ct);
+            if (doctorUser is null) continue;
+            doctorDtos.Add(new DoctorAssignmentDto(
+                doctorUser.Id,
+                doctorUser.FullName,
+                doctorProfile?.Specialization ?? string.Empty,
+                assignment.Status.ToString(),
+                assignment.AssignedAt));
+        }
+
         var dto = new PatientDetailDto(
-            profile.UserId, profile.User.FullName, profile.User.Email, profile.User.Phone,
-            profile.User.AvatarUrl, profile.DateOfBirth, profile.BloodType?.ToString(),
-            profile.WeightKg, profile.HeightCm, profile.ChronicDiseases,
-            profile.Allergies, profile.CurrentMedications, profile.EmergencyContactPhone,
+            profile.UserId,
+            profile.Id,
+            profile.User.FullName,
+            profile.User.Email,
+            profile.User.Phone,
+            profile.User.AvatarUrl,
+            profile.DateOfBirth,
+            profile.BloodType?.ToString(),
+            profile.WeightKg,
+            profile.HeightCm,
+            profile.ChronicDiseases,
+            profile.Allergies,
+            profile.CurrentMedications,
+            profile.EmergencyContactPhone,
             latest is null ? null : new VitalRecordLatestDto(
                 latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
-                latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt));
+                latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt),
+            doctorDtos);
         return Ok(dto);
     }
 
-    [HttpPost("{patientId}/assign-doctor/{doctorId}")]
-    [Authorize(Roles = "Doctor")]
-    public async Task<IActionResult> AssignDoctor(Guid patientId, Guid doctorId, CancellationToken ct)
+    [HttpPost("{patientUserId:guid}/assign-doctor/{doctorUserId:guid}")]
+    [Authorize(Roles = "Doctor,Admin")]
+    public async Task<IActionResult> AssignDoctor(Guid patientUserId, Guid doctorUserId, CancellationToken ct)
     {
-        var assignment = RPM.Domain.Entities.DoctorPatientAssignment.Create(doctorId, patientId);
-        assignment.Activate();
-        await uow.Patients.AddAssignmentAsync(assignment, ct);
+        var profile = await uow.Patients.GetByUserIdAsync(patientUserId, ct);
+        if (profile is null) return NotFound("Patient not found.");
+
+        var existing = await uow.Patients.GetAssignmentAsync(doctorUserId, profile.Id, ct);
+        if (existing is not null)
+        {
+            existing.Activate();
+            uow.Patients.UpdateAssignment(existing);
+        }
+        else
+        {
+            var assignment = Domain.Entities.DoctorPatientAssignment.Create(doctorUserId, profile.Id);
+            assignment.Activate();
+            await uow.Patients.AddAssignmentAsync(assignment, ct);
+        }
         await uow.SaveChangesAsync(ct);
         return Ok(new { message = "Doctor assigned successfully" });
     }
 
-    [HttpPost("{patientId}/link-relative/{relativeId}")]
-    public async Task<IActionResult> LinkRelative(Guid patientId, Guid relativeId,
+    [HttpPost("{patientUserId:guid}/link-relative/{relativeUserId:guid}")]
+    public async Task<IActionResult> LinkRelative(Guid patientUserId, Guid relativeUserId,
         [FromBody] string relationship, CancellationToken ct)
     {
-        var link = RPM.Domain.Entities.PatientRelativeLink.Create(patientId, relativeId, relationship);
+        var profile = await uow.Patients.GetByUserIdAsync(patientUserId, ct);
+        if (profile is null) return NotFound("Patient not found.");
+        var link = Domain.Entities.PatientRelativeLink.Create(profile.Id, relativeUserId, relationship);
         await uow.Patients.AddRelativeLinkAsync(link, ct);
         await uow.SaveChangesAsync(ct);
         return Ok(new { message = "Relative linked successfully" });

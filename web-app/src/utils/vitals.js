@@ -1,3 +1,6 @@
+import { getApiBase } from './apiBase'
+import { getAccessToken } from './authSession'
+
 export const mapVitalsPayload = (payload) => {
   if (!payload || typeof payload !== 'object') return null
   return {
@@ -6,20 +9,38 @@ export const mapVitalsPayload = (payload) => {
     systolicBp: payload.systolicBp ?? null,
     diastolicBp: payload.diastolicBp ?? null,
     temperatureC: payload.temperatureC ?? null,
+    skinTemperatureC: payload.skinTemperatureC ?? null,
+    heartRateVariabilityMs: payload.heartRateVariabilityMs ?? null,
+    restingHeartRateBpm: payload.restingHeartRateBpm ?? null,
+    maxHeartRateBpm: payload.maxHeartRateBpm ?? null,
+    respirationRateBpm: payload.respirationRateBpm ?? null,
     stepsCount: payload.stepsCount ?? null,
     caloriesBurned: payload.caloriesBurned ?? null,
+    distanceMeters: payload.distanceMeters ?? null,
+    floorsClimbed: payload.floorsClimbed ?? null,
+    activeMinutes: payload.activeMinutes ?? null,
+    stressScore: payload.stressScore ?? null,
+    sleepScore: payload.sleepScore ?? null,
+    sleepDurationMinutes: payload.sleepDurationMinutes ?? null,
+    bodyFatPercent: payload.bodyFatPercent ?? null,
+    muscleMassKg: payload.muscleMassKg ?? null,
+    bodyWaterPercent: payload.bodyWaterPercent ?? null,
+    basalMetabolicRate: payload.basalMetabolicRate ?? null,
+    ecgAverageHeartRate: payload.ecgAverageHeartRate ?? null,
+    ecgClassification: payload.ecgClassification ?? null,
+    ecgWaveformJson: payload.ecgWaveformJson ?? null,
+    bloodGlucoseMgDl: payload.bloodGlucoseMgDl ?? null,
+    batteryLevel: payload.batteryLevel ?? null,
     fallDetected: Boolean(payload.fallDetected),
     isWearing: payload.isWearing !== false,
     recordedAt: payload.recordedAt ?? new Date().toISOString(),
   }
 }
 
-import { getApiBase } from './apiBase'
-
-export const fetchLatestVitals = async (patientId, token) => {
+export const fetchLatestVitals = async (patientId) => {
   const url = new URL(`/api/patients/${patientId}/vitals/latest`, getApiBase()).toString()
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${getAccessToken()}` },
   })
   if (response.status === 401) {
     const err = new Error('Unauthorized')

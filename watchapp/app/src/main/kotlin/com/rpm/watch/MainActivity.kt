@@ -26,10 +26,12 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: WatchViewModel by viewModels()
 
-    // ── BODY_SENSORS permission ───────────────────────────────────────────────
-    private val requestPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) bindToService()
+    // ── Runtime permissions ───────────────────────────────────────────────────
+    private val requestPermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (results[Manifest.permission.BODY_SENSORS] == true) {
+                bindToService()
+            }
         }
 
     // ── Service binding (for state injection into ViewModel) ──────────────────
@@ -85,7 +87,15 @@ class MainActivity : ComponentActivity() {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun checkAndRequestPermissions() {
-        requestPermission.launch(Manifest.permission.BODY_SENSORS)
+        val perms = buildList {
+            add(Manifest.permission.BODY_SENSORS)
+            add(Manifest.permission.ACTIVITY_RECOGNITION)
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+                add("android.permission.BODY_SENSORS_BACKGROUND")
+            }
+        }
+        requestPermissions.launch(perms.toTypedArray())
     }
 
     private fun bindToService() {

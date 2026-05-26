@@ -1,0 +1,124 @@
+import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { api } from '../utils/api'
+
+const initials = (name = '') =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?'
+
+export default function RoleShell({ profile, onLogout, roleClass, brand, nav, children }) {
+  const [open, setOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      try {
+        const data = await api.get('/api/notifications/unread-count')
+        if (active) setUnread(data?.count ?? 0)
+      } catch {
+        if (active) setUnread(0)
+      }
+    }
+    load()
+    const id = setInterval(load, 30_000)
+    return () => {
+      active = false
+      clearInterval(id)
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
+
+  const handleSignOut = () => {
+    onLogout?.()
+    navigate('/login', { replace: true })
+  }
+
+  const notificationsRoute = nav.find((item) => item.to.endsWith('/notifications'))?.to
+
+  const currentTitle = nav.find((item) => location.pathname.startsWith(item.to))?.label ?? brand.title
+
+  return (
+    <div className={`app-frame ${roleClass} ${open ? 'sidebar-open' : ''}`}>
+      <aside className="sidebar" aria-label="Primary navigation">
+        <Link to="/" className="sidebar-brand">
+          <span className="brand-mark">RC</span>
+          <span>
+            <strong>{brand.title}</strong>
+            <span className="small">{brand.subtitle}</span>
+          </span>
+        </Link>
+
+        <nav className="sidebar-section" aria-label="Workspace navigation">
+          <div className="sidebar-section-title">{brand.subtitle}</div>
+          {nav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            >
+              <span className="sidebar-icon" aria-hidden="true">{item.icon}</span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <span className="avatar">{initials(profile?.fullName)}</span>
+            <span className="meta">
+              <strong>{profile?.fullName || 'User'}</strong>
+              <small>{profile?.email}</small>
+            </span>
+          </div>
+          <button className="btn btn-ghost btn-block btn-sm" onClick={handleSignOut} type="button">
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      <div className="sidebar-backdrop" onClick={() => setOpen(false)} />
+
+      <div className="main">
+        <header className="app-topbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              className="icon-btn mobile-menu-btn"
+              type="button"
+              aria-label="Open menu"
+              onClick={() => setOpen(true)}
+            >
+              ☰
+            </button>
+            <div className="page-title">
+              <small>{brand.subtitle}</small>
+              <h1>{currentTitle}</h1>
+            </div>
+          </div>
+          <div className="topbar-actions">
+            {notificationsRoute && (
+              <Link
+                to={notificationsRoute}
+                className="icon-btn"
+                aria-label={`Notifications (${unread} unread)`}
+              >
+                🔔
+                {unread > 0 && <span className="badge-dot">{unread > 99 ? '99+' : unread}</span>}
+              </Link>
+            )}
+          </div>
+        </header>
+        <main className="app-content">{children}</main>
+      </div>
+    </div>
+  )
+}
