@@ -12,6 +12,7 @@ using RPM.Domain.Enums;
 using RPM.API;
 using RPM.API.Middlewares;
 using RPM.API.Hubs;
+using RPM.API.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,25 +91,41 @@ using (var scope = app.Services.CreateScope())
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     db.Database.Migrate();
 
-    const string adminEmail = "mahmoodjob8@gmail.com";
-    const string adminPassword = "M1@a2@h3&m4&";
-
-    var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
-    if (admin is null)
+    var bootstrapAdmin = builder.Configuration.GetSection("BootstrapAdmin").Get<BootstrapAdminOptions>();
+    if (bootstrapAdmin?.Enabled == true)
     {
-        admin = User.Create("Mahmood Job", adminEmail, "+1000000000", hasher.Hash(adminPassword), UserRole.Admin);
-        await db.Users.AddAsync(admin);
-    }
-    else
-    {
-        admin.UpdateProfile("Mahmood Job", "+1000000000");
-        admin.UpdateRole(UserRole.Admin);
-        admin.Activate();
-        admin.UpdatePasswordHash(hasher.Hash(adminPassword));
-        db.Users.Update(admin);
-    }
+        if (string.IsNullOrWhiteSpace(bootstrapAdmin.FullName) ||
+            string.IsNullOrWhiteSpace(bootstrapAdmin.Email) ||
+            string.IsNullOrWhiteSpace(bootstrapAdmin.Password))
+        {
+            throw new InvalidOperationException("BootstrapAdmin is enabled but required values are missing.");
+        }
 
-    await db.SaveChangesAsync();
+        var adminEmail = bootstrapAdmin.Email.Trim().ToLowerInvariant();
+        var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
+        if (admin is null)
+        {
+            admin = User.Create(
+                bootstrapAdmin.FullName.Trim(),
+                adminEmail,
+                bootstrapAdmin.Phone?.Trim() ?? string.Empty,
+                hasher.Hash(bootstrapAdmin.Password),
+                UserRole.Admin);
+            await db.Users.AddAsync(admin);
+        }
+        else
+        {
+            admin.UpdateProfile(
+                bootstrapAdmin.FullName.Trim(),
+                bootstrapAdmin.Phone?.Trim() ?? string.Empty);
+            admin.UpdateRole(UserRole.Admin);
+            admin.Activate();
+            admin.UpdatePasswordHash(hasher.Hash(bootstrapAdmin.Password));
+            db.Users.Update(admin);
+        }
+
+        await db.SaveChangesAsync();
+    }
 }
 
 // Middleware pipeline

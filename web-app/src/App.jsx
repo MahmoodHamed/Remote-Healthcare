@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import './App.css'
 
@@ -7,8 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
 import PatientMonitor from './pages/PatientMonitor'
-
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+import { clearAuthSession, loadAuthSession, saveAuthSession } from './utils/authSession'
 
 function Header({ authProfile, onLogout }) {
   return (
@@ -66,52 +65,36 @@ function ProtectedRoute({ authProfile, children }) {
 
 export default function App() {
   const [authProfile, setAuthProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('authSession')
-      if (!saved) return null
-      const session = JSON.parse(saved)
-      return session?.profile ?? null
-    } catch (err) {
-      localStorage.removeItem('authSession')
-      return null
-    }
+    return loadAuthSession()?.profile ?? null
   })
   const [accessToken, setAccessToken] = useState(() => {
-    try {
-      const saved = localStorage.getItem('authSession')
-      if (!saved) return null
-      const session = JSON.parse(saved)
-      return session?.token ?? null
-    } catch (err) {
-      localStorage.removeItem('authSession')
-      return null
-    }
+    return loadAuthSession()?.accessToken ?? null
   })
 
   const handleLoginSuccess = (data) => {
-    const token = data?.tokens?.accessToken
+    const accessToken = data?.tokens?.accessToken
     const user = data?.user
-    if (token && user) {
-      setAccessToken(token)
+    if (accessToken && user) {
+      setAccessToken(accessToken)
       setAuthProfile(user)
-      localStorage.setItem('authSession', JSON.stringify({ token, profile: user }))
+      saveAuthSession({ accessToken, profile: user })
     }
   }
 
   const handleRegisterSuccess = (data) => {
-    const token = data?.tokens?.accessToken
+    const accessToken = data?.tokens?.accessToken
     const user = data?.user
-    if (token && user) {
-      setAccessToken(token)
+    if (accessToken && user) {
+      setAccessToken(accessToken)
       setAuthProfile(user)
-      localStorage.setItem('authSession', JSON.stringify({ token, profile: user }))
+      saveAuthSession({ accessToken, profile: user })
     }
   }
 
   const handleLogout = () => {
     setAccessToken(null)
     setAuthProfile(null)
-    localStorage.removeItem('authSession')
+    clearAuthSession()
   }
 
   return (
