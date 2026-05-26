@@ -9,4 +9,7 @@ public interface IUserRepository
     Task AddAsync(User user, CancellationToken ct = default);
     Task AddNotificationAsync(Notification notification, CancellationToken ct = default);
     void Update(User user);
+    Task AddRefreshTokenAsync(RefreshToken token, CancellationToken ct = default);
+    Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken ct = default);
+    void UpdateRefreshToken(RefreshToken token);
 }

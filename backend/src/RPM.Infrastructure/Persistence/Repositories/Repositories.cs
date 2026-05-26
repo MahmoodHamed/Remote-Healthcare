@@ -13,7 +13,7 @@ public class UserRepository(AppDbContext db) : IUserRepository
         db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant(), ct);
 
     public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default) =>
-        await db.Users.OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
+        await db.Users.Include(u => u.RefreshTokens).OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
 
     public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default) =>
         db.Users.AnyAsync(u => u.Email == email.ToLowerInvariant(), ct);
@@ -25,6 +25,13 @@ public class UserRepository(AppDbContext db) : IUserRepository
         await db.Notifications.AddAsync(notification, ct);
 
     public void Update(User user) => db.Users.Update(user);
+    public async Task AddRefreshTokenAsync(RefreshToken token, CancellationToken ct = default) =>
+        await db.RefreshTokens.AddAsync(token, ct);
+
+    public Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken ct = default) =>
+        db.RefreshTokens.FirstOrDefaultAsync(r => r.TokenHash == tokenHash, ct);
+
+    public void UpdateRefreshToken(RefreshToken token) => db.RefreshTokens.Update(token);
 }
 
 public class VitalRepository(AppDbContext db) : IVitalRepository
