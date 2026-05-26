@@ -11,7 +11,34 @@ import LinkWatch from './pages/LinkWatch'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
+const roleRoutes = {
+  Admin: [
+    { to: '/dashboard', label: 'Admin dashboard' },
+    { to: '/monitor', label: 'Live monitor' },
+    { to: '/heart-rate', label: 'Heart rate' },
+    { to: '/link-watch', label: 'Watch setup' },
+  ],
+  Doctor: [
+    { to: '/dashboard', label: 'Doctor dashboard' },
+    { to: '/monitor', label: 'Patient monitor' },
+    { to: '/heart-rate', label: 'Heart rate' },
+  ],
+  Patient: [
+    { to: '/dashboard', label: 'My dashboard' },
+    { to: '/monitor', label: 'My vitals' },
+    { to: '/link-watch', label: 'Link watch' },
+  ],
+}
+
+const normalizeRoleClass = (role) => {
+  if (role === 'Admin') return 'role-admin'
+  if (role === 'Doctor') return 'role-doctor'
+  return 'role-patient'
+}
+
 function Header({ authProfile, onLogout }) {
+  const navItems = roleRoutes[authProfile?.role] || roleRoutes.Patient
+
   return (
     <header className="nav">
       <div className="container nav-inner">
@@ -23,11 +50,13 @@ function Header({ authProfile, onLogout }) {
         <nav className="nav-links">
           {authProfile ? (
             <>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/heart-rate">Heart rate</Link>
-              <Link to="/monitor">Patient monitor</Link>
-              <Link to="/link-watch">Link watch</Link>
-              {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Admin</Link>}
+              {navItems.map((item) => (
+                <Link key={item.to} to={item.to}>{item.label}</Link>
+              ))}
+              {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Users</Link>}
+              <span className={`role-badge role-badge-${normalizeRoleClass(authProfile?.role)}`}>
+                {authProfile?.role}
+              </span>
               <button className="nav-link-btn" onClick={onLogout} style={{ cursor: 'pointer' }}>
                 Sign out
               </button>
@@ -118,7 +147,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="page">
+      <div className={`page ${normalizeRoleClass(authProfile?.role)}`}>
         <Header authProfile={authProfile} onLogout={handleLogout} />
 
         <Routes>

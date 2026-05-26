@@ -32,6 +32,21 @@
   margin: 0 auto;
 }
 
+.page.role-admin {
+  --accent: #5f3dc4;
+  --accent-2: #3b82f6;
+}
+
+.page.role-doctor {
+  --accent: #0f9d58;
+  --accent-2: #0ea5a4;
+}
+
+.page.role-patient {
+  --accent: #ff6b35;
+  --accent-2: #06b6d4;
+}
+
 .nav {
   position: sticky;
   top: 0;
@@ -86,6 +101,40 @@
   color: var(--ink);
   font-weight: 500;
   font-size: 0.95rem;
+}
+
+.nav-link-btn {
+  border: 0;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+}
+
+.role-badge-role-admin {
+  background: rgba(95, 61, 196, 0.12);
+  color: #4b2aa9;
+}
+
+.role-badge-role-doctor {
+  background: rgba(15, 157, 88, 0.14);
+  color: #137b49;
+}
+
+.role-badge-role-patient {
+  background: rgba(255, 107, 53, 0.14);
+  color: #d24f22;
 }
 
 .nav-cta {
@@ -276,6 +325,156 @@
 
 .section {
   padding: 5rem 0;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-chip-admin {
+  background: rgba(95, 61, 196, 0.14);
+  color: #4b2aa9;
+}
+
+.status-chip-doctor {
+  background: rgba(15, 157, 88, 0.14);
+  color: #137b49;
+}
+
+.status-chip-patient {
+  background: rgba(255, 107, 53, 0.14);
+  color: #d24f22;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+}
+
+.workspace-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem;
+  box-shadow: 0 12px 30px rgba(15, 27, 35, 0.08);
+}
+
+.workspace-card h3,
+.workspace-card h4 {
+  margin-bottom: 0.35rem;
+}
+
+.workspace-card-highlight {
+  background: linear-gradient(140deg, rgba(14, 165, 164, 0.14), rgba(255, 181, 99, 0.12));
+  border-color: rgba(14, 165, 164, 0.24);
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.admin-shell {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.vitals-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.vital-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.7rem 0.8rem;
+  background: rgba(15, 27, 35, 0.03);
+}
+
+.vital-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.vital-value {
+  font-weight: 700;
+}
+
+.vitals-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.vitals-table th,
+.vitals-table td {
+  text-align: left;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.vitals-table th {
+  background: rgba(15, 27, 35, 0.05);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vitals-table tr:last-child td {
+  border-bottom: none;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.hero-features {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem;
+  box-shadow: 0 10px 24px rgba(15, 27, 35, 0.06);
+}
+
+.feature-card h3 {
+  margin-bottom: 0.35rem;
 }
 
 .simple-hero .section-head h1 {
@@ -1114,6 +1313,12 @@
 
   .live-log-item {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .vitals-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
 

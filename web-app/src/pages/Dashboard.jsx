@@ -5,6 +5,42 @@ import { clearAuthSession, getAccessToken, isTokenExpired } from '../utils/authS
 import { getApiBase } from '../utils/apiBase'
 import { buildVitalsHubConnection, startVitalsHub } from '../utils/signalr'
 
+const roleWorkspace = {
+  Admin: {
+    label: 'Administration center',
+    heading: 'Control users, access, and platform flow',
+    summary: 'Manage users and keep the care system organized across all teams.',
+    badgeTone: 'admin',
+    cards: [
+      { title: 'User governance', text: 'Review user identities, roles, and activity status.' },
+      { title: 'Platform visibility', text: 'Track active monitoring sessions and secure access.' },
+      { title: 'Operational readiness', text: 'Keep onboarding, support, and escalations coordinated.' },
+    ],
+  },
+  Doctor: {
+    label: 'Clinical workspace',
+    heading: 'Monitor patients and react to live changes',
+    summary: 'Focus on real-time vitals, trends, and quick intervention decisions.',
+    badgeTone: 'doctor',
+    cards: [
+      { title: 'Live patient feed', text: 'Subscribe to patient IDs and receive fresh measurements instantly.' },
+      { title: 'Trend awareness', text: 'Use recent timeline entries to spot risky patterns early.' },
+      { title: 'Action speed', text: 'Keep patient context in one place for fast decisions.' },
+    ],
+  },
+  Patient: {
+    label: 'Patient workspace',
+    heading: 'Follow your own health readings clearly',
+    summary: 'Get a clean, easy view of your latest body metrics and watch connection.',
+    badgeTone: 'patient',
+    cards: [
+      { title: 'Simple readings', text: 'Heart rate, oxygen, pressure, and temperature in one stream.' },
+      { title: 'Connection clarity', text: 'See whether your watch is connected and data is live.' },
+      { title: 'Personal timeline', text: 'Review your most recent updates for better daily awareness.' },
+    ],
+  },
+}
+
 export default function Dashboard({ authProfile, accessToken, onLogout }) {
   const navigate = useNavigate()
   const [patientIdInput, setPatientIdInput] = useState('')
@@ -18,6 +54,8 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
   const connectionRef = useRef(null)
 
   const isAdmin = authProfile?.role === 'Admin'
+  const userRole = authProfile?.role || 'Patient'
+  const workspace = roleWorkspace[userRole] || roleWorkspace.Patient
 
   useEffect(() => {
     const token = getAccessToken() || accessToken
@@ -50,6 +88,14 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
   }
 
   const connectToVitals = async () => {
+    if (connectionRef.current && connectionStatus === 'connected') {
+      await connectionRef.current.stop().catch(() => {})
+      connectionRef.current = null
+      setConnectionStatus('disconnected')
+      setConnectionError('')
+      return
+    }
+
     const patientId = normalizePatientId(patientIdInput)
     if (!patientId) {
       setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
@@ -137,13 +183,29 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
         <div className="container">
           <div className="dashboard-header">
             <div>
-              <p className="eyebrow">Dashboard</p>
-              <h2>Welcome back, {authProfile?.fullName || 'user'}!</h2>
-              <p className="muted">Role: {authProfile?.role}</p>
+              <p className="eyebrow">{workspace.label}</p>
+              <h2>{workspace.heading}</h2>
+              <p className="muted">Welcome, {authProfile?.fullName || 'user'}.</p>
             </div>
+            <span className={`status-chip status-chip-${workspace.badgeTone}`}>{userRole}</span>
             <button className="btn btn-outline" onClick={handleLogout}>
               Sign out
             </button>
+          </div>
+
+          <div className="workspace-grid">
+            <article className="workspace-card workspace-card-highlight">
+              <h3>{workspace.summary}</h3>
+              <p className="muted">
+                This area is arranged specifically for the {userRole.toLowerCase()} role to keep your workflow focused.
+              </p>
+            </article>
+            {workspace.cards.map((card) => (
+              <article className="workspace-card" key={card.title}>
+                <h4>{card.title}</h4>
+                <p className="muted">{card.text}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -152,8 +214,27 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
         <div className="container live-grid">
           <div className="live-copy">
             <p className="eyebrow">Live vitals</p>
-            <h2>Stream vitals from your device</h2>
-            <p>Enter your patient ID and connect to view real-time readings.</p>
+            <h2>{userRole === 'Admin' ? 'Inspect active patient stream' : 'Connect and view real-time vitals'}</h2>
+            <p>
+              Enter a patient ID to open the live channel. You can switch patients anytime and the timeline updates instantly.
+            </p>
+            <div className={`live-status status-${connectionStatus}`}>
+              <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
+              <div>
+                <strong>
+                  {connectionStatus === 'connected'
+                    ? 'Connected'
+                    : connectionStatus === 'connecting'
+                      ? 'Connecting'
+                      : connectionStatus === 'error'
+                        ? 'Connection error'
+                        : 'Disconnected'}
+                </strong>
+                <span className="live-status-note">
+                  {connectionStatus === 'connected' ? 'Live measurements are streaming.' : 'Waiting for patient connection.'}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="live-panel">
@@ -170,7 +251,7 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                 />
               </label>
               <button className="btn btn-primary" type="button" onClick={connectToVitals}>
-                {connectionStatus === 'connected' ? 'Disconnect' : 'Connect'}
+                {connectionStatus === 'connected' ? 'Disconnect stream' : 'Start stream'}
               </button>
 
               {vitals && (
@@ -239,34 +320,51 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
           <div className="container">
             <div className="section-head">
               <p className="eyebrow">Admin</p>
-              <h2>User management</h2>
-              <p>View and manage all users in the system.</p>
+              <h2>User management panel</h2>
+              <p>Review all accounts from one organized table view.</p>
             </div>
 
             {adminError && <p className="live-error">{adminError}</p>}
             {adminLoading && <p>Loading users...</p>}
 
             {adminUsers.length > 0 && (
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {adminUsers.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.fullName}</td>
-                      <td>{user.email}</td>
-                      <td>{user.phone}</td>
-                      <td>{user.role}</td>
+              <div className="admin-shell">
+                <div className="quick-grid">
+                  <article className="workspace-card">
+                    <h4>Total users</h4>
+                    <p className="muted">{adminUsers.length} accounts</p>
+                  </article>
+                  <article className="workspace-card">
+                    <h4>Doctors</h4>
+                    <p className="muted">{adminUsers.filter((user) => user.role === 'Doctor').length} active doctors</p>
+                  </article>
+                  <article className="workspace-card">
+                    <h4>Patients</h4>
+                    <p className="muted">{adminUsers.filter((user) => user.role === 'Patient').length} registered patients</p>
+                  </article>
+                </div>
+
+                <table className="vitals-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Role</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {adminUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td>{user.fullName}</td>
+                        <td>{user.email}</td>
+                        <td>{user.phone}</td>
+                        <td>{user.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </section>
