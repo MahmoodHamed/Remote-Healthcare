@@ -5,7 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.health.HrStatus
-import com.rpm.watch.service.HeartRateMonitorService
+import com.rpm.watch.mqtt.MqttConnectionState
+import com.rpm.watch.mqtt.MqttManager
 import com.rpm.watch.service.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,13 +24,15 @@ data class WatchUiState(
     val serviceStatus: ServiceStatus = ServiceStatus.IDLE,
     val patientId: String = "",
     val isMonitoring: Boolean = false,
-    val errorMessage: String = ""
+    val errorMessage: String = "",
+    val mqttConnectionState: MqttConnectionState = MqttConnectionState.DISCONNECTED,
 )
 
 @HiltViewModel
 class WatchViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val dataStore: WatchDataStore
+    private val dataStore: WatchDataStore,
+    private val mqttManager: MqttManager,
 ) : ViewModel() {
 
     // Exposed via service companion singleton
@@ -45,15 +48,17 @@ class WatchViewModel @Inject constructor(
         _hrStatus,
         _svcStatus,
         _isMonitoring,
-        _errorMessage
-    ) { hr, hrSt, svcSt, localMonitoring, errMsg ->
+        _errorMessage,
+        mqttManager.connectionState,
+    ) { hr, hrSt, svcSt, localMonitoring, errMsg, mqttState ->
         WatchUiState(
             heartRate     = hr,
             hrStatus      = hrSt,
             serviceStatus = svcSt,
             patientId     = _patientId.value,
             isMonitoring  = localMonitoring || svcSt == ServiceStatus.MEASURING || svcSt == ServiceStatus.CONNECTING,
-            errorMessage  = errMsg
+            errorMessage  = errMsg,
+            mqttConnectionState = mqttState,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, WatchUiState())
 
@@ -107,7 +112,7 @@ class WatchViewModel @Inject constructor(
 
     fun saveConfig(patientId: String, mqttHost: String, mqttPort: Int) {
         viewModelScope.launch {
-            if (patientId.isNotBlank()) dataStore.savePatientId(patientId)
+            if (patientId.isNotBlank()) dataStore.savePatientId(patientId.trim().uppercase())
             if (mqttHost.isNotBlank()) dataStore.saveMqttConfig(mqttHost, mqttPort)
         }
     }

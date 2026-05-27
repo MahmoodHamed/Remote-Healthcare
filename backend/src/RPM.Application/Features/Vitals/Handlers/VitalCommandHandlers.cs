@@ -3,6 +3,7 @@ using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Vitals;
 using RPM.Application.Features.Vitals.Commands;
 using RPM.Domain.Entities;
+using RPM.Domain.Enums;
 using RPM.Domain.Interfaces;
 namespace RPM.Application.Features.Vitals.Handlers;
 
@@ -17,7 +18,11 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub, I
             var profile = await EnsurePatientProfileAsync(uow, cmd.PatientId, ct);
             await EnsureDeviceAsync(uow, cmd.DeviceId, profile, ct);
             await uow.SaveChangesAsync(ct);
+            existingDevice = await uow.Devices.GetByIdAsync(cmd.DeviceId, ct);
         }
+
+        existingDevice?.UpdateStatus(DeviceStatus.Online, cmd.BatteryLevel);
+        if (existingDevice is not null) uow.Devices.Update(existingDevice);
 
         var record = VitalRecord.Create(
             cmd.PatientId,
@@ -116,10 +121,15 @@ public class IngestVitalsBatchCommandHandler(IUnitOfWork uow, IVitalsHubService 
                 profilesByUser[reading.PatientId] = profile;
             }
 
-            if (await uow.Devices.GetByIdAsync(reading.DeviceId, ct) is null && ensuredDevices.Add(reading.DeviceId))
+            var device = await uow.Devices.GetByIdAsync(reading.DeviceId, ct);
+            if (device is null && ensuredDevices.Add(reading.DeviceId))
             {
                 await IngestVitalCommandHandler.EnsureDeviceAsync(uow, reading.DeviceId, profile, ct);
+                device = await uow.Devices.GetByIdAsync(reading.DeviceId, ct);
             }
+
+            device?.UpdateStatus(DeviceStatus.Online, reading.BatteryLevel);
+            if (device is not null) uow.Devices.Update(device);
 
             records.Add(VitalRecord.Create(
                 reading.PatientId,

@@ -29,6 +29,7 @@ import androidx.wear.compose.material.TimeText
 import com.rpm.watch.WatchUiState
 import com.rpm.watch.WatchViewModel
 import com.rpm.watch.health.HrStatus
+import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.service.ServiceStatus
 
 @Composable
@@ -159,7 +160,13 @@ private fun buildStatusText(state: WatchUiState): String {
         HrStatus.LOW_PASS     -> "Low"
         HrStatus.INITIAL      -> "Place watch firmly"
     }
-    return if (state.isMonitoring) sensorStr else "Tap Start to monitor"
+    val serverStr = when (state.mqttConnectionState) {
+        MqttConnectionState.CONNECTED    -> " · Server OK"
+        MqttConnectionState.CONNECTING   -> " · Server…"
+        MqttConnectionState.ERROR        -> " · Server error"
+        MqttConnectionState.DISCONNECTED -> " · No server"
+    }
+    return if (state.isMonitoring) sensorStr + serverStr else "Tap Start to monitor"
 }
 
 private fun heartColor(status: HrStatus): Color = when (status) {
