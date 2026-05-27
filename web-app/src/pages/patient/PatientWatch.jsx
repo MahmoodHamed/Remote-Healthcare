@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
 import { readProfile } from '../../utils/auth'
 import { getMqttHost, getMqttPort } from '../../utils/apiBase'
-
-const SHORT_KEY = 'rpm-watch-shortid'
-const HOST_KEY = 'rpm-watch-mqtt-host'
-const PORT_KEY = 'rpm-watch-mqtt-port'
+import { normalizePatientId } from '../../utils/patientId'
+import {
+  WATCH_HOST_KEY,
+  WATCH_PORT_KEY,
+  WATCH_SHORT_ID_KEY,
+  getWatchShortId,
+  isValidWatchShortId,
+} from '../../utils/watchPairing'
 
 export default function PatientWatch() {
   const profile = readProfile()
@@ -12,19 +16,31 @@ export default function PatientWatch() {
   const [host, setHost] = useState('')
   const [port, setPort] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setShortId(localStorage.getItem(SHORT_KEY) ?? '')
-    setHost(localStorage.getItem(HOST_KEY) ?? getMqttHost())
-    setPort(localStorage.getItem(PORT_KEY) ?? getMqttPort())
+    setShortId(getWatchShortId())
+    setHost(localStorage.getItem(WATCH_HOST_KEY) ?? getMqttHost())
+    setPort(localStorage.getItem(WATCH_PORT_KEY) ?? getMqttPort())
   }, [])
+
+  const streamingId = shortId && isValidWatchShortId(shortId)
+    ? normalizePatientId(shortId)
+    : profile?.id ?? ''
 
   const save = (event) => {
     event.preventDefault()
-    localStorage.setItem(SHORT_KEY, shortId.trim().toUpperCase())
-    localStorage.setItem(HOST_KEY, host.trim())
-    localStorage.setItem(PORT_KEY, port.trim())
-    setFeedback('Saved. Open the Wear OS app on your watch to apply these values.')
+    const trimmed = shortId.trim().toUpperCase()
+    if (!isValidWatchShortId(trimmed)) {
+      setError('Enter exactly 6 letters or digits (for example ABC123).')
+      setFeedback('')
+      return
+    }
+    localStorage.setItem(WATCH_SHORT_ID_KEY, trimmed)
+    localStorage.setItem(WATCH_HOST_KEY, host.trim())
+    localStorage.setItem(WATCH_PORT_KEY, port.trim())
+    setError('')
+    setFeedback(`Saved. Enter ${trimmed} on your watch Setup screen, then press Start.`)
   }
 
   return (
@@ -47,7 +63,7 @@ export default function PatientWatch() {
           <article className="feature-card">
             <span className="feature-icon">2</span>
             <h3>Enter your patient ID</h3>
-            <p>Open the app on the watch and paste the 6-character ID shown below.</p>
+            <p>Open the app on the watch and type the same 6-character ID shown below.</p>
           </article>
           <article className="feature-card">
             <span className="feature-icon">3</span>
@@ -61,7 +77,7 @@ export default function PatientWatch() {
         <div className="card-head">
           <div>
             <h3>Pairing details</h3>
-            <span className="muted">Use these values on the watch.</span>
+            <span className="muted">Save here first, then enter the same values on the watch.</span>
           </div>
         </div>
 
@@ -71,17 +87,19 @@ export default function PatientWatch() {
               Patient short ID
               <input
                 value={shortId}
-                onChange={(e) => setShortId(e.target.value)}
+                onChange={(e) => setShortId(e.target.value.toUpperCase())}
                 maxLength={6}
                 placeholder="ABC123"
                 style={{ fontFamily: 'monospace', letterSpacing: '0.18em' }}
               />
-              <span className="form-hint">6 letters or digits. Share this with your watch.</span>
+              <span className="form-hint">
+                Must match the watch exactly. Your dashboard listens for this code after you save.
+              </span>
             </label>
             <label>
-              Your user ID
-              <input value={profile?.id || ''} readOnly style={{ fontFamily: 'monospace' }} />
-              <span className="form-hint">Use this GUID if your watch supports it directly.</span>
+              Streaming patient ID
+              <input value={streamingId} readOnly style={{ fontFamily: 'monospace' }} />
+              <span className="form-hint">Internal ID used by the server after your short code is normalized.</span>
             </label>
           </div>
           <div className="form-row">
@@ -94,6 +112,7 @@ export default function PatientWatch() {
               <input value={port} onChange={(e) => setPort(e.target.value)} placeholder="1883" />
             </label>
           </div>
+          {error && <div className="form-error">{error}</div>}
           {feedback && <div className="form-success">{feedback}</div>}
           <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>Save pairing details</button>
         </form>

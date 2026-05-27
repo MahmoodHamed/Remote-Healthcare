@@ -1,8 +1,10 @@
 import { readProfile } from '../../utils/auth'
+import { getVitalsPatientId } from '../../utils/watchPairing'
 import LiveVitals from '../../components/LiveVitals.jsx'
 
 export default function PatientDashboard() {
   const profile = readProfile()
+  const vitalsPatientId = getVitalsPatientId(profile?.id)
   return (
     <>
       <section className="card">
@@ -16,7 +18,7 @@ export default function PatientDashboard() {
           <span className="tag patient">Patient</span>
         </div>
       </section>
-      <LiveVitals patientId={profile?.id} patientName={profile?.fullName} />
+      <LiveVitals patientId={vitalsPatientId} patientName={profile?.fullName} />
     </>
   )
 }
