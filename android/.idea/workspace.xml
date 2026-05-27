@@ -4,7 +4,31 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="52bbacd7-71dc-4f99-b610-89d3aa2965b9" name="Changes" comment="" />
+    <list default="true" id="52bbacd7-71dc-4f99-b610-89d3aa2965b9" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gradle/8.9/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.9/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/cache.properties" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/cache.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.API/obj/Debug/net10.0/RPM.API.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Application/obj/Debug/net10.0/RPM.Application.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Domain/obj/Debug/net10.0/RPM.Domain.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/src/RPM.Infrastructure/obj/Debug/net10.0/RPM.Infrastructure.assets.cache" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,14 +37,35 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
+  <component name="CopilotChats">
+    <option name="panelChat">
+      <chat>
+        <option name="activeSessionId" value="bf6d51e7-288c-433b-8daf-18f53165d043" />
+        <option name="sessions">
+          <session>
+            <option name="chatType" value="PANEL" />
+            <option name="id" value="bf6d51e7-288c-433b-8daf-18f53165d043" />
+            <option name="modeId" value="Agent" />
+            <option name="modelType" value="builtin_family" />
+            <option name="modelValue" value="auto" />
+            <option name="targetType" value="LOCAL" />
+          </session>
+        </option>
+        <option name="type" value="PANEL" />
+      </chat>
+    </option>
+  </component>
   <component name="CopilotPersistence">
     <persistenceIdMap>
       <entry key="_C:/Users/mahmo/source/Projects/Remote-Patiant-Monitoring/android" value="3CD6YbaplZRTML8HQzxOXqoU27H" />
     </persistenceIdMap>
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 8
-}]]></component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="3CD6YbaplZRTML8HQzxOXqoU27H" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -31,10 +76,12 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "android.gradle.sync.needed": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "backup-before-clean",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/mahmo/source/Projects/Remote-Patiant-Monitoring/android"
   }

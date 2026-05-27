@@ -146,5 +146,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<VitalsHub>("/hubs/vitals");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();

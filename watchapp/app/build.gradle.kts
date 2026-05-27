@@ -20,7 +20,7 @@ android {
         versionName            = "1.0.0"
 
         // MQTT broker settings – override per build variant or inject at runtime via DataStore
-        buildConfigField("String", "MQTT_HOST", "\"www.remote-care.tech\"")   // change to your server domain
+        buildConfigField("String", "MQTT_HOST", "\"remote-care.tech\"")
         buildConfigField("int",    "MQTT_PORT", "1883")
         // 6-char patient code (A-Z, 0-9). The app will derive a deterministic UUID for MQTT.
         buildConfigField("String", "DEFAULT_PATIENT_ID", "\"ABC123\"")

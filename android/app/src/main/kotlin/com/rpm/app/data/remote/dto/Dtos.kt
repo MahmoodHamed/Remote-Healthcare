@@ -13,11 +13,13 @@ data class LoginRequest(
 
 @Serializable
 data class RegisterRequest(
-    val email: String,
-    val password: String,
     val fullName: String,
+    val email: String,
+    val phone: String,
+    val password: String,
     val role: String,              // "Doctor" | "Patient" | "Relative"
-    val fcmToken: String? = null
+    val licenseNumber: String? = null,
+    val specialization: String? = null,
 )
 
 @Serializable

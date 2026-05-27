@@ -57,10 +57,20 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun register(email: String, password: String, fullName: String, role: String) {
+    fun register(
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        role: String,
+        licenseNumber: String? = null,
+        specialization: String? = null,
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = authRepository.register(email, password, fullName, role, null)) {
+            when (val result = authRepository.register(
+                email, password, fullName, phone, role, licenseNumber, specialization
+            )) {
                 is Resource.Success -> _uiState.value = AuthUiState(
                     isLoggedIn = true,
                     userRole = result.data.user.role

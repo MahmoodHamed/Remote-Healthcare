@@ -26,6 +26,9 @@ fun RegisterScreen(
     var email    by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
+    var phone    by remember { mutableStateOf("") }
+    var licenseNumber by remember { mutableStateOf("") }
+    var specialization by remember { mutableStateOf("General") }
     var expanded by remember { mutableStateOf(false) }
     var role     by remember { mutableStateOf("Doctor") }
     val roles    = listOf("Doctor", "Patient", "Relative")
@@ -60,6 +63,16 @@ fun RegisterScreen(
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Phone") },
+                placeholder = { Text("+966501234567") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
@@ -88,6 +101,23 @@ fun RegisterScreen(
                 }
             }
 
+            if (role == "Doctor") {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = licenseNumber,
+                    onValueChange = { licenseNumber = it },
+                    label = { Text("License Number") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = specialization,
+                    onValueChange = { specialization = it },
+                    label = { Text("Specialization") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             uiState.error?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, color = MaterialTheme.colorScheme.error)
@@ -96,7 +126,17 @@ fun RegisterScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.register(email, password, fullName, role) },
+                onClick = {
+                    viewModel.register(
+                        email = email.trim(),
+                        password = password,
+                        fullName = fullName.trim(),
+                        phone = phone.trim(),
+                        role = role,
+                        licenseNumber = licenseNumber.trim().ifBlank { null },
+                        specialization = specialization.trim().ifBlank { null },
+                    )
+                },
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth()
             ) {

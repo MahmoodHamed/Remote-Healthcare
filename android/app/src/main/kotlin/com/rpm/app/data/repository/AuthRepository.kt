@@ -10,6 +10,21 @@ class AuthRepository @Inject constructor(
     private val api: RpmApiService,
     private val tokenStore: TokenDataStore
 ) {
+    private fun httpErrorMessage(response: retrofit2.Response<*>): String {
+        val body = response.errorBody()?.string()?.trim().orEmpty()
+        if (body.isNotEmpty()) {
+            val messageMatch = Regex(""""message"\s*:\s*"([^"]+)"""").find(body)
+            if (messageMatch != null) return messageMatch.groupValues[1]
+            val titleMatch = Regex(""""title"\s*:\s*"([^"]+)"""").find(body)
+            if (titleMatch != null) return titleMatch.groupValues[1]
+        }
+        return when (response.code()) {
+            502 -> "Server unavailable (502). The API is not running on remote-care.tech."
+            503 -> "Service unavailable (503). Try again shortly."
+            else -> response.message().ifBlank { "Request failed (${response.code()})" }
+        }
+    }
+
     suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> {
         return try {
             val response = api.login(LoginRequest(email, password, fcmToken))
@@ -24,7 +39,7 @@ class AuthRepository @Inject constructor(
                 )
                 Resource.Success(body)
             } else {
-                Resource.Error(response.message())
+                Resource.Error(httpErrorMessage(response))
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unknown error")
@@ -32,10 +47,26 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun register(
-        email: String, password: String, fullName: String, role: String, fcmToken: String?
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        role: String,
+        licenseNumber: String? = null,
+        specialization: String? = null,
     ): Resource<LoginResponseDto> {
         return try {
-            val response = api.register(RegisterRequest(email, password, fullName, role, fcmToken))
+            val response = api.register(
+                RegisterRequest(
+                    fullName = fullName,
+                    email = email,
+                    phone = phone,
+                    password = password,
+                    role = role,
+                    licenseNumber = licenseNumber,
+                    specialization = specialization,
+                )
+            )
             if (response.isSuccessful) {
                 val body = response.body()!!
                 tokenStore.saveSession(
@@ -47,7 +78,7 @@ class AuthRepository @Inject constructor(
                 )
                 Resource.Success(body)
             } else {
-                Resource.Error(response.message())
+                Resource.Error(httpErrorMessage(response))
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unknown error")

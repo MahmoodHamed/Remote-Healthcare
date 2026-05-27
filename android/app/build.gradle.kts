@@ -21,16 +21,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
-        buildConfigField("String", "SIGNALR_URL", "\"http://10.0.2.2:8080/\"")
+        buildConfigField("String", "BASE_URL", "\"https://remote-care.tech/\"")
+        buildConfigField("String", "SIGNALR_URL", "\"https://remote-care.tech/\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "BASE_URL", "\"https://api.yourserver.com/\"")
-            buildConfigField("String", "SIGNALR_URL", "\"https://api.yourserver.com/\"")
         }
     }
 
@@ -49,6 +47,7 @@ android {
 
 dependencies {
     // Core
+    implementation("com.google.android.material:material:1.12.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.lifecycle.viewmodel)
