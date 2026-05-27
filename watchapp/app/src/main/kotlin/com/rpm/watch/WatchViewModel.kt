@@ -1,12 +1,16 @@
 package com.rpm.watch
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.health.HrStatus
 import com.rpm.watch.mqtt.MqttConnectionState
+import com.rpm.watch.mqtt.MqttManager
 import com.rpm.watch.service.HeartRateMonitorService
 import com.rpm.watch.service.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,7 +45,8 @@ data class WatchUiState(
 @HiltViewModel
 class WatchViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val dataStore: WatchDataStore
+    private val dataStore: WatchDataStore,
+    private val mqttManager: MqttManager
 ) : ViewModel() {
 
     // Exposed via service companion singleton
@@ -55,6 +60,10 @@ class WatchViewModel @Inject constructor(
     private val _isMonitoring = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow("")
     private val _mqttState = MutableStateFlow(MqttConnectionState.DISCONNECTED)
+    private var serviceAttached = false
+
+    /** Set from [MainActivity] so monitoring can bind the foreground service. */
+    var onRequestBindService: (() -> Unit)? = null
 
     val uiState: StateFlow<WatchUiState> = combine(
         listOf(
@@ -99,10 +108,15 @@ class WatchViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.patientId.collect { id -> _patientId.value = id ?: "" }
         }
+        viewModelScope.launch {
+            mqttManager.connectionState.collect { _mqttState.value = it }
+        }
     }
 
     /** Update ViewModel state from the bound service (called by MainActivity). */
     fun attachService(service: HeartRateMonitorService) {
+        if (serviceAttached) return
+        serviceAttached = true
         viewModelScope.launch {
             service.heartRate.collect { _heartRate.value = it }
         }
@@ -131,11 +145,20 @@ class WatchViewModel @Inject constructor(
     }
 
     fun startMonitoring(mode: MonitoringMode = _selectedMode.value) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BODY_SENSORS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            _errorMessage.value = "Allow body sensor permission first"
+            _svcStatus.value = ServiceStatus.ERROR
+            return
+        }
         try {
             _selectedMode.value = mode
             context.startForegroundService(HeartRateMonitorService.startIntent(context, mode))
             _isMonitoring.value = true
             _errorMessage.value = ""
+            _svcStatus.value = ServiceStatus.CONNECTING
+            onRequestBindService?.invoke()
         } catch (e: Exception) {
             Log.e("WatchViewModel", "Failed to start monitoring", e)
             _isMonitoring.value = false
@@ -147,6 +170,10 @@ class WatchViewModel @Inject constructor(
     fun stopMonitoring() {
         context.startService(HeartRateMonitorService.stopIntent(context))
         _isMonitoring.value = false
+        serviceAttached = false
+        _heartRate.value = 0
+        _hrStatus.value = HrStatus.INITIAL
+        _svcStatus.value = ServiceStatus.IDLE
     }
 
     fun savePatientId(id: String) {

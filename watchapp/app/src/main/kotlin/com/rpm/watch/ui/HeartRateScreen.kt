@@ -104,7 +104,11 @@ fun HeartRateContent(
             Spacer(Modifier.height(10.dp))
 
             // ── Live value ────────────────────────────────────────────────────
-            if (state.serviceStatus == ServiceStatus.CONNECTING) {
+            if (state.isMonitoring &&
+                state.selectedMode == MonitoringMode.HEART_RATE &&
+                state.heartRate <= 0 &&
+                state.serviceStatus == ServiceStatus.CONNECTING
+            ) {
                 CircularProgressIndicator(
                     modifier         = Modifier.size(40.dp),
                     indicatorColor   = MaterialTheme.colors.primary,
@@ -250,15 +254,21 @@ private fun buildStatusText(state: WatchUiState): String {
     }
 
     val sensorStr = when (state.selectedMode) {
-        MonitoringMode.HEART_RATE -> when (state.hrStatus) {
-            HrStatus.GOOD         -> "Good"
-            HrStatus.MOVING       -> "Moving"
-            HrStatus.DEVICE_MOVING -> "Still"
-            HrStatus.LOW_PASS     -> "Low"
-            HrStatus.INITIAL      -> "Place watch firmly"
+        MonitoringMode.HEART_RATE -> when {
+            state.heartRate > 0 -> "Measuring — ${state.heartRate} bpm"
+            state.hrStatus == HrStatus.DEVICE_MOVING -> "Fasten watch snugly"
+            else -> "Keep screen on, wait 10s…"
         }
-        MonitoringMode.TEMPERATURE -> if (state.temperatureC == null) "Waiting for temperature" else "Temperature active"
-        MonitoringMode.SPO2 -> if (state.spO2Percent == null) "Waiting for SpO2" else "SpO2 active"
+        MonitoringMode.TEMPERATURE -> if (state.temperatureC == null) {
+            "Wear watch snugly, wait…"
+        } else {
+            "Temperature active"
+        }
+        MonitoringMode.SPO2 -> if (state.spO2Percent == null) {
+            "Wear watch snugly, wait…"
+        } else {
+            "SpO2 active"
+        }
     }
     return if (state.isMonitoring) sensorStr else "Tap Start to monitor"
 }

@@ -25,8 +25,10 @@ class MainActivity : ComponentActivity() {
     // ── Runtime permissions ───────────────────────────────────────────────────
     private val requestPermissions =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            val bodySensorsGranted = results[Manifest.permission.BODY_SENSORS] == true
-            if (bodySensorsGranted) bindToService()
+            val denied = results.filterValues { !it }.keys
+            if (denied.isNotEmpty()) {
+                android.util.Log.w("MainActivity", "Denied permissions: $denied")
+            }
         }
 
     // ── Service binding (for state injection into ViewModel) ──────────────────
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel.onRequestBindService = { bindMonitoringService() }
 
         setContent {
             WatchTheme {
@@ -76,15 +79,23 @@ class MainActivity : ComponentActivity() {
         }.filter { permission ->
             checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
-        if (needed.isEmpty()) {
-            bindToService()
-        } else {
+        // Do not bind the monitoring service on launch — binding creates the service and
+        // previously crashed before Hilt injection completed. Bind when monitoring starts.
+        if (needed.isNotEmpty()) {
             requestPermissions.launch(needed.toTypedArray())
         }
     }
 
-    private fun bindToService() {
+    fun bindMonitoringService() {
+        monitorService?.let {
+            viewModel.attachService(it)
+            return
+        }
         val intent = Intent(this, HeartRateMonitorService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        try {
+            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to bind monitoring service", e)
+        }
     }
 }

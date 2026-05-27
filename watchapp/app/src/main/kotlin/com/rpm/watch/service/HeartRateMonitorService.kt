@@ -62,6 +62,7 @@ class HeartRateMonitorService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var monitorJob: Job? = null
+    private var trackerCollectJob: Job? = null
     private val binder = LocalBinder()
     private var sensorManager: SensorManager? = null
     private var sensorListener: SensorEventListener? = null
@@ -90,7 +91,9 @@ class HeartRateMonitorService : Service() {
     val hrStatus:   StateFlow<HrStatus>      = _hrStatus
     val svcStatus:  StateFlow<ServiceStatus> = _svcStatus
     val lastError:  StateFlow<String>        = _lastError
-    val mqttState:  StateFlow<MqttConnectionState> = mqttManager.connectionState
+    /** Must be a getter — [mqttManager] is injected after the Service constructor runs. */
+    val mqttState: StateFlow<MqttConnectionState>
+        get() = mqttManager.connectionState
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -125,12 +128,16 @@ class HeartRateMonitorService : Service() {
     // ── Monitoring logic ──────────────────────────────────────────────────────
 
     private fun startMonitoring(mode: MonitoringMode) {
+        val modeChanged = currentMode != mode
         currentMode = mode
 
-        if (monitorJob?.isActive == true) {
+        if (monitorJob?.isActive == true && !modeChanged) {
             promoteToForeground("Monitoring ${mode.displayLabel()}…")
             return
         }
+
+        trackerCollectJob?.cancel()
+        monitorJob?.cancel()
 
         promoteToForeground("Starting ${mode.displayLabel()}…")
         _svcStatus.value = ServiceStatus.CONNECTING
@@ -182,7 +189,7 @@ class HeartRateMonitorService : Service() {
 
             // 3. Start the selected sensor flow(s)
             val topic = "vitals/$patientId/data"
-            launch {
+            trackerCollectJob = launch {
                 hrTrackerManager.monitoringFlow(mode).collect { state ->
                     when (state) {
                         is TrackerState.Connecting -> {
@@ -249,6 +256,7 @@ class HeartRateMonitorService : Service() {
         when (mode) {
             MonitoringMode.HEART_RATE -> {
                 val bpm = reading.heartRateBpm ?: return
+                if (bpm <= 0) return
                 latestHeartRate = bpm
                 _heartRate.value = bpm
                 _hrStatus.value = reading.status
@@ -289,19 +297,34 @@ class HeartRateMonitorService : Service() {
         val sm = getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
         sensorManager = sm
 
+        val hrSensor = sm.getDefaultSensor(Sensor.TYPE_HEART_RATE)
         val stepSensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         val tempSensorType = resolveSensorType("TYPE_SKIN_TEMPERATURE", "TYPE_AMBIENT_TEMPERATURE")
         val spo2SensorType = resolveSensorType("TYPE_OXYGEN_SATURATION", "TYPE_SPO2")
         Log.d(TAG, "Resolved sensor types: temp=$tempSensorType spo2=$spo2SensorType")
         val tempSensor = tempSensorType?.let { sm.getDefaultSensor(it) }
         val spo2Sensor = spo2SensorType?.let { sm.getDefaultSensor(it) }
-        Log.d(TAG, "Platform sensors present: tempSensor=${tempSensor != null}, spo2Sensor=${spo2Sensor != null}")
+        Log.d(
+            TAG,
+            "Platform sensors present: hr=${hrSensor != null}, temp=${tempSensor != null}, spo2=${spo2Sensor != null}"
+        )
         val accelSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
                 val e = event ?: return
                 when {
+                    e.sensor.type == Sensor.TYPE_HEART_RATE -> {
+                        val bpm = e.values.firstOrNull()?.toInt() ?: return
+                        if (bpm <= 0) return
+                        latestHeartRate = bpm
+                        _heartRate.value = bpm
+                        _hrStatus.value = HrStatus.GOOD
+                        _svcStatus.value = ServiceStatus.MEASURING
+                        isWearingNow = true
+                        Log.d(TAG, "Platform heart rate: $bpm bpm")
+                    }
+
                     e.sensor.type == Sensor.TYPE_STEP_COUNTER -> {
                         val raw = e.values.firstOrNull() ?: return
                         val base = baseStepCounter
@@ -347,6 +370,7 @@ class HeartRateMonitorService : Service() {
         }
 
         sensorListener = listener
+        if (hrSensor != null) sm.registerListener(listener, hrSensor, SensorManager.SENSOR_DELAY_UI)
         if (stepSensor != null) sm.registerListener(listener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
         if (tempSensor != null) sm.registerListener(listener, tempSensor, SensorManager.SENSOR_DELAY_NORMAL)
         if (spo2Sensor != null) sm.registerListener(listener, spo2Sensor, SensorManager.SENSOR_DELAY_NORMAL)

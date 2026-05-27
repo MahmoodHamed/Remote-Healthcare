@@ -445,7 +445,7 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
       public T get() {
         switch (id) {
           case 0: // com.rpm.watch.WatchViewModel
-          return (T) new WatchViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideWatchDataStoreProvider.get());
+          return (T) new WatchViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideWatchDataStoreProvider.get(), singletonCImpl.mqttManagerProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -542,9 +542,9 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
 
     Provider<WatchDataStore> provideWatchDataStoreProvider;
 
-    Provider<HeartRateTrackerManager> heartRateTrackerManagerProvider;
-
     Provider<MqttManager> mqttManagerProvider;
+
+    Provider<HeartRateTrackerManager> heartRateTrackerManagerProvider;
 
     SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -555,8 +555,8 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.provideWatchDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<WatchDataStore>(singletonCImpl, 0));
-      this.heartRateTrackerManagerProvider = DoubleCheck.provider(new SwitchingProvider<HeartRateTrackerManager>(singletonCImpl, 1));
-      this.mqttManagerProvider = DoubleCheck.provider(new SwitchingProvider<MqttManager>(singletonCImpl, 2));
+      this.mqttManagerProvider = DoubleCheck.provider(new SwitchingProvider<MqttManager>(singletonCImpl, 1));
+      this.heartRateTrackerManagerProvider = DoubleCheck.provider(new SwitchingProvider<HeartRateTrackerManager>(singletonCImpl, 2));
     }
 
     @Override
@@ -595,11 +595,11 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
           case 0: // com.rpm.watch.data.WatchDataStore
           return (T) WatchModule_ProvideWatchDataStoreFactory.provideWatchDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 1: // com.rpm.watch.health.HeartRateTrackerManager
-          return (T) new HeartRateTrackerManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
-
-          case 2: // com.rpm.watch.mqtt.MqttManager
+          case 1: // com.rpm.watch.mqtt.MqttManager
           return (T) new MqttManager();
+
+          case 2: // com.rpm.watch.health.HeartRateTrackerManager
+          return (T) new HeartRateTrackerManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }
