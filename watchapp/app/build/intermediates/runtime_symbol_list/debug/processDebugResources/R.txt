@@ -673,3 +673,4 @@ int[] styleable WearableRecyclerView { 0x7f040010, 0x7f040012, 0x7f04004f }
 int styleable WearableRecyclerView_bezelWidth 0
 int styleable WearableRecyclerView_circularScrollingGestureEnabled 1
 int styleable WearableRecyclerView_scrollDegreesPerScreen 2
+int xml network_security_config 0x7f0f0000

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.health.HrStatus
+import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.service.HeartRateMonitorService
 import com.rpm.watch.service.ServiceStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ data class WatchUiState(
     val hrStatus: HrStatus = HrStatus.INITIAL,
     val serviceStatus: ServiceStatus = ServiceStatus.IDLE,
     val patientId: String = "",
+    val mqttState: MqttConnectionState = MqttConnectionState.DISCONNECTED,
     val selectedMode: MonitoringMode = MonitoringMode.HEART_RATE,
     val isMonitoring: Boolean = false,
     val errorMessage: String = ""
@@ -52,6 +54,7 @@ class WatchViewModel @Inject constructor(
     private val _selectedMode = MutableStateFlow(MonitoringMode.HEART_RATE)
     private val _isMonitoring = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow("")
+    private val _mqttState = MutableStateFlow(MqttConnectionState.DISCONNECTED)
 
     val uiState: StateFlow<WatchUiState> = combine(
         listOf(
@@ -60,6 +63,8 @@ class WatchViewModel @Inject constructor(
             _spO2Percent,
             _hrStatus,
             _svcStatus,
+            _patientId,
+            _mqttState,
             _selectedMode,
             _isMonitoring,
             _errorMessage
@@ -70,9 +75,11 @@ class WatchViewModel @Inject constructor(
         val spo2 = values[2] as Float?
         val hrSt = values[3] as HrStatus
         val svcSt = values[4] as ServiceStatus
-        val mode = values[5] as MonitoringMode
-        val localMonitoring = values[6] as Boolean
-        val errMsg = values[7] as String
+        val pid = values[5] as String
+        val mqtt = values[6] as MqttConnectionState
+        val mode = values[7] as MonitoringMode
+        val localMonitoring = values[8] as Boolean
+        val errMsg = values[9] as String
 
         WatchUiState(
             heartRate     = hr,
@@ -80,7 +87,8 @@ class WatchViewModel @Inject constructor(
             spO2Percent   = spo2,
             hrStatus      = hrSt,
             serviceStatus = svcSt,
-            patientId     = _patientId.value,
+            patientId     = pid,
+            mqttState     = mqtt,
             selectedMode  = mode,
             isMonitoring  = localMonitoring || svcSt == ServiceStatus.MEASURING || svcSt == ServiceStatus.CONNECTING,
             errorMessage  = errMsg
@@ -112,6 +120,9 @@ class WatchViewModel @Inject constructor(
         }
         viewModelScope.launch {
             service.lastError.collect { _errorMessage.value = it }
+        }
+        viewModelScope.launch {
+            service.mqttState.collect { _mqttState.value = it }
         }
     }
 

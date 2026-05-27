@@ -32,7 +32,7 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
   const connect = async () => {
     const patientId = normalizePatientId(patientIdInput)
     if (!patientId) {
-      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
+      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9), matching the watch (default ABC123).')
       return
     }
 

@@ -12,3 +12,4 @@ string status_error
 string status_measuring
 string stop_monitoring
 style AppTheme
+xml network_security_config

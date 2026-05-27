@@ -147,7 +147,10 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
           <div className="live-copy">
             <p className="eyebrow">Live vitals</p>
             <h2>Stream vitals from your device</h2>
-            <p>Enter your patient ID and connect to view real-time readings.</p>
+            <p>
+              Enter the same 6-character Patient ID shown on the watch (default <strong>ABC123</strong>),
+              then click Connect while monitoring is running on the watch.
+            </p>
           </div>
 
           <div className="live-panel">

@@ -24,6 +24,7 @@ import com.rpm.watch.health.HeartRateTrackerManager
 import com.rpm.watch.health.HrStatus
 import com.rpm.watch.health.VitalReading
 import com.rpm.watch.health.TrackerState
+import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.mqtt.MqttManager
 import com.rpm.watch.mqtt.VitalsPayload
 import dagger.hilt.android.AndroidEntryPoint
@@ -89,6 +90,7 @@ class HeartRateMonitorService : Service() {
     val hrStatus:   StateFlow<HrStatus>      = _hrStatus
     val svcStatus:  StateFlow<ServiceStatus> = _svcStatus
     val lastError:  StateFlow<String>        = _lastError
+    val mqttState:  StateFlow<MqttConnectionState> = mqttManager.connectionState
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -157,22 +159,22 @@ class HeartRateMonitorService : Service() {
 
             // After the check above, patientId is smart-cast to String (non-null)
 
-            // 2. Connect MQTT in parallel — must not block heart-rate startup
+            // 2. Connect MQTT before publishing vitals
             if (!localSensorOnly) {
-                serviceScope.launch {
-                    try {
-                        withTimeout(MQTT_CONNECT_TIMEOUT_MS) {
-                            mqttManager.connect(
-                                host     = mqttHost,
-                                port     = mqttPort,
-                                clientId = "rpm-watch-$deviceId"
-                            )
-                        }
-                        Log.i(TAG, "MQTT connected")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "MQTT unavailable, continuing local sensor mode: ${e.message}")
-                        updateNotification("Sensor mode (no MQTT)")
+                try {
+                    withTimeout(MQTT_CONNECT_TIMEOUT_MS) {
+                        mqttManager.connect(
+                            host     = mqttHost,
+                            port     = mqttPort,
+                            clientId = "rpm-watch-$deviceId"
+                        )
                     }
+                    Log.i(TAG, "MQTT connected to $mqttHost:$mqttPort")
+                    updateNotification("Connected — streaming vitals")
+                } catch (e: Exception) {
+                    Log.w(TAG, "MQTT unavailable, continuing local sensor mode: ${e.message}")
+                    _lastError.value = "Server unreachable — check Wi‑Fi"
+                    updateNotification("Sensor only (no server)")
                 }
             } else {
                 Log.i(TAG, "LOCAL_SENSOR_ONLY enabled: skipping MQTT connect")
@@ -215,7 +217,9 @@ class HeartRateMonitorService : Service() {
             launch {
                 while (isActive) {
                     delay(MQTT_PUBLISH_INTERVAL_MS)
-                    if (!localSensorOnly) {
+                    if (!localSensorOnly &&
+                        mqttManager.connectionState.value == MqttConnectionState.CONNECTED
+                    ) {
                         publishReading(patientId, deviceId, topic)
                     }
                 }

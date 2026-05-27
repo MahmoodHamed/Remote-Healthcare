@@ -14,7 +14,7 @@ public final class BuildConfig {
   // Field from default config.
   public static final boolean LOCAL_SENSOR_ONLY = false;
   // Field from default config.
-  public static final String MQTT_HOST = "www.remote-care.tech";
+  public static final String MQTT_HOST = "remote-care.tech";
   // Field from default config.
   public static final int MQTT_PORT = 1883;
 }

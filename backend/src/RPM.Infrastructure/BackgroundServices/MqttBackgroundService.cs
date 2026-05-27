@@ -93,6 +93,9 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
                 data.CaloriesBurned, data.FallDetected, data.IsWearing);
 
             await mediator.Send(cmd);
+            logger.LogInformation(
+                "Ingested vitals for patient {PatientId}: HR={HeartRate}, SpO2={SpO2}, Temp={Temp}",
+                patientId.Value, data.HeartRateBpm, data.SpO2Percent, data.TemperatureC);
         }
         catch (Exception ex)
         {

@@ -31,6 +31,7 @@ import com.rpm.watch.MonitoringMode
 import com.rpm.watch.WatchUiState
 import com.rpm.watch.WatchViewModel
 import com.rpm.watch.health.HrStatus
+import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.service.ServiceStatus
 import java.util.Locale
 
@@ -40,14 +41,15 @@ fun HeartRateScreen(viewModel: WatchViewModel) {
     HeartRateContent(state = state, onToggle = {
         if (state.isMonitoring) viewModel.stopMonitoring()
         else viewModel.startMonitoring(state.selectedMode)
-    }, onModeSelected = viewModel::selectMode)
+    }, onModeSelected = viewModel::selectMode, onPatientIdChange = viewModel::savePatientId)
 }
 
 @Composable
 fun HeartRateContent(
     state: WatchUiState,
     onToggle: () -> Unit,
-    onModeSelected: (MonitoringMode) -> Unit
+    onModeSelected: (MonitoringMode) -> Unit,
+    onPatientIdChange: (String) -> Unit
 ) {
     Scaffold(
         timeText  = { TimeText() },
@@ -60,6 +62,30 @@ fun HeartRateContent(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Patient ID: ${state.patientId.ifBlank { "not set" }}",
+                fontSize = 10.sp,
+                color = MaterialTheme.colors.onBackground.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = mqttStatusText(state.mqttState),
+                fontSize = 10.sp,
+                color = mqttStatusColor(state.mqttState),
+                textAlign = TextAlign.Center
+            )
+            if (!state.isMonitoring && state.patientId != "ABC123") {
+                Button(
+                    onClick = { onPatientIdChange("ABC123") },
+                    modifier = Modifier.fillMaxWidth().height(28.dp),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
+                ) {
+                    Text("Use ABC123", fontSize = 10.sp)
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
             Text(
                 text = "Choose sensor",
                 fontSize = 11.sp,
@@ -245,3 +271,16 @@ private fun heartColor(status: HrStatus): Color = when (status) {
 
 private fun statusColor(state: WatchUiState): Color =
     if (state.serviceStatus == ServiceStatus.ERROR) Color(0xFFFF5252) else Color(0xFFBDBDBD)
+
+private fun mqttStatusText(state: MqttConnectionState): String = when (state) {
+    MqttConnectionState.CONNECTED -> "Server: connected"
+    MqttConnectionState.CONNECTING -> "Server: connecting…"
+    MqttConnectionState.ERROR -> "Server: error"
+    MqttConnectionState.DISCONNECTED -> "Server: offline"
+}
+
+private fun mqttStatusColor(state: MqttConnectionState): Color = when (state) {
+    MqttConnectionState.CONNECTED -> Color(0xFF43A047)
+    MqttConnectionState.ERROR -> Color(0xFFFF5252)
+    else -> Color(0xFFBDBDBD)
+}

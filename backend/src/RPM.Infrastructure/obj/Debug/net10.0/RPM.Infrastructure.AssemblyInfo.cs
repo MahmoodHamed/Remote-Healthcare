@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RPM.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+05bf923b9d7afefbf59aad8f9a197ec141d51d07")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4958238a24cd81d7cf5f17fdb382c50da399a731")]
 [assembly: System.Reflection.AssemblyProductAttribute("RPM.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RPM.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
