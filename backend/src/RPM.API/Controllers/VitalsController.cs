@@ -30,7 +30,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
         var id = ParsePatientId(patientId);
         if (id is null) return BadRequest("Invalid patient ID.");
         var latest = await mediator.Send(new GetLatestVitalsQuery(id.Value), ct);
-        if (latest is null) return NotFound();
+        if (latest is null) return NoContent();
         return Ok(latest);
     }
 

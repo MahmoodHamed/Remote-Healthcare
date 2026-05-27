@@ -86,9 +86,13 @@ export default function RoleShell({ profile, onLogout, roleClass, brand, nav, ch
         </div>
       </aside>
 
-      <div className="sidebar-backdrop" onClick={() => setOpen(false)} />
-
       <div className="main">
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
         <header className="app-topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button

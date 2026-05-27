@@ -47,7 +47,7 @@ export const fetchLatestVitals = async (patientId) => {
     err.status = 401
     throw err
   }
-  if (response.status === 404) return null
+  if (response.status === 404 || response.status === 204) return null
   if (!response.ok) throw new Error(`Failed to load vitals (${response.status}).`)
   const data = await response.json()
   return mapVitalsPayload(data)

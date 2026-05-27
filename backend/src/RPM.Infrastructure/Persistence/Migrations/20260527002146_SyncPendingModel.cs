@@ -1,17 +1,16 @@
-using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace RPM.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class Watch8AndHospitalAdmin : Migration
+    public partial class SyncPendingModel : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // ===== VitalRecords: Samsung Watch 8 advanced sensors =====
+            // Samsung Watch 8 vitals columns
             migrationBuilder.AddColumn<float>(name: "SkinTemperatureC", table: "VitalRecords", type: "real", nullable: true);
             migrationBuilder.AddColumn<float>(name: "HeartRateVariabilityMs", table: "VitalRecords", type: "real", nullable: true);
             migrationBuilder.AddColumn<float>(name: "RestingHeartRateBpm", table: "VitalRecords", type: "real", nullable: true);
@@ -33,7 +32,6 @@ namespace RPM.Infrastructure.Persistence.Migrations
             migrationBuilder.AddColumn<float>(name: "BloodGlucoseMgDl", table: "VitalRecords", type: "real", nullable: true);
             migrationBuilder.AddColumn<float>(name: "BatteryLevel", table: "VitalRecords", type: "real", nullable: true);
 
-            // ===== AlertThresholds: new sensor thresholds =====
             migrationBuilder.AddColumn<float>(name: "MaxSkinTemperatureC", table: "AlertThresholds", type: "real", nullable: false, defaultValue: 38.0f);
             migrationBuilder.AddColumn<float>(name: "MinRespirationRate", table: "AlertThresholds", type: "real", nullable: false, defaultValue: 8.0f);
             migrationBuilder.AddColumn<float>(name: "MaxRespirationRate", table: "AlertThresholds", type: "real", nullable: false, defaultValue: 24.0f);
@@ -41,13 +39,19 @@ namespace RPM.Infrastructure.Persistence.Migrations
             migrationBuilder.AddColumn<float>(name: "MinBloodGlucoseMgDl", table: "AlertThresholds", type: "real", nullable: false, defaultValue: 70.0f);
             migrationBuilder.AddColumn<float>(name: "MaxBloodGlucoseMgDl", table: "AlertThresholds", type: "real", nullable: false, defaultValue: 180.0f);
 
-            // ===== Notifications: faster inbox lookup per user =====
+            migrationBuilder.DropIndex(
+                name: "IX_Notifications_UserId",
+                table: "Notifications");
+
+            migrationBuilder.DropIndex(
+                name: "IX_DoctorPatientAssignments_DoctorId",
+                table: "DoctorPatientAssignments");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId_IsRead_SentAt",
                 table: "Notifications",
                 columns: new[] { "UserId", "IsRead", "SentAt" });
 
-            // ===== DoctorPatientAssignments: prevent duplicate active assignments =====
             migrationBuilder.CreateIndex(
                 name: "IX_DoctorPatientAssignments_DoctorId_PatientId",
                 table: "DoctorPatientAssignments",
@@ -60,6 +64,16 @@ namespace RPM.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropIndex(name: "IX_DoctorPatientAssignments_DoctorId_PatientId", table: "DoctorPatientAssignments");
             migrationBuilder.DropIndex(name: "IX_Notifications_UserId_IsRead_SentAt", table: "Notifications");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DoctorPatientAssignments_DoctorId",
+                table: "DoctorPatientAssignments",
+                column: "DoctorId");
 
             migrationBuilder.DropColumn(name: "MaxSkinTemperatureC", table: "AlertThresholds");
             migrationBuilder.DropColumn(name: "MinRespirationRate", table: "AlertThresholds");

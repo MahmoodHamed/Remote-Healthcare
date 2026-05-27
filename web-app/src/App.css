@@ -484,11 +484,13 @@
    ────────────────────────────────────────────────────────────────── */
 .app-frame {
   display: grid;
-  grid-template-columns: 264px 1fr;
+  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-areas: "sidebar main";
   min-height: 100vh;
   background: var(--bg);
 }
 .app-frame .sidebar {
+  grid-area: sidebar;
   background: var(--surface);
   border-right: 1px solid var(--line);
   padding: 1.25rem 1rem;
@@ -499,6 +501,7 @@
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  z-index: 30;
 }
 .sidebar-brand {
   display: flex;
@@ -587,9 +590,17 @@
 .role-patient .avatar { background: linear-gradient(135deg, #fb923c, #ea580c); }
 
 .app-frame .main {
+  grid-area: main;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
+  position: relative;
+  isolation: isolate;
+}
+.app-frame .sidebar-backdrop {
+  display: none;
+  pointer-events: none;
 }
 .app-topbar {
   display: flex;
@@ -602,6 +613,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  flex-shrink: 0;
+  width: 100%;
 }
 .app-topbar .page-title {
   display: grid;
@@ -651,9 +664,13 @@
 }
 
 .app-content {
+  flex: 1;
   padding: 2rem;
   display: grid;
   gap: 1.5rem;
+  min-width: 0;
+  width: 100%;
+  align-content: start;
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -785,8 +802,25 @@
 
 .vitals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
+  min-width: 0;
+}
+.vitals-empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background: var(--surface-2);
+}
+.vitals-empty h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+.vitals-empty p {
+  color: var(--ink-muted);
+  max-width: 36rem;
+  margin: 0 auto 1rem;
 }
 .vital-card {
   background: var(--surface);
@@ -906,7 +940,10 @@
 @media (max-width: 1024px) {
   .hero-grid, .auth-shell { grid-template-columns: 1fr; }
   .auth-shell .auth-art { display: none; }
-  .app-frame { grid-template-columns: 1fr; }
+  .app-frame {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "main";
+  }
   .app-frame .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
@@ -923,6 +960,7 @@
     inset: 0;
     background: rgba(15, 23, 42, 0.45);
     z-index: 40;
+    pointer-events: auto;
   }
   .app-frame.sidebar-open .sidebar-backdrop { display: block; }
   .mobile-menu-btn { display: inline-flex !important; }
