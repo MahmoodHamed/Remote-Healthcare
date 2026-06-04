@@ -1,5 +1,7 @@
 ﻿namespace RPM.Application.DTOs.Patients;
-public record PatientSummaryDto(Guid UserId, string FullName, string Email, string? AvatarUrl, DateOnly? DateOfBirth, string? BloodType);
+public record PatientSummaryDto(
+    Guid UserId, string FullName, string Email, string? AvatarUrl,
+    DateOnly? DateOfBirth, string? BloodType, VitalRecordLatestDto? LatestVitals = null);
 public record PatientDetailDto(Guid UserId, string FullName, string Email, string Phone, string? AvatarUrl,
     DateOnly? DateOfBirth, string? BloodType, float? WeightKg, float? HeightCm,
     List<string> ChronicDiseases, List<string> Allergies, List<string> CurrentMedications,

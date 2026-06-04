@@ -13,13 +13,44 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
 {
     [HttpGet]
     [Authorize(Roles = "Doctor")]
-    public async Task<IActionResult> GetMyPatients(CancellationToken ct)
+    public async Task<IActionResult> GetMyPatients(CancellationToken ct) =>
+        Ok(await ToSummaries(await uow.Patients.GetByDoctorIdAsync(currentUser.UserId, ct), ct));
+
+    /// <summary>Patients the current user may view (Doctor, Patient self, or Relative links).</summary>
+    [HttpGet("accessible")]
+    public async Task<IActionResult> GetAccessiblePatients(CancellationToken ct)
     {
-        var patients = await uow.Patients.GetByDoctorIdAsync(currentUser.UserId, ct);
-        var result = patients.Select(p => new PatientSummaryDto(
-            p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
-            p.DateOfBirth, p.BloodType?.ToString()));
-        return Ok(result);
+        IEnumerable<Domain.Entities.PatientProfile> patients = currentUser.Role switch
+        {
+            "Doctor" => await uow.Patients.GetByDoctorIdAsync(currentUser.UserId, ct),
+            "Patient" => await SelfPatientOrEmpty(ct),
+            "Relative" => await uow.Patients.GetByRelativeUserIdAsync(currentUser.UserId, ct),
+            _ => []
+        };
+        return Ok(await ToSummaries(patients, ct));
+    }
+
+    private async Task<IEnumerable<Domain.Entities.PatientProfile>> SelfPatientOrEmpty(CancellationToken ct)
+    {
+        var profile = await uow.Patients.GetByUserIdAsync(currentUser.UserId, ct);
+        return profile is null ? [] : [profile];
+    }
+
+    private async Task<IEnumerable<PatientSummaryDto>> ToSummaries(
+        IEnumerable<Domain.Entities.PatientProfile> patients, CancellationToken ct)
+    {
+        var list = new List<PatientSummaryDto>();
+        foreach (var p in patients)
+        {
+            var latest = await uow.Vitals.GetLatestByPatientIdAsync(p.UserId, ct);
+            list.Add(new PatientSummaryDto(
+                p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
+                p.DateOfBirth, p.BloodType?.ToString(),
+                latest is null ? null : new VitalRecordLatestDto(
+                    latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
+                    latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt)));
+        }
+        return list;
     }
 
     [HttpGet("{userId}")]

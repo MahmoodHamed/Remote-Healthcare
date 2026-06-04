@@ -1,13 +1,31 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RPM.Application.Common.Interfaces;
 using RPM.Application.Features.Auth.Commands;
+using RPM.Domain.Interfaces;
 namespace RPM.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(IMediator mediator) : ControllerBase
+public class AuthController(IMediator mediator, IUnitOfWork uow, ICurrentUser currentUser) : ControllerBase
 {
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> GetMe(CancellationToken ct)
+    {
+        var user = await uow.Users.GetByIdAsync(currentUser.UserId, ct);
+        if (user is null) return NotFound();
+        return Ok(new
+        {
+            id = user.Id,
+            fullName = user.FullName,
+            email = user.Email,
+            phone = user.Phone,
+            role = user.Role.ToString(),
+            avatarUrl = user.AvatarUrl
+        });
+    }
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand cmd, CancellationToken ct) =>
         Ok(await mediator.Send(cmd, ct));

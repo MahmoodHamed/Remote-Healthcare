@@ -164,6 +164,11 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
             .Where(p => p.DoctorAssignments.Any(a => a.DoctorId == doctorId && a.Status == Domain.Enums.RelationshipAssignmentStatus.Active))
             .ToListAsync(ct);
 
+    public async Task<IEnumerable<PatientProfile>> GetByRelativeUserIdAsync(Guid relativeUserId, CancellationToken ct = default) =>
+        await db.PatientProfiles.Include(p => p.User)
+            .Where(p => p.RelativeLinks.Any(l => l.RelativeUserId == relativeUserId))
+            .ToListAsync(ct);
+
     public Task<DoctorProfile?> GetDoctorProfileByUserIdAsync(Guid userId, CancellationToken ct = default) =>
         db.DoctorProfiles.FirstOrDefaultAsync(d => d.UserId == userId, ct);
 

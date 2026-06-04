@@ -412,20 +412,20 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
+      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
 
       static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
 
       static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
 
-      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
-
       static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
 
       static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
 
+      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
+
       @KeepFieldType
-      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
+      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
 
       @KeepFieldType
       AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
@@ -434,13 +434,13 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
       ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
 
       @KeepFieldType
-      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
-
-      @KeepFieldType
       PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
 
       @KeepFieldType
       ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+
+      @KeepFieldType
+      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
     }
   }
 
@@ -488,7 +488,7 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
     }
 
     private PatientRepository patientRepository() {
-      return new PatientRepository(singletonCImpl.provideApiServiceProvider.get());
+      return new PatientRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get());
     }
 
     @SuppressWarnings("unchecked")
@@ -514,35 +514,35 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
-
       static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
+
+      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
 
       static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
 
-      @KeepFieldType
-      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
+      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
 
-      @KeepFieldType
-      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
+      static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
 
-      @KeepFieldType
-      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
-
-      @KeepFieldType
-      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
 
       @KeepFieldType
       AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
 
       @KeepFieldType
+      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
+
+      @KeepFieldType
       PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
+
+      @KeepFieldType
+      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
+
+      @KeepFieldType
+      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+
+      @KeepFieldType
+      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {

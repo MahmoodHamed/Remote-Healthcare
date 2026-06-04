@@ -6,6 +6,7 @@ public interface IPatientRepository
     Task<PatientProfile?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<PatientProfile?> GetByPatientUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<IEnumerable<PatientProfile>> GetByDoctorIdAsync(Guid doctorId, CancellationToken ct = default);
+    Task<IEnumerable<PatientProfile>> GetByRelativeUserIdAsync(Guid relativeUserId, CancellationToken ct = default);
     Task<DoctorProfile?> GetDoctorProfileByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task AddPatientProfileAsync(PatientProfile profile, CancellationToken ct = default);
     Task AddDoctorProfileAsync(DoctorProfile profile, CancellationToken ct = default);

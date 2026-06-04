@@ -10,7 +10,8 @@ fun httpErrorMessage(response: Response<*>): String {
     }
     return when (response.code()) {
         401 -> "Session expired. Please sign in again."
-        403 -> "Access denied. The My Patients screen requires a Doctor account. Sign out, register or log in as Doctor."
+        403 -> "Access denied. You do not have permission for this action."
+        404 -> "This feature is not available on the server yet. Deploy the latest API or sign in again."
         502 -> "Server unavailable (502). The API is not running on remote-care.tech."
         503 -> "Service unavailable (503). Try again shortly."
         else -> response.message().ifBlank { "Request failed (${response.code()})" }

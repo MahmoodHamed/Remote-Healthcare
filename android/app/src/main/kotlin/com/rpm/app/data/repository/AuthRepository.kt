@@ -89,6 +89,22 @@ class AuthRepository @Inject constructor(
                     )
                 }
                 Resource.Success(body)
+            } else if (response.code() == 404) {
+                val role = tokenStore.userRole.firstOrNull()
+                val userId = tokenStore.userId.firstOrNull()
+                val name = tokenStore.userName.firstOrNull()
+                if (role != null && userId != null) {
+                    Resource.Success(
+                        UserProfileDto(
+                            id = userId,
+                            email = "",
+                            fullName = name.orEmpty(),
+                            role = role,
+                        )
+                    )
+                } else {
+                    Resource.Error(httpErrorMessage(response))
+                }
             } else {
                 Resource.Error(httpErrorMessage(response))
             }
