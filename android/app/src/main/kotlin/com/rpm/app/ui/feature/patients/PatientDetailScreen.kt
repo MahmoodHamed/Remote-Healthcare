@@ -10,15 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.rpm.app.data.remote.dto.VitalRecordLatestDto
-import com.rpm.app.data.signalr.RealTimeVitals
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientDetailScreen(
+    userRole: String?,
     onBack: () -> Unit,
     onOpenChat: (patientId: String) -> Unit,
     onOpenAlerts: (patientId: String) -> Unit,
@@ -26,14 +24,25 @@ fun PatientDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val patient = uiState.patient
+    val vitalsTitle = vitalsSectionTitle(userRole, patient?.fullName)
+    val showBack = userRole != "Patient"
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(patient?.fullName ?: "Patient Detail") },
+                title = {
+                    Text(
+                        when (userRole) {
+                            "Patient" -> "My Health"
+                            else -> patient?.fullName ?: "Patient Detail"
+                        }
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (showBack) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
                 actions = {
@@ -50,10 +59,10 @@ fun PatientDetailScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 uiState.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                uiState.error != null -> Text(
+                uiState.error != null && patient == null -> Text(
                     uiState.error!!,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 )
                 patient != null -> {
                     Column(
@@ -61,42 +70,37 @@ fun PatientDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        // Patient info card
+                        VitalsDetailCard(
+                            title = vitalsTitle,
+                            live = uiState.realtimeVitals,
+                            latest = patient.latestVitals,
+                            full = uiState.latestVitals,
+                        )
+
                         Card(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {
-                                Text("Patient Information", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    when (userRole) {
+                                        "Patient" -> "My Profile"
+                                        "Relative" -> "Family Member"
+                                        else -> "Patient Information"
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
                                 Spacer(Modifier.height(8.dp))
-                                InfoRow("Name", patient.fullName)
-                                patient.bloodType?.let { InfoRow("Blood Type", it) }
+                                VitalRow("Name", patient.fullName)
+                                patient.bloodType?.let { VitalRow("Blood Type", it) }
                                 patient.doctor?.let {
-                                    InfoRow("Doctor", it.fullName)
-                                    it.specialization?.let { s -> InfoRow("Specialization", s) }
+                                    VitalRow("Doctor", it.fullName)
+                                    it.specialization?.let { s -> VitalRow("Specialization", s) }
                                 }
                             }
                         }
 
-                        // Real-time vitals (if connected)
-                        uiState.realtimeVitals?.let { rv ->
-                            RealtimeVitalsCard(rv)
-                        } ?: patient.latestVitals?.let { v ->
-                            LatestVitalsCard(v)
-                        } ?: uiState.latestVitals?.let { v ->
-                            Card(Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(16.dp)) {
-                                    Text("Latest Vitals", style = MaterialTheme.typography.titleMedium)
-                                    Spacer(Modifier.height(8.dp))
-                                    v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-                                    v.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-                                    v.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
-                                    if (v.systolicBp != null && v.diastolicBp != null)
-                                        VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
-                                    VitalRow("Wearing Watch", if (v.isWearing) "Yes" else "No")
-                                    if (v.fallDetected)
-                                        Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
-                                }
-                            }
+                        uiState.error?.let { msg ->
+                            Text(msg, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -104,58 +108,3 @@ fun PatientDetailScreen(
         }
     }
 }
-
-@Composable
-private fun LatestVitalsCard(v: VitalRecordLatestDto) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Latest Vitals", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-            v.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-            v.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
-            if (v.systolicBp != null && v.diastolicBp != null)
-                VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
-        }
-    }
-}
-
-@Composable
-private fun RealtimeVitalsCard(rv: RealTimeVitals) {
-    Card(
-        Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Green, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Live Vitals", style = MaterialTheme.typography.titleMedium)
-            }
-            Spacer(Modifier.height(8.dp))
-            rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-            rv.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-            rv.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
-            if (rv.systolicBp != null && rv.diastolicBp != null)
-                VitalRow("Blood Pressure", "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg")
-            if (rv.fallDetected)
-                Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
-        }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value)
-    }
-}
-
-@Composable
-private fun VitalRow(label: String, value: String) = InfoRow(label, value)

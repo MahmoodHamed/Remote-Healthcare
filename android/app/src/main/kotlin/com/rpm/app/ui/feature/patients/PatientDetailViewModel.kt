@@ -43,12 +43,16 @@ class PatientDetailViewModel @Inject constructor(
 
     private fun loadPatient() {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val detail = repo.getPatientDetail(patientId)
             val vitals = repo.getLatestVitals(patientId)
+            val patient = (detail as? Resource.Success)?.data
             _uiState.value = PatientDetailUiState(
-                patient = (detail as? Resource.Success)?.data,
+                isLoading = false,
+                patient = patient,
                 latestVitals = (vitals as? Resource.Success)?.data,
                 error = (detail as? Resource.Error)?.message
+                    ?: (vitals as? Resource.Error)?.message.takeIf { patient == null },
             )
         }
     }

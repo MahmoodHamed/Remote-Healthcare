@@ -19,6 +19,7 @@ import com.rpm.app.data.remote.dto.PatientSummaryDto
 fun PatientListScreen(
     title: String,
     emptyMessage: String,
+    userRole: String?,
     onPatientClick: (patientId: String) -> Unit,
     onLogout: () -> Unit,
     autoOpenSinglePatient: Boolean = false,
@@ -66,7 +67,11 @@ fun PatientListScreen(
                 )
                 else -> LazyColumn(contentPadding = PaddingValues(8.dp)) {
                     items(uiState.patients) { patient ->
-                        PatientCard(patient, onClick = { onPatientClick(patient.userId) })
+                        PatientCard(
+                            patient = patient,
+                            userRole = userRole,
+                            onClick = { onPatientClick(patient.userId) },
+                        )
                     }
                 }
             }
@@ -75,7 +80,7 @@ fun PatientListScreen(
 }
 
 @Composable
-private fun PatientCard(patient: PatientSummaryDto, onClick: () -> Unit) {
+private fun PatientCard(patient: PatientSummaryDto, userRole: String?, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -91,17 +96,24 @@ private fun PatientCard(patient: PatientSummaryDto, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(patient.fullName, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    when (userRole) {
+                        "Doctor" -> "Patient vitals"
+                        "Relative" -> "Family member vitals"
+                        else -> "Latest vitals"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 patient.latestVitals?.let { v ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        buildString {
-                            v.heartRateBpm?.let { append("HR: ${it.toInt()} bpm  ") }
-                            v.spO2Percent?.let { append("SpO2: ${it.toInt()}%") }
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    Spacer(Modifier.height(2.dp))
+                    VitalsSummaryText(v)
+                } ?: Text(
+                    "No vitals yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 patient.bloodType?.let {
                     Spacer(Modifier.height(4.dp))
                     Text("Blood type: $it", style = MaterialTheme.typography.bodySmall)

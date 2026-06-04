@@ -80,6 +80,7 @@ fun RpmNavHost() {
             PatientListScreen(
                 title = patientListTitle(authState.userRole),
                 emptyMessage = patientListEmptyMessage(authState.userRole),
+                userRole = authState.userRole,
                 onPatientClick = { navController.navigate(Routes.patientDetail(it)) },
                 onLogout = {
                     authViewModel.logout()
@@ -87,7 +88,7 @@ fun RpmNavHost() {
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                autoOpenSinglePatient = authState.userRole == "Patient",
+                autoOpenSinglePatient = authState.userRole == "Patient" || authState.userRole == "Relative",
             )
         }
 
@@ -96,6 +97,7 @@ fun RpmNavHost() {
             arguments = listOf(navArgument("patientId") { type = NavType.StringType })
         ) {
             PatientDetailScreen(
+                userRole = authState.userRole,
                 onBack = { navController.popBackStack() },
                 onOpenChat = { navController.navigate(Routes.CONVERSATION_LIST) },
                 onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) }

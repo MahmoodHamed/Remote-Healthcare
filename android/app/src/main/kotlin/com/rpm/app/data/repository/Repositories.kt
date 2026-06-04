@@ -41,7 +41,9 @@ class PatientRepository @Inject constructor(
                 is Resource.Error -> detail
                 Resource.Loading -> Resource.Error("Loading…")
             }
-            "Relative" -> Resource.Success(emptyList())
+            "Relative" -> Resource.Error(
+                "Could not load linked family members. Ensure the server supports /api/patients/accessible."
+            )
             else -> Resource.Error("Unsupported account type: $role")
         }
     }
