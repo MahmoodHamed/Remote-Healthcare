@@ -63,5 +63,7 @@ data class VitalsPayload(
     // Safety & wear status
     @SerialName("fallDetected")            val fallDetected: Boolean = false,
     @SerialName("isWearing")               val isWearing: Boolean = true,
-    @SerialName("batteryLevel")            val batteryLevel: Float? = null
+    @SerialName("batteryLevel")            val batteryLevel: Float? = null,
+    /** Wall-clock ms on the watch when this message was sent (forces fresh server/UI updates). */
+    @SerialName("publishedAtMs")           val publishedAtMs: Long? = null,
 )

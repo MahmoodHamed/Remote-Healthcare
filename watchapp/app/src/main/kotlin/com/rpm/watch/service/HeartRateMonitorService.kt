@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import com.rpm.watch.BuildConfig
 import com.rpm.watch.MainActivity
@@ -27,19 +28,22 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
 private const val TAG = "HRMonitorService"
 private const val CHANNEL_ID = "rpm_watch_hr"
 private const val NOTIFICATION_ID = 1
-/** Publish latest vitals to MQTT on this cadence (decoupled from Samsung batching). */
-private const val MQTT_PUBLISH_TICK_MS = 1_000L
+/** Fixed-rate MQTT publish (independent of Samsung sensor batching). */
+private const val MQTT_PUBLISH_PERIOD_MS = 500L
 
 enum class ServiceStatus { IDLE, CONNECTING, MEASURING, ERROR }
 
@@ -58,6 +62,14 @@ class HeartRateMonitorService : Service() {
     @Volatile private var lastHeartRate: Float? = null
     @Volatile private var maxHeartRate: Float? = null
     @Volatile private var isWearingNow: Boolean = true
+    @Volatile private var publishTopic: String? = null
+    @Volatile private var publishPatientId: String? = null
+    @Volatile private var publishDeviceId: String? = null
+    @Volatile private var mqttPublishEnabled: Boolean = false
+
+    private val publishSequence = AtomicLong(0L)
+    private var publishScheduler: ScheduledExecutorService? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private val _heartRate = MutableStateFlow(0)
     private val _hrStatus = MutableStateFlow(HrStatus.INITIAL)
@@ -73,6 +85,7 @@ class HeartRateMonitorService : Service() {
         super.onCreate()
         createNotificationChannel()
         sensorsManager.start()
+        acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -85,6 +98,8 @@ class HeartRateMonitorService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopPublishScheduler()
+        releaseWakeLock()
         monitorJob?.cancel()
         mqttManager.disconnect()
         sensorsManager.stop()
@@ -121,26 +136,21 @@ class HeartRateMonitorService : Service() {
 
             val patientId = normalizeGuid(patientIdRaw)
             val topic = "vitals/$patientId/data"
+            publishPatientId = patientId
+            publishDeviceId = deviceId
+            publishTopic = topic
+            mqttPublishEnabled = !localSensorOnly
 
             if (!localSensorOnly) {
                 try {
                     mqttManager.connect(mqttHost, mqttPort, "rpm-watch-$deviceId")
+                    startPublishScheduler()
                 } catch (e: Exception) {
                     Log.w(TAG, "MQTT unavailable, continuing local sensor mode: ${e.message}")
+                    mqttPublishEnabled = false
                 }
             }
 
-            val publishTicker = launch {
-                while (isActive) {
-                    delay(MQTT_PUBLISH_TICK_MS)
-                    val hr = lastHeartRate
-                    if (!localSensorOnly && hr != null && hr > 0f) {
-                        publishReading(patientId, deviceId, topic)
-                    }
-                }
-            }
-
-            try {
             hrTrackerManager.heartRateFlow().collect { state ->
                 when (state) {
                     is TrackerState.Connecting -> {
@@ -159,8 +169,9 @@ class HeartRateMonitorService : Service() {
                         isWearingNow = reading.status != HrStatus.DEVICE_MOVING
                         updateNotification("HR: ${reading.bpm} bpm")
 
-                        if (!localSensorOnly && reading.bpm > 0) {
-                            publishReading(patientId, deviceId, topic)
+                        val sensorHr = sensorsManager.snapshot().heartRateBpm
+                        if (sensorHr != null && sensorHr > 0f) {
+                            lastHeartRate = sensorHr
                         }
                     }
                     is TrackerState.Error -> {
@@ -176,18 +187,46 @@ class HeartRateMonitorService : Service() {
                     }
                 }
             }
-            } finally {
-                publishTicker.cancel()
-            }
         }
+    }
+
+    private fun startPublishScheduler() {
+        stopPublishScheduler()
+        publishScheduler = Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "rpm-mqtt-publish").apply { isDaemon = true }
+        }
+        publishScheduler?.scheduleAtFixedRate(
+            { publishLatestVitals() },
+            0L,
+            MQTT_PUBLISH_PERIOD_MS,
+            TimeUnit.MILLISECONDS,
+        )
+        Log.i(TAG, "MQTT publish scheduler started (${MQTT_PUBLISH_PERIOD_MS}ms)")
+    }
+
+    private fun stopPublishScheduler() {
+        publishScheduler?.shutdownNow()
+        publishScheduler = null
+    }
+
+    private fun publishLatestVitals() {
+        if (!mqttPublishEnabled) return
+        val hr = lastHeartRate ?: sensorsManager.snapshot().heartRateBpm
+        if (hr == null || hr <= 0f) return
+        lastHeartRate = hr
+        val patientId = publishPatientId ?: return
+        val deviceId = publishDeviceId ?: return
+        val topic = publishTopic ?: return
+        publishReading(patientId, deviceId, topic)
     }
 
     private fun publishReading(patientId: String, deviceId: String, topic: String) {
         val sensors = sensorsManager.snapshot()
+        val hr = lastHeartRate ?: sensors.heartRateBpm
         val payload = VitalsPayload(
             patientId = patientId,
             deviceId = deviceId,
-            heartRateBpm = lastHeartRate,
+            heartRateBpm = hr,
             heartRateVariabilityMs = sensors.heartRateVariabilityMs,
             maxHeartRateBpm = maxHeartRate,
             skinTemperatureC = sensors.skinTemperatureC,
@@ -198,10 +237,27 @@ class HeartRateMonitorService : Service() {
             batteryLevel = sensors.batteryLevel,
             fallDetected = sensors.fallDetected,
             isWearing = isWearingNow,
+            publishedAtMs = System.currentTimeMillis(),
         )
         val json = Json.encodeToString(payload)
         mqttManager.publish(topic, json)
-        Log.d(TAG, "Published vitals payload to $topic")
+        val seq = publishSequence.incrementAndGet()
+        Log.d(TAG, "Published vitals #$seq to $topic (hr=$hr)")
+    }
+
+    private fun acquireWakeLock() {
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rpm:hr_monitor").apply {
+            setReferenceCounted(false)
+            acquire(10 * 60 * 60 * 1000L)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            wakeLock?.let { if (it.isHeld) it.release() }
+        } catch (_: Exception) {}
+        wakeLock = null
     }
 
     private fun normalizeGuid(value: String): String = try {

@@ -24,8 +24,6 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
         FullMode = BoundedChannelFullMode.Wait
     });
     private CancellationToken _stoppingToken;
-    private const int MaxBatchSize = 100;
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -139,33 +137,10 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
 
     private async Task ConsumeQueueAsync(CancellationToken stoppingToken)
     {
-        var batch = new List<VitalIngestionDto>(MaxBatchSize);
-
-        while (await _queue.Reader.WaitToReadAsync(stoppingToken))
+        await foreach (var reading in _queue.Reader.ReadAllAsync(stoppingToken))
         {
-            batch.Clear();
-            batch.Add(await _queue.Reader.ReadAsync(stoppingToken));
-
-            var deadline = DateTime.UtcNow.Add(FlushInterval);
-            while (batch.Count < MaxBatchSize && DateTime.UtcNow < deadline)
-            {
-                if (_queue.Reader.TryRead(out var next))
-                {
-                    batch.Add(next);
-                    continue;
-                }
-
-                var remaining = deadline - DateTime.UtcNow;
-                if (remaining <= TimeSpan.Zero)
-                    break;
-
-                await Task.Delay(remaining, stoppingToken);
-            }
-
-            while (batch.Count < MaxBatchSize && _queue.Reader.TryRead(out var leftover))
-                batch.Add(leftover);
-
-            await mediator.Send(new IngestVitalsBatchCommand(batch.ToArray()), stoppingToken);
+            // Process each MQTT message immediately (no batch delay).
+            await mediator.Send(new IngestVitalsBatchCommand([reading]), stoppingToken);
         }
     }
 

@@ -62,7 +62,7 @@ export default function LiveVitals({ patientId, patientName, watchSetupHref = '/
           const mapped = mapVitalsPayload(payload)
           if (mapped) {
             setLatest(mapped)
-            setUpdatedAt(new Date(mapped.recordedAt))
+            setUpdatedAt(new Date())
             setStatus('connected')
           }
         },

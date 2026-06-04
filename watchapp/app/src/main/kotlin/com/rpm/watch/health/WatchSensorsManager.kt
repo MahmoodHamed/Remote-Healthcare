@@ -30,6 +30,7 @@ private const val TAG = "WatchSensorsManager"
  * Sensor SDK or the Android SensorManager actually produces a value.
  */
 data class AdvancedReading(
+    var heartRateBpm: Float? = null,
     var heartRateVariabilityMs: Float? = null,
     var skinTemperatureC: Float? = null,
     var stepsCount: Int? = null,
@@ -103,6 +104,10 @@ class WatchSensorsManager @Inject constructor(
                 Log.i(TAG, "Samsung Health tracking connected (continuous)")
                 bindContinuousTracker(HealthTrackerType.HEART_RATE_CONTINUOUS) { dp ->
                     try {
+                        val bpm = (dp.getValue(ValueKey.HeartRateSet.HEART_RATE) as? Number)?.toFloat()
+                        if (bpm != null && bpm > 0f) {
+                            synchronized(state) { state.heartRateBpm = bpm }
+                        }
                         val raw = dp.getValue(ValueKey.HeartRateSet.IBI_LIST) as? List<*>
                         val intervals = raw?.mapNotNull { (it as? Number)?.toFloat() } ?: emptyList()
                         if (intervals.size > 1) {

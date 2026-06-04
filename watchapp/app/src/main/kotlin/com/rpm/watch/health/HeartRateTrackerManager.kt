@@ -25,7 +25,7 @@ import javax.inject.Singleton
 
 private const val TAG = "HeartRateTracker"
 /** Samsung batches HR when the watch display is off; flush() forces ~1 Hz delivery. */
-private const val HR_FLUSH_INTERVAL_MS = 1_000L
+private const val HR_FLUSH_INTERVAL_MS = 500L
 
 /** Heart rate status values returned by Samsung Health Sensor SDK */
 enum class HrStatus(val code: Int) {

@@ -39,6 +39,7 @@
     <!-- API 34+ requires declaring the type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Tell Samsung Health Sensor SDK which services we may bind to -->
     <queries>
