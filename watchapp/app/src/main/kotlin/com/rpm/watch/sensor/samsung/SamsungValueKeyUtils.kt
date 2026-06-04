@@ -52,7 +52,10 @@ private fun resolveValueKeyField(
 
 internal fun logDataPointContents(dp: DataPoint) {
     try {
-        val nestedNames = listOf("HeartRateSet", "SpO2Set", "SkinTemperatureSet", "PpgSet")
+        val nestedNames = listOf(
+            "HeartRateSet", "SpO2Set", "SkinTemperatureSet", "PpgSet",
+            "EdaSet", "BiaSet", "EcgSet",
+        )
         for (n in nestedNames) {
             val cls = runCatching {
                 Class.forName("com.samsung.android.service.health.tracking.data.ValueKey\$$n")

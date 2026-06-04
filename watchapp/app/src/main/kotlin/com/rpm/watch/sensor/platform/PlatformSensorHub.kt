@@ -27,6 +27,7 @@ class PlatformSensorHub(context: Context) {
         SensorType.SPO2 -> spO2Reader.start { pct ->
             emit(TrackerState.Measuring(com.rpm.watch.sensor.VitalReading(spO2Percent = pct)))
         }
+        SensorType.EDA, SensorType.BIA, SensorType.ECG -> false
     }.also { started ->
         if (!started) Log.w(TAG, "No platform sensor for ${sensor.name}")
     }

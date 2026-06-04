@@ -57,6 +57,7 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
         var record = VitalRecord.Create(cmd.PatientId, cmd.DeviceId,
             cmd.HeartRateBpm, cmd.SpO2Percent, cmd.SystolicBp, cmd.DiastolicBp,
             cmd.TemperatureC, cmd.SkinTemperatureC, cmd.AmbientTemperatureC, cmd.HrvMs,
+            cmd.StressScore, cmd.BodyFatPercent, cmd.EcgAvgHeartRateBpm,
             cmd.Steps, cmd.Calories, cmd.FallDetected, cmd.IsWearing);
 
         await uow.Vitals.AddAsync(record, ct);

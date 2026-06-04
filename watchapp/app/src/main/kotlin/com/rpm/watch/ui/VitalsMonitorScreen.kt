@@ -249,24 +249,30 @@ private fun displayValue(state: WatchUiState): String = when (state.selectedSens
         state.temperatureC?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
     SensorType.SPO2 ->
         state.spO2Percent?.let { String.format(Locale.US, "%.0f", it) } ?: "--"
+    SensorType.EDA, SensorType.BIA, SensorType.ECG -> "--"
 }
 
 private fun sensorUnit(sensor: SensorType): String = when (sensor) {
     SensorType.HEART_RATE -> "bpm"
     SensorType.SKIN_TEMPERATURE -> "°C"
     SensorType.SPO2 -> "%"
+    SensorType.EDA, SensorType.BIA, SensorType.ECG -> ""
 }
 
 private fun sensorIcon(sensor: SensorType): String = when (sensor) {
     SensorType.HEART_RATE -> "♥"
     SensorType.SKIN_TEMPERATURE -> "T"
     SensorType.SPO2 -> "O₂"
+    SensorType.EDA -> "S"
+    SensorType.BIA -> "B"
+    SensorType.ECG -> "E"
 }
 
 private fun sensorColor(state: WatchUiState): Color = when (state.selectedSensor) {
     SensorType.HEART_RATE -> heartColor(state.heartRateStatus)
     SensorType.SKIN_TEMPERATURE -> Color(0xFF1E88E5)
     SensorType.SPO2 -> Color(0xFF43A047)
+    SensorType.EDA, SensorType.BIA, SensorType.ECG -> Color(0xFF757575)
 }
 
 private fun buildStatusText(state: WatchUiState): String {
@@ -294,6 +300,9 @@ private fun buildStatusText(state: WatchUiState): String {
         } else {
             "SpO₂ active"
         }
+        SensorType.EDA -> "Stress (EDA) in background"
+        SensorType.BIA -> "Body fat — follow watch BIA prompt"
+        SensorType.ECG -> "ECG — follow watch ECG prompt"
     }
     return sensorStr
 }

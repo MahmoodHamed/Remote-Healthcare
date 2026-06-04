@@ -73,6 +73,9 @@ class VitalsMonitorService : Service() {
     @Volatile private var latestAmbientTemperatureC: Float? = null
     @Volatile private var latestHrvMs: Float? = null
     @Volatile private var latestSpO2Percent: Float? = null
+    @Volatile private var latestStressScore: Float? = null
+    @Volatile private var latestBodyFatPercent: Float? = null
+    @Volatile private var latestEcgAvgHeartRateBpm: Float? = null
     @Volatile private var isWearingNow: Boolean = true
 
     @Volatile private var vitalsMqttTopic: String? = null
@@ -287,6 +290,7 @@ class VitalsMonitorService : Service() {
         val hrForMqtt = latestHeartRate?.toFloat()?.takeIf {
             isWearingNow && _heartRateStatus.value.isSuccessful
         }
+        val hrvForMqtt = latestHrvMs?.takeIf { isWearingNow && hrForMqtt != null }
         val payload = VitalsPayload(
             patientId = patientId,
             deviceId = deviceId,
@@ -295,7 +299,10 @@ class VitalsMonitorService : Service() {
             temperatureC = latestTemperatureC,
             skinTemperatureC = latestSkinTemperatureC,
             ambientTemperatureC = latestAmbientTemperatureC,
-            hrvMs = latestHrvMs,
+            hrvMs = hrvForMqtt,
+            stressScore = latestStressScore,
+            bodyFatPercent = latestBodyFatPercent,
+            ecgAvgHeartRateBpm = latestEcgAvgHeartRateBpm,
             stepsCount = motion.stepsCount,
             caloriesBurned = motion.caloriesBurned,
             fallDetected = motion.fallDetected,
@@ -317,12 +324,31 @@ class VitalsMonitorService : Service() {
                     maybePublishVitals()
                     return
                 }
-                reading.hrvMs?.let { latestHrvMs = it }
+                if (isWearingNow) {
+                    reading.hrvMs?.let { latestHrvMs = it }
+                }
                 val bpm = reading.heartRateBpm
-                if (bpm != null && reading.status.isSuccessful) {
+                if (bpm != null && reading.status.isSuccessful && isWearingNow) {
                     latestHeartRate = bpm
                     _heartRate.value = bpm
-                    isWearingNow = true
+                    maybePublishVitals()
+                }
+            }
+            SensorType.EDA -> {
+                reading.stressScore?.let {
+                    latestStressScore = it
+                    maybePublishVitals()
+                }
+            }
+            SensorType.BIA -> {
+                reading.bodyFatPercent?.let {
+                    latestBodyFatPercent = it
+                    maybePublishVitals()
+                }
+            }
+            SensorType.ECG -> {
+                if (reading.ecgComplete) {
+                    latestEcgAvgHeartRateBpm = latestHeartRate?.toFloat()?.takeIf { isWearingNow }
                     maybePublishVitals()
                 }
             }
@@ -346,7 +372,9 @@ class VitalsMonitorService : Service() {
 
     private fun clearHeartRateDisplay() {
         latestHeartRate = null
+        latestHrvMs = null
         _heartRate.value = 0
+        maybePublishVitals(force = true)
     }
 
     private fun statusMessage(sensor: SensorType, reading: VitalReading): String = when (sensor) {
@@ -361,6 +389,11 @@ class VitalsMonitorService : Service() {
         SensorType.SKIN_TEMPERATURE -> reading.temperatureC?.let {
             "Temp: ${String.format(java.util.Locale.US, "%.1f", it)} °C"
         } ?: "Measuring temp…"
+        SensorType.EDA -> reading.stressScore?.let { "Stress: ${it.toInt()}/100" } ?: "EDA…"
+        SensorType.BIA -> reading.bodyFatPercent?.let {
+            "Body fat: ${String.format(java.util.Locale.US, "%.1f", it)}%"
+        } ?: "BIA — touch keys on watch"
+        SensorType.ECG -> if (reading.ecgComplete) "ECG recorded" else "ECG — follow watch prompt"
     }
 
     private fun readSensor(intent: Intent): SensorType {

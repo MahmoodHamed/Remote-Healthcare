@@ -631,6 +631,24 @@ namespace RPM.Infrastructure.Persistence.Migrations
                     b.Property<float?>("HeartRateBpm")
                         .HasColumnType("real");
 
+                    b.Property<float?>("HrvMs")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("AmbientTemperatureC")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("SkinTemperatureC")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("BodyFatPercent")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("EcgAvgHeartRateBpm")
+                        .HasColumnType("real");
+
+                    b.Property<float?>("StressScore")
+                        .HasColumnType("real");
+
                     b.Property<bool>("IsWearing")
                         .HasColumnType("boolean");
 

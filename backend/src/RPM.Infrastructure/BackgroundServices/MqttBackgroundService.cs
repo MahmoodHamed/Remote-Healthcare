@@ -90,8 +90,8 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
                 data.HeartRateBpm, data.SpO2Percent,
                 data.SystolicBp, data.DiastolicBp,
                 data.TemperatureC, data.SkinTemperatureC, data.AmbientTemperatureC,
-                data.HrvMs, data.StepsCount,
-                data.CaloriesBurned, data.FallDetected, data.IsWearing);
+                data.HrvMs, data.StressScore, data.BodyFatPercent, data.EcgAvgHeartRateBpm,
+                data.StepsCount, data.CaloriesBurned, data.FallDetected, data.IsWearing);
 
             await mediator.Send(cmd);
             logger.LogInformation(
@@ -162,5 +162,5 @@ public record MqttVitalsPayload(
     float? HeartRateBpm, float? SpO2Percent,
     float? SystolicBp, float? DiastolicBp,
     float? TemperatureC, float? SkinTemperatureC, float? AmbientTemperatureC,
-    float? HrvMs, int? StepsCount,
-    float? CaloriesBurned, bool FallDetected, bool IsWearing);
+    float? HrvMs, float? StressScore, float? BodyFatPercent, float? EcgAvgHeartRateBpm,
+    int? StepsCount, float? CaloriesBurned, bool FallDetected, bool IsWearing);

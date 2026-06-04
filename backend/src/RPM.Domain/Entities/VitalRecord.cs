@@ -15,6 +15,9 @@ public class VitalRecord : BaseEntity
     public float? SkinTemperatureC { get; private set; }
     public float? AmbientTemperatureC { get; private set; }
     public float? HrvMs { get; private set; }
+    public float? StressScore { get; private set; }
+    public float? BodyFatPercent { get; private set; }
+    public float? EcgAvgHeartRateBpm { get; private set; }
     public int? StepsCount { get; private set; }
     public float? CaloriesBurned { get; private set; }
     public bool FallDetected { get; private set; }
@@ -28,6 +31,7 @@ public class VitalRecord : BaseEntity
     public static VitalRecord Create(Guid patientId, Guid deviceId,
         float? hr, float? spo2, float? sysBp, float? diaBp,
         float? temp, float? skinTemp, float? ambientTemp, float? hrvMs,
+        float? stressScore, float? bodyFatPercent, float? ecgAvgHeartRateBpm,
         int? steps, float? cal, bool fall, bool wearing)
     {
         var record = new VitalRecord
@@ -42,6 +46,9 @@ public class VitalRecord : BaseEntity
             SkinTemperatureC = skinTemp,
             AmbientTemperatureC = ambientTemp,
             HrvMs = hrvMs,
+            StressScore = stressScore,
+            BodyFatPercent = bodyFatPercent,
+            EcgAvgHeartRateBpm = ecgAvgHeartRateBpm,
             StepsCount = steps,
             CaloriesBurned = cal,
             FallDetected = fall,

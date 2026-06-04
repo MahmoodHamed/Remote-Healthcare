@@ -137,11 +137,16 @@ private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier
                 Text("$title (Live)", style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.height(8.dp))
-            rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+            if (rv.isWearing) {
+                rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+                rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms") }
+            }
             rv.spO2Percent?.let { VitalRow("SpO₂", "${it.toInt()}%") }
             rv.temperatureC?.let { VitalRow("Body temp.", String.format("%.1f °C", it)) }
             rv.skinTemperatureC?.let { VitalRow("Skin temp.", String.format("%.1f °C", it)) }
-            rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms") }
+            rv.stressScore?.let { VitalRow("Stress", "${it.toInt()} / 100") }
+            rv.bodyFatPercent?.let { VitalRow("Body fat", String.format("%.1f %%", it)) }
+            rv.ecgAvgHeartRateBpm?.let { VitalRow("ECG avg HR", "${it.toInt()} bpm") }
             rv.stepsCount?.let { VitalRow("Steps", "$it") }
             rv.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
             if (rv.systolicBp != null && rv.diastolicBp != null) {
