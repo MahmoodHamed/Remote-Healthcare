@@ -29,6 +29,6 @@ public record RegisterDoctorCommand(
 
 public record LoginCommand(string Email, string Password, string? DeviceInfo) : IRequest<LoginResponseDto>;
 public record AdminLoginCommand(string Email, string Password, string? DeviceInfo) : IRequest<LoginResponseDto>;
-public record RefreshTokenCommand(string AccessToken, string RefreshToken, string? DeviceInfo) : IRequest<AuthTokensDto>;
+public record RefreshTokenCommand(string RefreshToken, string? AccessToken = null, string? DeviceInfo = null) : IRequest<AuthTokensDto>;
 public record LogoutCommand(string RefreshToken) : IRequest;
 public record UpdateFcmTokenCommand(string FcmToken) : IRequest;

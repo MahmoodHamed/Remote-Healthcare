@@ -33,6 +33,14 @@ public class User : BaseEntity
         };
     }
 
+    /// <summary>Creates a placeholder user with a pre-assigned ID (e.g. from MQTT vitals ingestion).</summary>
+    public static User CreateWithId(Guid id, string fullName, string email, string phone, string passwordHash, UserRole role)
+    {
+        var user = Create(fullName, email, phone, passwordHash, role);
+        user.AssignId(id);
+        return user;
+    }
+
     public void UpdateFcmToken(string token) { FcmToken = token; SetUpdatedAt(); }
     public void UpdateAvatar(string url) { AvatarUrl = url; SetUpdatedAt(); }
     public void UpdatePasswordHash(string passwordHash)

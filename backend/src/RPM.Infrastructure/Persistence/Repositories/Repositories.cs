@@ -221,3 +221,14 @@ public class NotificationRepository(AppDbContext db) : INotificationRepository
 
     public void Update(Notification notification) => db.Notifications.Update(notification);
 }
+
+public class RefreshTokenRepository(AppDbContext db) : IRefreshTokenRepository
+{
+    public Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default) =>
+        db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+
+    public async Task AddAsync(RefreshToken token, CancellationToken ct = default) =>
+        await db.RefreshTokens.AddAsync(token, ct);
+
+    public void Update(RefreshToken token) => db.RefreshTokens.Update(token);
+}

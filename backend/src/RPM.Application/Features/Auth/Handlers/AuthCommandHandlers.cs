@@ -8,7 +8,7 @@ using RPM.Domain.Enums;
 using RPM.Domain.Interfaces;
 namespace RPM.Application.Features.Auth.Handlers;
 
-public class RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt)
+public class RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt, IRefreshTokenService refreshTokens)
     : IRequestHandler<RegisterCommand, LoginResponseDto>
 {
     public async Task<LoginResponseDto> Handle(RegisterCommand cmd, CancellationToken ct)
@@ -20,53 +20,93 @@ public class RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJw
             });
 
         return await AuthRegistration.CreateUserAsync(
-            uow, hasher, jwt,
+            uow, hasher, jwt, refreshTokens,
             cmd.FullName, cmd.Email, cmd.Phone, cmd.Password,
             role,
             cmd.LicenseNumber,
             cmd.Specialization,
             null,
+            deviceInfo: null,
             ct);
     }
 }
 
-public class RegisterPatientCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt)
+public class RegisterPatientCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt, IRefreshTokenService refreshTokens)
     : IRequestHandler<RegisterPatientCommand, LoginResponseDto>
 {
     public async Task<LoginResponseDto> Handle(RegisterPatientCommand cmd, CancellationToken ct) =>
         await AuthRegistration.CreateUserAsync(
-            uow, hasher, jwt,
+            uow, hasher, jwt, refreshTokens,
             cmd.FullName, cmd.Email, cmd.Phone, cmd.Password,
             UserRole.Patient,
-            null, null, null, ct);
+            null, null, null,
+            deviceInfo: null, ct);
 }
 
-public class RegisterDoctorCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt)
+public class RegisterDoctorCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt, IRefreshTokenService refreshTokens)
     : IRequestHandler<RegisterDoctorCommand, LoginResponseDto>
 {
     public async Task<LoginResponseDto> Handle(RegisterDoctorCommand cmd, CancellationToken ct) =>
         await AuthRegistration.CreateUserAsync(
-            uow, hasher, jwt,
+            uow, hasher, jwt, refreshTokens,
             cmd.FullName, cmd.Email, cmd.Phone, cmd.Password,
             UserRole.Doctor,
             cmd.LicenseNumber,
             cmd.Specialization,
             cmd.HospitalName,
-            ct);
+            deviceInfo: null, ct);
 }
 
-public class LoginCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt)
+public class LoginCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt, IRefreshTokenService refreshTokens)
     : IRequestHandler<LoginCommand, LoginResponseDto>
 {
     public async Task<LoginResponseDto> Handle(LoginCommand cmd, CancellationToken ct) =>
-        await AuthRegistration.SignInAsync(uow, hasher, jwt, cmd.Email, cmd.Password, cmd.DeviceInfo, requireAdmin: false, ct);
+        await AuthRegistration.SignInAsync(uow, hasher, jwt, refreshTokens, cmd.Email, cmd.Password, cmd.DeviceInfo, requireAdmin: false, ct);
 }
 
-public class AdminLoginCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt)
+public class AdminLoginCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtService jwt, IRefreshTokenService refreshTokens)
     : IRequestHandler<AdminLoginCommand, LoginResponseDto>
 {
     public async Task<LoginResponseDto> Handle(AdminLoginCommand cmd, CancellationToken ct) =>
-        await AuthRegistration.SignInAsync(uow, hasher, jwt, cmd.Email, cmd.Password, cmd.DeviceInfo, requireAdmin: true, ct);
+        await AuthRegistration.SignInAsync(uow, hasher, jwt, refreshTokens, cmd.Email, cmd.Password, cmd.DeviceInfo, requireAdmin: true, ct);
+}
+
+public class RefreshTokenCommandHandler(
+    IUnitOfWork uow,
+    IJwtService jwt,
+    IRefreshTokenService refreshTokens)
+    : IRequestHandler<RefreshTokenCommand, AuthTokensDto>
+{
+    public async Task<AuthTokensDto> Handle(RefreshTokenCommand cmd, CancellationToken ct)
+    {
+        var stored = await refreshTokens.FindActiveAsync(cmd.RefreshToken, ct)
+            ?? throw new UnauthorizedException("Invalid or expired refresh token.");
+
+        var user = await uow.Users.GetByIdAsync(stored.UserId, ct)
+            ?? throw new UnauthorizedException("Invalid or expired refresh token.");
+
+        if (!user.IsActive)
+            throw new UnauthorizedException("Account is deactivated.");
+
+        stored.Revoke();
+        uow.RefreshTokens.Update(stored);
+
+        var newRefreshToken = await refreshTokens.IssueAsync(user.Id, cmd.DeviceInfo, ct);
+        var accessToken = jwt.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
+        await uow.SaveChangesAsync(ct);
+
+        return new AuthTokensDto(
+            accessToken,
+            newRefreshToken,
+            DateTime.UtcNow.AddHours(jwt.AccessTokenExpiryHours));
+    }
+}
+
+public class LogoutCommandHandler(IRefreshTokenService refreshTokens)
+    : IRequestHandler<LogoutCommand>
+{
+    public Task Handle(LogoutCommand cmd, CancellationToken ct) =>
+        refreshTokens.RevokeAsync(cmd.RefreshToken, ct);
 }
 
 public class UpdateFcmTokenCommandHandler(IUnitOfWork uow, ICurrentUser currentUser)
@@ -88,6 +128,7 @@ internal static class AuthRegistration
         IUnitOfWork uow,
         IPasswordHasher hasher,
         IJwtService jwt,
+        IRefreshTokenService refreshTokens,
         string fullName,
         string email,
         string phone,
@@ -96,6 +137,7 @@ internal static class AuthRegistration
         string? licenseNumber,
         string? specialization,
         string? hospitalName,
+        string? deviceInfo,
         CancellationToken ct)
     {
         if (await uow.Users.ExistsByEmailAsync(email, ct))
@@ -120,12 +162,12 @@ internal static class AuthRegistration
             await uow.Patients.AddDoctorProfileAsync(doc, ct);
         }
 
+        var accessToken = jwt.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
+        var refreshToken = await refreshTokens.IssueAsync(user.Id, deviceInfo, ct);
         await uow.SaveChangesAsync(ct);
 
-        var accessToken = jwt.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
-        var refreshToken = jwt.GenerateRefreshToken();
         return new LoginResponseDto(
-            new AuthTokensDto(accessToken, refreshToken, DateTime.UtcNow.AddHours(1)),
+            new AuthTokensDto(accessToken, refreshToken, DateTime.UtcNow.AddHours(jwt.AccessTokenExpiryHours)),
             new UserProfileDto(user.Id, user.FullName, user.Email, user.Phone, user.Role.ToString(), null));
     }
 
@@ -133,6 +175,7 @@ internal static class AuthRegistration
         IUnitOfWork uow,
         IPasswordHasher hasher,
         IJwtService jwt,
+        IRefreshTokenService refreshTokens,
         string email,
         string password,
         string? deviceInfo,
@@ -150,12 +193,11 @@ internal static class AuthRegistration
             throw new UnauthorizedException("This sign-in page is reserved for administrators.");
 
         var accessToken = jwt.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
-        var refreshToken = jwt.GenerateRefreshToken();
-        _ = RefreshToken.Create(user.Id, hasher.Hash(refreshToken), DateTime.UtcNow.AddDays(30), deviceInfo);
+        var refreshToken = await refreshTokens.IssueAsync(user.Id, deviceInfo, ct);
         await uow.SaveChangesAsync(ct);
 
         return new LoginResponseDto(
-            new AuthTokensDto(accessToken, refreshToken, DateTime.UtcNow.AddHours(1)),
+            new AuthTokensDto(accessToken, refreshToken, DateTime.UtcNow.AddHours(jwt.AccessTokenExpiryHours)),
             new UserProfileDto(user.Id, user.FullName, user.Email, user.Phone, user.Role.ToString(), user.AvatarUrl));
     }
 }

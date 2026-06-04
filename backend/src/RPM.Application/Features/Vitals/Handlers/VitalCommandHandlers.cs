@@ -76,13 +76,13 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub, I
         if (existingUser is null)
         {
             var shortLabel = userId.ToString("N")[..8];
-            var placeholderUser = User.Create(
+            var placeholderUser = User.CreateWithId(
+                userId,
                 $"Patient {shortLabel}",
                 $"patient+{shortLabel}@local",
                 string.Empty,
                 string.Empty,
                 Domain.Enums.UserRole.Patient);
-            typeof(User).GetProperty("Id")?.SetValue(placeholderUser, userId);
             await uow.Users.AddAsync(placeholderUser, ct);
             await uow.SaveChangesAsync(ct);
         }
@@ -96,8 +96,7 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub, I
     internal static async Task EnsureDeviceAsync(IUnitOfWork uow, Guid deviceId, PatientProfile profile, CancellationToken ct)
     {
         var mqttClientId = $"rpm-watch-{deviceId:D}";
-        var device = Device.Create(profile.Id, "RPM Watch", "Samsung Galaxy Watch 8", mqttClientId);
-        typeof(Device).GetProperty("Id")?.SetValue(device, deviceId);
+        var device = Device.CreateWithId(deviceId, profile.Id, "RPM Watch", "Samsung Galaxy Watch 8", mqttClientId);
         await uow.Devices.AddAsync(device, ct);
     }
 }

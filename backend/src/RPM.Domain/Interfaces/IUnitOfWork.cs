@@ -8,5 +8,6 @@ public interface IUnitOfWork
     IDeviceRepository Devices { get; }
     IPatientRepository Patients { get; }
     INotificationRepository Notifications { get; }
+    IRefreshTokenRepository RefreshTokens { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
