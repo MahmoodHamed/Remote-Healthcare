@@ -41,7 +41,8 @@ data class UserProfileDto(
     val email: String,
     val fullName: String,
     val role: String,
-    val avatarUrl: String? = null
+    val phone: String? = null,
+    val avatarUrl: String? = null,
 )
 
 @Serializable
@@ -168,26 +169,43 @@ data class SendMessageRequest(
 // ── Patients ──────────────────────────────────────────────────────────────
 
 @Serializable
+data class VitalRecordLatestDto(
+    val heartRateBpm: Float? = null,
+    val spO2Percent: Float? = null,
+    val systolicBp: Float? = null,
+    val diastolicBp: Float? = null,
+    val temperatureC: Float? = null,
+    val recordedAt: String? = null,
+)
+
+@Serializable
 data class PatientSummaryDto(
-    val patientId: String,
     val userId: String,
     val fullName: String,
+    val email: String? = null,
     val avatarUrl: String? = null,
-    val latestVitals: VitalRecordDto? = null,
-    val unresolvedAlertCount: Int = 0
+    val dateOfBirth: String? = null,
+    val bloodType: String? = null,
+    val latestVitals: VitalRecordLatestDto? = null,
 )
 
 @Serializable
 data class PatientDetailDto(
-    val patientId: String,
     val userId: String,
     val fullName: String,
+    val email: String? = null,
+    val phone: String? = null,
+    val avatarUrl: String? = null,
     val dateOfBirth: String? = null,
     val bloodType: String? = null,
-    val medicalHistory: String? = null,
-    val avatarUrl: String? = null,
-    val latestVitals: VitalRecordDto? = null,
-    val doctor: DoctorDto? = null
+    val weightKg: Float? = null,
+    val heightCm: Float? = null,
+    val chronicDiseases: List<String> = emptyList(),
+    val allergies: List<String> = emptyList(),
+    val currentMedications: List<String> = emptyList(),
+    val emergencyContactPhone: String? = null,
+    val latestVitals: VitalRecordLatestDto? = null,
+    val doctor: DoctorDto? = null,
 )
 
 @Serializable

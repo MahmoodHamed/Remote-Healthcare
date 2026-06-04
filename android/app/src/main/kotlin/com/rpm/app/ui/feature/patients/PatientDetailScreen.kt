@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.rpm.app.data.remote.dto.VitalRecordLatestDto
 import com.rpm.app.data.signalr.RealTimeVitals
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +37,7 @@ fun PatientDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { patient?.let { onOpenAlerts(it.patientId) } }) {
+                    IconButton(onClick = { patient?.let { onOpenAlerts(it.userId) } }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Alerts")
                     }
                     IconButton(onClick = { patient?.let { onOpenChat(it.userId) } }) {
@@ -79,6 +80,8 @@ fun PatientDetailScreen(
                         // Real-time vitals (if connected)
                         uiState.realtimeVitals?.let { rv ->
                             RealtimeVitalsCard(rv)
+                        } ?: patient.latestVitals?.let { v ->
+                            LatestVitalsCard(v)
                         } ?: uiState.latestVitals?.let { v ->
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(16.dp)) {
@@ -98,6 +101,21 @@ fun PatientDetailScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LatestVitalsCard(v: VitalRecordLatestDto) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Latest Vitals", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+            v.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
+            v.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
+            if (v.systolicBp != null && v.diastolicBp != null)
+                VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
         }
     }
 }

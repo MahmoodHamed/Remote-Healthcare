@@ -5,6 +5,7 @@ import com.rpm.app.data.remote.api.RpmApiService
 import com.rpm.app.data.remote.dto.*
 import com.rpm.app.data.remote.httpErrorMessage
 import com.rpm.app.domain.model.Resource
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
@@ -62,6 +63,31 @@ class AuthRepository @Inject constructor(
                     body.user.role,
                     body.user.fullName
                 )
+                Resource.Success(body)
+            } else {
+                Resource.Error(httpErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun refreshProfile(): Resource<UserProfileDto> {
+        return try {
+            val response = api.getMe()
+            if (response.isSuccessful) {
+                val body = response.body()!!
+                val existingToken = tokenStore.getAccessToken()
+                val refresh = tokenStore.refreshToken.firstOrNull()
+                if (existingToken != null && refresh != null) {
+                    tokenStore.saveSession(
+                        existingToken,
+                        refresh,
+                        body.id,
+                        body.role,
+                        body.fullName,
+                    )
+                }
                 Resource.Success(body)
             } else {
                 Resource.Error(httpErrorMessage(response))

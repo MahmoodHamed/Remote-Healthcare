@@ -10,6 +10,9 @@ class PatientRepository @Inject constructor(private val api: RpmApiService) {
 
     suspend fun getMyPatients(): Resource<List<PatientSummaryDto>> = safeCall { api.getMyPatients() }
 
+    suspend fun getAccessiblePatients(): Resource<List<PatientSummaryDto>> =
+        safeCall { api.getAccessiblePatients() }
+
     suspend fun getPatientDetail(patientId: String): Resource<PatientDetailDto> =
         safeCall { api.getPatientDetail(patientId) }
 

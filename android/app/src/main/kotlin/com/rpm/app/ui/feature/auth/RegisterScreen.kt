@@ -100,15 +100,6 @@ fun RegisterScreen(
                     }
                 }
             }
-            if (role != "Doctor") {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "My Patients in the app is only for Doctor accounts.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             if (role == "Doctor") {
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(

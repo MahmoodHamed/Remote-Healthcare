@@ -36,12 +36,29 @@ class AuthViewModel @Inject constructor(
 
     private fun checkSession() {
         viewModelScope.launch {
-            val token = tokenStore.getAccessToken()
-            val role = tokenStore.userRole.firstOrNull()
-            val userId = tokenStore.userId.firstOrNull()
-            if (token != null) {
-                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
+            refreshSession()
+        }
+    }
+
+    private suspend fun refreshSession() {
+        if (tokenStore.getAccessToken() == null) return
+        when (val result = authRepository.refreshProfile()) {
+            is Resource.Success -> _uiState.value = AuthUiState(
+                isLoggedIn = true,
+                userRole = result.data.role,
+                userId = result.data.id,
+            )
+            is Resource.Error -> {
+                val role = tokenStore.userRole.firstOrNull()
+                val userId = tokenStore.userId.firstOrNull()
+                if (role != null && userId != null) {
+                    _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
+                } else {
+                    authRepository.logout()
+                    _uiState.value = AuthUiState()
+                }
             }
+            Resource.Loading -> {}
         }
     }
 

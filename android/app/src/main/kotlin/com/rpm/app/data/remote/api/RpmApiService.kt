@@ -29,6 +29,9 @@ interface RpmApiService {
     @GET("api/patients")
     suspend fun getMyPatients(): Response<List<PatientSummaryDto>>
 
+    @GET("api/patients/accessible")
+    suspend fun getAccessiblePatients(): Response<List<PatientSummaryDto>>
+
     @GET("api/patients/{patientId}")
     suspend fun getPatientDetail(@Path("patientId") patientId: String): Response<PatientDetailDto>
 

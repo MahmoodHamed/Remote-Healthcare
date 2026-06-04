@@ -17,16 +17,27 @@ import com.rpm.app.data.remote.dto.PatientSummaryDto
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientListScreen(
+    title: String,
+    emptyMessage: String,
     onPatientClick: (patientId: String) -> Unit,
     onLogout: () -> Unit,
+    autoOpenSinglePatient: Boolean = false,
     viewModel: PatientListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    var didAutoOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.patients, autoOpenSinglePatient, uiState.isLoading) {
+        if (!didAutoOpen && autoOpenSinglePatient && !uiState.isLoading && uiState.patients.size == 1) {
+            didAutoOpen = true
+            onPatientClick(uiState.patients.first().userId)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Patients") },
+                title = { Text(title) },
                 actions = {
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Default.Logout, contentDescription = "Logout")
@@ -49,12 +60,13 @@ fun PatientListScreen(
                     modifier = Modifier.align(Alignment.Center)
                 )
                 uiState.patients.isEmpty() -> Text(
-                    "No patients assigned yet.",
-                    modifier = Modifier.align(Alignment.Center)
+                    emptyMessage,
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 else -> LazyColumn(contentPadding = PaddingValues(8.dp)) {
                     items(uiState.patients) { patient ->
-                        PatientCard(patient, onClick = { onPatientClick(patient.patientId) })
+                        PatientCard(patient, onClick = { onPatientClick(patient.userId) })
                     }
                 }
             }
@@ -90,9 +102,10 @@ private fun PatientCard(patient: PatientSummaryDto, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-            if (patient.unresolvedAlertCount > 0) {
-                Badge { Text(patient.unresolvedAlertCount.toString()) }
+                patient.bloodType?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Blood type: $it", style = MaterialTheme.typography.bodySmall)
+                }
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null)
         }

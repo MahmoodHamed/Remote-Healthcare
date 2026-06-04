@@ -20,7 +20,7 @@ data class PatientListUiState(
 
 @HiltViewModel
 class PatientListViewModel @Inject constructor(
-    private val repo: PatientRepository
+    private val repo: PatientRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PatientListUiState(isLoading = true))
@@ -31,7 +31,7 @@ class PatientListViewModel @Inject constructor(
     fun loadPatients() {
         viewModelScope.launch {
             _uiState.value = PatientListUiState(isLoading = true)
-            _uiState.value = when (val result = repo.getMyPatients()) {
+            _uiState.value = when (val result = repo.getAccessiblePatients()) {
                 is Resource.Success -> PatientListUiState(patients = result.data)
                 is Resource.Error   -> PatientListUiState(error = result.message)
                 Resource.Loading    -> PatientListUiState(isLoading = true)
