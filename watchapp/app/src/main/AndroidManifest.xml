@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
     <!-- Required for step counter/health tracking on Wear OS -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Skin temperature (Health Connect / Wear OS 4+) -->
+    <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <!-- Samsung skin temp / SpO2 on Wear OS 5+ (API 36+) -->
+    <uses-permission android:name="com.samsung.android.hardware.sensormanager.permission.READ_ADDITIONAL_HEALTH_DATA" />
 
     <!-- ── Foreground service to keep MQTT + sensor alive ── -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -28,6 +32,7 @@
     </queries>
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <application
         android:name=".WatchApplication"
         android:allowBackup="true"
@@ -57,14 +62,9 @@
             </intent-filter>
         </activity>
 
-        <!--
-            HeartRateMonitorService – Foreground service that:
-              1. binds to Samsung Health Tracking Service
-              2. starts heart-rate measurement
-              3. publishes readings to MQTT broker
-        -->
+        <!-- VitalsMonitorService: HR, skin temperature, SpO₂ → MQTT (Galaxy Watch 8) -->
         <service
-            android:name=".service.HeartRateMonitorService"
+            android:name=".service.VitalsMonitorService"
             android:exported="false"
             android:foregroundServiceType="dataSync|health" />
 

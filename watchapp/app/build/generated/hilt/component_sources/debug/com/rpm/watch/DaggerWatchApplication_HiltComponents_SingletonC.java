@@ -8,10 +8,10 @@ import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import com.rpm.watch.data.WatchDataStore;
 import com.rpm.watch.di.WatchModule_ProvideWatchDataStoreFactory;
-import com.rpm.watch.health.HeartRateTrackerManager;
 import com.rpm.watch.mqtt.MqttManager;
-import com.rpm.watch.service.HeartRateMonitorService;
-import com.rpm.watch.service.HeartRateMonitorService_MembersInjector;
+import com.rpm.watch.sensor.VitalsSensorCoordinator;
+import com.rpm.watch.service.VitalsMonitorService;
+import com.rpm.watch.service.VitalsMonitorService_MembersInjector;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
 import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
@@ -522,15 +522,14 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
     }
 
     @Override
-    public void injectHeartRateMonitorService(HeartRateMonitorService arg0) {
-      injectHeartRateMonitorService2(arg0);
+    public void injectVitalsMonitorService(VitalsMonitorService arg0) {
+      injectVitalsMonitorService2(arg0);
     }
 
-    private HeartRateMonitorService injectHeartRateMonitorService2(
-        HeartRateMonitorService instance) {
-      HeartRateMonitorService_MembersInjector.injectHrTrackerManager(instance, singletonCImpl.heartRateTrackerManagerProvider.get());
-      HeartRateMonitorService_MembersInjector.injectMqttManager(instance, singletonCImpl.mqttManagerProvider.get());
-      HeartRateMonitorService_MembersInjector.injectDataStore(instance, singletonCImpl.provideWatchDataStoreProvider.get());
+    private VitalsMonitorService injectVitalsMonitorService2(VitalsMonitorService instance) {
+      VitalsMonitorService_MembersInjector.injectVitalsCoordinator(instance, singletonCImpl.vitalsSensorCoordinatorProvider.get());
+      VitalsMonitorService_MembersInjector.injectMqttManager(instance, singletonCImpl.mqttManagerProvider.get());
+      VitalsMonitorService_MembersInjector.injectDataStore(instance, singletonCImpl.provideWatchDataStoreProvider.get());
       return instance;
     }
   }
@@ -544,7 +543,7 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
 
     Provider<MqttManager> mqttManagerProvider;
 
-    Provider<HeartRateTrackerManager> heartRateTrackerManagerProvider;
+    Provider<VitalsSensorCoordinator> vitalsSensorCoordinatorProvider;
 
     SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -556,7 +555,7 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.provideWatchDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<WatchDataStore>(singletonCImpl, 0));
       this.mqttManagerProvider = DoubleCheck.provider(new SwitchingProvider<MqttManager>(singletonCImpl, 1));
-      this.heartRateTrackerManagerProvider = DoubleCheck.provider(new SwitchingProvider<HeartRateTrackerManager>(singletonCImpl, 2));
+      this.vitalsSensorCoordinatorProvider = DoubleCheck.provider(new SwitchingProvider<VitalsSensorCoordinator>(singletonCImpl, 2));
     }
 
     @Override
@@ -598,8 +597,8 @@ public final class DaggerWatchApplication_HiltComponents_SingletonC {
           case 1: // com.rpm.watch.mqtt.MqttManager
           return (T) new MqttManager();
 
-          case 2: // com.rpm.watch.health.HeartRateTrackerManager
-          return (T) new HeartRateTrackerManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+          case 2: // com.rpm.watch.sensor.VitalsSensorCoordinator
+          return (T) new VitalsSensorCoordinator(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }

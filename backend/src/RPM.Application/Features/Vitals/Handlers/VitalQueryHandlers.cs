@@ -11,9 +11,7 @@ public class GetPatientVitalsHandler(IUnitOfWork uow)
     {
         var items = await uow.Vitals.GetByPatientIdAsync(q.PatientId, q.From, q.To, q.Page, q.PageSize, ct);
         var total = await uow.Vitals.CountByPatientIdAsync(q.PatientId, q.From, q.To, ct);
-        var dtos = items.Select(r => new VitalRecordDto(r.Id, r.PatientId, r.DeviceId,
-            r.HeartRateBpm, r.SpO2Percent, r.SystolicBp, r.DiastolicBp,
-            r.TemperatureC, r.StepsCount, r.FallDetected, r.IsWearing, r.RecordedAt));
+        var dtos = items.Select(VitalRecordDtoMapper.MapToDto);
         return new VitalsPagedDto(dtos, total, q.Page, q.PageSize);
     }
 }
@@ -25,8 +23,7 @@ public class GetLatestVitalsHandler(IUnitOfWork uow)
     {
         var r = await uow.Vitals.GetLatestByPatientIdAsync(q.PatientId, ct);
         if (r is null) return null;
-        return new VitalRecordDto(r.Id, r.PatientId, r.DeviceId, r.HeartRateBpm, r.SpO2Percent,
-            r.SystolicBp, r.DiastolicBp, r.TemperatureC, r.StepsCount, r.FallDetected, r.IsWearing, r.RecordedAt);
+        return VitalRecordDtoMapper.MapToDto(r);
     }
 }
 
@@ -40,3 +37,4 @@ public class GetAlertThresholdHandler(IUnitOfWork uow)
         return new AlertThresholdDto(t.MinHeartRate, t.MaxHeartRate, t.MinSpO2, t.MaxSystolicBp, t.MaxDiastolicBp, t.MaxTemperatureC);
     }
 }
+

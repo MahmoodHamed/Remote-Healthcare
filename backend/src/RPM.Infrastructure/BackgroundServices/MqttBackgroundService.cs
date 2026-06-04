@@ -89,7 +89,8 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
                 patientId.Value, deviceId.Value,
                 data.HeartRateBpm, data.SpO2Percent,
                 data.SystolicBp, data.DiastolicBp,
-                data.TemperatureC, data.StepsCount,
+                data.TemperatureC, data.SkinTemperatureC, data.AmbientTemperatureC,
+                data.HrvMs, data.StepsCount,
                 data.CaloriesBurned, data.FallDetected, data.IsWearing);
 
             await mediator.Send(cmd);
@@ -160,5 +161,6 @@ public record MqttVitalsPayload(
     string PatientId, string DeviceId,
     float? HeartRateBpm, float? SpO2Percent,
     float? SystolicBp, float? DiastolicBp,
-    float? TemperatureC, int? StepsCount,
+    float? TemperatureC, float? SkinTemperatureC, float? AmbientTemperatureC,
+    float? HrvMs, int? StepsCount,
     float? CaloriesBurned, bool FallDetected, bool IsWearing);

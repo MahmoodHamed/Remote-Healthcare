@@ -56,22 +56,17 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
 
         var record = VitalRecord.Create(cmd.PatientId, cmd.DeviceId,
             cmd.HeartRateBpm, cmd.SpO2Percent, cmd.SystolicBp, cmd.DiastolicBp,
-            cmd.TemperatureC, cmd.Steps, cmd.Calories, cmd.FallDetected, cmd.IsWearing);
+            cmd.TemperatureC, cmd.SkinTemperatureC, cmd.AmbientTemperatureC, cmd.HrvMs,
+            cmd.Steps, cmd.Calories, cmd.FallDetected, cmd.IsWearing);
 
         await uow.Vitals.AddAsync(record, ct);
         await uow.SaveChangesAsync(ct);
 
-        var dto = MapToDto(record);
-        // Broadcast real-time
+        var dto = VitalRecordDtoMapper.MapToDto(record);
         await hub.BroadcastVitalsAsync(cmd.PatientId, dto, ct);
 
         return dto;
     }
-
-    private static VitalRecordDto MapToDto(VitalRecord r) =>
-        new(r.Id, r.PatientId, r.DeviceId, r.HeartRateBpm, r.SpO2Percent,
-            r.SystolicBp, r.DiastolicBp, r.TemperatureC, r.StepsCount,
-            r.FallDetected, r.IsWearing, r.RecordedAt);
 }
 
 public class UpdateAlertThresholdHandler(IUnitOfWork uow)

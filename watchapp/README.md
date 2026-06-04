@@ -1,46 +1,35 @@
-# Watch to Server Connection
+# Galaxy Watch 8 – Vitals App
 
-The watch app already publishes heart-rate telemetry to the RPM MQTT broker. Use this guide to connect a watch to the server and verify that the backend is receiving readings.
+Wear OS app for **Samsung Galaxy Watch 8** (Samsung Health Sensor SDK). Streams heart rate, skin temperature, and SpO₂ to the RPM MQTT broker.
 
-## Broker settings
+## Sensor modules (`app/src/main/kotlin/com/rpm/watch/sensor/`)
 
-- MQTT host: the server IP or hostname running Mosquitto
-- MQTT port: `1883` for local/dev deployments
-- Topic: `vitals/{patientId}/data`
+| Path | Role |
+|------|------|
+| `SensorType.kt` | Active sensor: `HEART_RATE`, `SKIN_TEMPERATURE`, `SPO2` |
+| `VitalsModels.kt` | Shared readings & tracker state |
+| `VitalsSensorCoordinator.kt` | Samsung SDK session + routes to parsers |
+| `heart/HeartRateSamsungParser.kt` | Samsung HR `DataPoint` parsing |
+| `temperature/SkinTemperatureSamsungParser.kt` | Samsung skin temp parsing |
+| `spo2/SpO2SamsungParser.kt` | Samsung SpO₂ parsing |
+| `platform/PlatformHeartRateReader.kt` | Android SensorManager HR fallback |
+| `platform/PlatformSkinTemperatureReader.kt` | Platform skin temp fallback |
+| `platform/PlatformSpO2Reader.kt` | Platform SpO₂ fallback |
+| `platform/PlatformSensorHub.kt` | Starts the active platform reader |
+| `motion/MotionSensorHub.kt` | Steps & fall (accelerometer) |
+| `samsung/SamsungTrackerResolver.kt` | Maps `SensorType` → `HealthTrackerType` |
 
-## Watch setup
+## Service & UI
 
-1. Start the backend stack from `docker/docker-compose.yml`.
-2. Open the watch app and enter the patient ID assigned to the patient.
-3. Set the MQTT host to the server address if it is not already saved.
-4. Tap Start on the watch.
+- `service/VitalsMonitorService.kt` – foreground service, MQTT publish
+- `ui/VitalsMonitorScreen.kt` – scrollable vitals UI
 
-The watch publishes a reading every 5 seconds while the heart-rate service is active.
+## Setup
 
-## Payload sent to the server
+1. Place `samsung-health-sensor-api.aar` in `app/libs/`.
+2. Set patient ID and MQTT host in the watch app.
+3. Tap **Start** and grant **Body sensors** (and skin temperature if prompted).
 
-```json
-{
-  "patientId": "00000000-0000-0000-0000-000000000001",
-  "deviceId": "2d9f7f10-5d4b-4f8f-8d92-7a5b8c9f1e21",
-  "heartRateBpm": 78,
-  "spO2Percent": null,
-  "systolicBp": null,
-  "diastolicBp": null,
-  "temperatureC": 36.6,
-  "stepsCount": 124,
-  "caloriesBurned": 4.9,
-  "fallDetected": false,
-  "isWearing": true
-}
-```
+## MQTT topic
 
-## Prompt to send to the server
-
-Use this prompt when you want to verify the server-side ingestion path:
-
-> Connect the watch to the RPM MQTT broker at `<server-host>:1883`. Publish heart-rate telemetry to `vitals/{patientId}/data` as JSON with `patientId`, `deviceId`, `heartRateBpm`, `spO2Percent`, `systolicBp`, `diastolicBp`, `temperatureC`, `stepsCount`, `caloriesBurned`, `fallDetected`, and `isWearing`. Keep `patientId` and `deviceId` as stable identifiers so the backend can map readings to the correct patient and device.
-
-## Backend fallback
-
-If you need a direct HTTP test instead of MQTT, the API exposes a fallback ingest endpoint at `POST /api/patients/{patientId}/vitals`.
+`vitals/{patientId}/data` — JSON: `heartRateBpm`, `temperatureC`, `spO2Percent`, `stepsCount`, `fallDetected`, etc.

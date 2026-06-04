@@ -1,4 +1,15 @@
-# Samsung Health Sensor SDK
+# Samsung Health Sensor SDK (official rules + broad keep)
+-keepparameternames
+-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
+-keep public class com.samsung.android.service.health.tracking.data.DataPoint { public *; }
+-keep public class com.samsung.android.service.health.tracking.data.HealthTrackerType { public *; }
+-keep public class com.samsung.android.service.health.tracking.data.ValueKey { public *; }
+-keep public class com.samsung.android.service.health.tracking.data.ValueKey$* { public *; }
+-keep public class com.samsung.android.service.health.tracking.HealthTracker { public *; }
+-keep public class com.samsung.android.service.health.tracking.HealthTracker$* { public *; }
+-keep public class com.samsung.android.service.health.tracking.HealthTrackingService { public *; }
+-keep public class com.samsung.android.service.health.tracking.ConnectionListener { public *; }
+-keep public class com.samsung.android.service.health.tracking.HealthTrackerException { public *; }
 -keep class com.samsung.android.service.health.** { *; }
 -dontwarn com.samsung.android.service.health.**
 
@@ -30,4 +41,4 @@
 -dontwarn androidx.datastore.**
 
 # Keep service
--keep class com.rpm.watch.service.HeartRateMonitorService { *; }
+-keep class com.rpm.watch.service.VitalsMonitorService { *; }

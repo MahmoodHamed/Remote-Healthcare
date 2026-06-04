@@ -1,7 +1,7 @@
 package com.rpm.watch;
 
 import com.rpm.watch.di.WatchModule;
-import com.rpm.watch.service.HeartRateMonitorService_GeneratedInjector;
+import com.rpm.watch.service.VitalsMonitorService_GeneratedInjector;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -145,7 +145,7 @@ public final class WatchApplication_HiltComponents {
 
   @Subcomponent
   @ServiceScoped
-  public abstract static class ServiceC implements HeartRateMonitorService_GeneratedInjector,
+  public abstract static class ServiceC implements VitalsMonitorService_GeneratedInjector,
       ServiceComponent,
       GeneratedComponent {
     @Subcomponent.Builder

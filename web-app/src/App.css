@@ -588,6 +588,11 @@
     gap: 0.9rem;
   }
 
+  .sensor-grid-dense {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.65rem;
+  }
+
   .sensor-card {
     border-radius: 18px;
     padding: 1rem;
@@ -620,6 +625,25 @@
 
   .sensor-card.tone-danger {
     background: linear-gradient(135deg, rgba(229, 57, 53, 0.14), rgba(229, 57, 53, 0.04));
+  }
+
+  .sensor-card.tone-blue {
+    background: linear-gradient(135deg, rgba(30, 136, 229, 0.14), rgba(30, 136, 229, 0.04));
+  }
+
+  .sensor-card.tone-violet {
+    background: linear-gradient(135deg, rgba(126, 87, 194, 0.14), rgba(126, 87, 194, 0.04));
+  }
+
+  .sensor-card-muted {
+    opacity: 0.72;
+  }
+
+  .sensor-hint {
+    font-size: 0.68rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   .sensor-label {

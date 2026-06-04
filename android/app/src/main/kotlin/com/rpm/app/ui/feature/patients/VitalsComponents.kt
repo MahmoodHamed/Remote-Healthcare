@@ -139,10 +139,15 @@ private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier
             Spacer(Modifier.height(8.dp))
             rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
             rv.spO2Percent?.let { VitalRow("SpO₂", "${it.toInt()}%") }
-            rv.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
+            rv.temperatureC?.let { VitalRow("Body temp.", String.format("%.1f °C", it)) }
+            rv.skinTemperatureC?.let { VitalRow("Skin temp.", String.format("%.1f °C", it)) }
+            rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms") }
+            rv.stepsCount?.let { VitalRow("Steps", "$it") }
+            rv.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
             if (rv.systolicBp != null && rv.diastolicBp != null) {
                 VitalRow("Blood Pressure", "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg")
             }
+            VitalRow("Watch", if (rv.isWearing) "On wrist" else "Off wrist")
             if (rv.fallDetected) {
                 Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
             }
