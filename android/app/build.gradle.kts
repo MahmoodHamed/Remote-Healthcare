@@ -97,9 +97,10 @@ dependencies {
     // WorkManager
     implementation(libs.workmanager.ktx)
 
-    // Firebase
+    // Firebase (BoM manages versions — do not pin versions on Firebase libs)
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.messaging)
 
     // Tests
     testImplementation(libs.junit)

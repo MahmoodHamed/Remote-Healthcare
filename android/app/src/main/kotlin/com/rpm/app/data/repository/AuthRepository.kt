@@ -3,6 +3,7 @@ package com.rpm.app.data.repository
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.api.RpmApiService
 import com.rpm.app.data.remote.dto.*
+import com.rpm.app.data.remote.httpErrorMessage
 import com.rpm.app.domain.model.Resource
 import javax.inject.Inject
 
@@ -10,21 +11,6 @@ class AuthRepository @Inject constructor(
     private val api: RpmApiService,
     private val tokenStore: TokenDataStore
 ) {
-    private fun httpErrorMessage(response: retrofit2.Response<*>): String {
-        val body = response.errorBody()?.string()?.trim().orEmpty()
-        if (body.isNotEmpty()) {
-            val messageMatch = Regex(""""message"\s*:\s*"([^"]+)"""").find(body)
-            if (messageMatch != null) return messageMatch.groupValues[1]
-            val titleMatch = Regex(""""title"\s*:\s*"([^"]+)"""").find(body)
-            if (titleMatch != null) return titleMatch.groupValues[1]
-        }
-        return when (response.code()) {
-            502 -> "Server unavailable (502). The API is not running on remote-care.tech."
-            503 -> "Service unavailable (503). Try again shortly."
-            else -> response.message().ifBlank { "Request failed (${response.code()})" }
-        }
-    }
-
     suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> {
         return try {
             val response = api.login(LoginRequest(email, password, fcmToken))

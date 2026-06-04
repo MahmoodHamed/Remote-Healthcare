@@ -14,6 +14,7 @@ object Routes {
     const val REGISTER            = "register"
     const val PATIENT_LIST        = "patients"
     const val PATIENT_DETAIL      = "patients/{patientId}"
+    const val ROLE_ACCESS         = "role-access"
     const val ALERTS              = "alerts?patientId={patientId}"
     const val CONVERSATION_LIST   = "conversations"
     const val CHAT_ROOM           = "conversations/{conversationId}"
@@ -23,17 +24,28 @@ object Routes {
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
 }
 
+private fun homeRoute(role: String?, userId: String?): String = when (role) {
+    "Doctor" -> Routes.PATIENT_LIST
+    "Patient" -> userId?.let { Routes.patientDetail(it) } ?: Routes.ROLE_ACCESS
+    else -> Routes.ROLE_ACCESS
+}
+
 @Composable
 fun RpmNavHost() {
     val navController = rememberNavController()
 
-    // Determine start destination at runtime using AuthViewModel
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
 
     val startDest = when {
-        authState.isLoggedIn -> Routes.PATIENT_LIST
+        authState.isLoggedIn -> homeRoute(authState.userRole, authState.userId)
         else                 -> Routes.LOGIN
+    }
+
+    val navigateHome: () -> Unit = {
+        navController.navigate(homeRoute(authState.userRole, authState.userId)) {
+            popUpTo(Routes.LOGIN) { inclusive = true }
+        }
     }
 
     NavHost(navController, startDestination = startDest) {
@@ -41,19 +53,27 @@ fun RpmNavHost() {
         // ── Auth ──────────────────────────────────────────────────────────
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = { navController.navigate(Routes.PATIENT_LIST) {
-                    popUpTo(Routes.LOGIN) { inclusive = true }
-                }},
+                onLoginSuccess = { navigateHome() },
                 onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = { navController.navigate(Routes.PATIENT_LIST) {
-                    popUpTo(Routes.LOGIN) { inclusive = true }
-                }},
+                onRegisterSuccess = { navigateHome() },
                 onNavigateToLogin = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.ROLE_ACCESS) {
+            RoleAccessScreen(
+                role = authState.userRole,
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
 
@@ -75,7 +95,16 @@ fun RpmNavHost() {
             arguments = listOf(navArgument("patientId") { type = NavType.StringType })
         ) {
             PatientDetailScreen(
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    if (authState.userRole == "Patient") {
+                        authViewModel.logout()
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
                 onOpenChat = { navController.navigate(Routes.CONVERSATION_LIST) },
                 onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) }
             )

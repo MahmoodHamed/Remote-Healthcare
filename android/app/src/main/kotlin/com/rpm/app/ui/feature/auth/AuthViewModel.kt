@@ -17,7 +17,8 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLoggedIn: Boolean = false,
-    val userRole: String? = null
+    val userRole: String? = null,
+    val userId: String? = null,
 )
 
 @HiltViewModel
@@ -36,9 +37,10 @@ class AuthViewModel @Inject constructor(
     private fun checkSession() {
         viewModelScope.launch {
             val token = tokenStore.getAccessToken()
-            val role  = tokenStore.userRole.firstOrNull()
+            val role = tokenStore.userRole.firstOrNull()
+            val userId = tokenStore.userId.firstOrNull()
             if (token != null) {
-                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role)
+                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
             }
         }
     }
@@ -49,7 +51,8 @@ class AuthViewModel @Inject constructor(
             when (val result = authRepository.login(email, password, fcmToken = null)) {
                 is Resource.Success -> _uiState.value = AuthUiState(
                     isLoggedIn = true,
-                    userRole = result.data.user.role
+                    userRole = result.data.user.role,
+                    userId = result.data.user.id,
                 )
                 is Resource.Error   -> _uiState.value = AuthUiState(error = result.message)
                 Resource.Loading    -> {}
@@ -73,7 +76,8 @@ class AuthViewModel @Inject constructor(
             )) {
                 is Resource.Success -> _uiState.value = AuthUiState(
                     isLoggedIn = true,
-                    userRole = result.data.user.role
+                    userRole = result.data.user.role,
+                    userId = result.data.user.id,
                 )
                 is Resource.Error   -> _uiState.value = AuthUiState(error = result.message)
                 Resource.Loading    -> {}

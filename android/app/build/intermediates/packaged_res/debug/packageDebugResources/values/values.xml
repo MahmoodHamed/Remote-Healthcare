@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RPM - Patient Monitor</string>
-    <string name="gcm_defaultSenderId" translatable="false">000000000000</string>
-    <string name="google_api_key" translatable="false">local-dev-placeholder</string>
-    <string name="google_app_id" translatable="false">1:000000000000:android:0000000000000000000000</string>
-    <string name="google_crash_reporting_api_key" translatable="false">local-dev-placeholder</string>
-    <string name="google_storage_bucket" translatable="false">rpm-local-dev.appspot.com</string>
-    <string name="project_id" translatable="false">rpm-local-dev</string>
+    <string name="gcm_defaultSenderId" translatable="false">68155043415</string>
+    <string name="google_api_key" translatable="false">AIzaSyAnfZ1WsMhQIq8WgrHY01b0GSKiB-VS6Q4</string>
+    <string name="google_app_id" translatable="false">1:68155043415:android:fde6dccc8a68e2ae86bd12</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAnfZ1WsMhQIq8WgrHY01b0GSKiB-VS6Q4</string>
+    <string name="google_storage_bucket" translatable="false">rpms-75cc6.firebasestorage.app</string>
+    <string name="project_id" translatable="false">rpms-75cc6</string>
     <style name="Theme.RPM" parent="Theme.Material3.DayNight.NoActionBar"/>
 </resources>

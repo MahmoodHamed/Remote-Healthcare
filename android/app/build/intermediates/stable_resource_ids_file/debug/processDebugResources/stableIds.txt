@@ -4653,6 +4653,7 @@ com.rpm.app:integer/mtrl_switch_track_viewport_width = 0x7f09003f
 com.rpm.app:attr/layout_constraintLeft_toLeftOf = 0x7f030279
 com.rpm.app:attr/lastItemDecorated = 0x7f030256
 com.rpm.app:attr/flow_lastVerticalBias = 0x7f0301e2
+com.rpm.app:xml/ga_ad_services_config = 0x7f120000
 com.rpm.app:style/Theme.AppCompat.DayNight.Dialog = 0x7f100214
 com.rpm.app:dimen/mtrl_badge_long_text_horizontal_padding = 0x7f06024c
 com.rpm.app:string/common_google_play_services_install_button = 0x7f0f0034

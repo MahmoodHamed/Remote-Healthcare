@@ -13,14 +13,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: (role: String) -> Unit,
+    onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.isLoggedIn) {
-        if (uiState.isLoggedIn) onRegisterSuccess(uiState.userRole ?: "Doctor")
+        if (uiState.isLoggedIn) onRegisterSuccess()
     }
 
     var email    by remember { mutableStateOf("") }
@@ -99,6 +99,14 @@ fun RegisterScreen(
                         )
                     }
                 }
+            }
+            if (role != "Doctor") {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "My Patients in the app is only for Doctor accounts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             if (role == "Doctor") {

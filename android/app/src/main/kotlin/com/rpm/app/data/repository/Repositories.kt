@@ -2,6 +2,7 @@ package com.rpm.app.data.repository
 
 import com.rpm.app.data.remote.api.RpmApiService
 import com.rpm.app.data.remote.dto.*
+import com.rpm.app.data.remote.httpErrorMessage
 import com.rpm.app.domain.model.Resource
 import javax.inject.Inject
 
@@ -68,7 +69,7 @@ private suspend fun <T> safeCall(call: suspend () -> retrofit2.Response<T>): Res
         if (response.isSuccessful) {
             Resource.Success(response.body()!!)
         } else {
-            Resource.Error("Error ${response.code()}: ${response.message()}")
+            Resource.Error(httpErrorMessage(response))
         }
     } catch (e: Exception) {
         Resource.Error(e.message ?: "Network error")

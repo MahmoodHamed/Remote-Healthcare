@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "eiHKTVLaOq8=",
+  "dgSpecHash": "0n3wEGm6HS8=",
   "success": true,
   "projectFilePath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.API\\RPM.API.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\mahmo\\.nuget\\packages\\automapper\\16.0.0\\automapper.16.0.0.nupkg.sha512",
+    "C:\\Users\\mahmo\\.nuget\\packages\\automapper\\16.1.1\\automapper.16.1.1.nupkg.sha512",
     "C:\\Users\\mahmo\\.nuget\\packages\\awssdk.core\\4.0.3.12\\awssdk.core.4.0.3.12.nupkg.sha512",
     "C:\\Users\\mahmo\\.nuget\\packages\\awssdk.s3\\4.0.18.6\\awssdk.s3.4.0.18.6.nupkg.sha512",
     "C:\\Users\\mahmo\\.nuget\\packages\\bcrypt.net-next\\4.1.0\\bcrypt.net-next.4.1.0.nupkg.sha512",
@@ -79,18 +79,5 @@
     "C:\\Users\\mahmo\\.nuget\\packages\\system.io.hashing\\10.0.2\\system.io.hashing.10.0.2.nupkg.sha512",
     "C:\\Users\\mahmo\\.nuget\\packages\\system.management\\7.0.2\\system.management.7.0.2.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1903",
-      "level": "Warning",
-      "message": "Package 'AutoMapper' 16.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-rvv3-g6hj-g44x",
-      "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.API\\RPM.API.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.API\\RPM.API.csproj",
-      "libraryId": "AutoMapper",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    }
-  ]
+  "logs": []
 }

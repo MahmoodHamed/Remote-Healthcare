@@ -57,7 +57,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = true, ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidateAudience = true, ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true, ClockSkew = TimeSpan.Zero
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "role"
         };
         // Support SignalR JWT from query string
         options.Events = new JwtBearerEvents
