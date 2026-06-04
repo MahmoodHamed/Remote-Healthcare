@@ -27,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -37,7 +38,8 @@ import javax.inject.Inject
 private const val TAG = "HRMonitorService"
 private const val CHANNEL_ID = "rpm_watch_hr"
 private const val NOTIFICATION_ID = 1
-private const val MQTT_PUBLISH_INTERVAL_MS = 5_000L
+/** Publish latest vitals to MQTT on this cadence (decoupled from Samsung batching). */
+private const val MQTT_PUBLISH_TICK_MS = 1_000L
 
 enum class ServiceStatus { IDLE, CONNECTING, MEASURING, ERROR }
 
@@ -128,8 +130,17 @@ class HeartRateMonitorService : Service() {
                 }
             }
 
-            var lastPublishMs = 0L
+            val publishTicker = launch {
+                while (isActive) {
+                    delay(MQTT_PUBLISH_TICK_MS)
+                    val hr = lastHeartRate
+                    if (!localSensorOnly && hr != null && hr > 0f) {
+                        publishReading(patientId, deviceId, topic)
+                    }
+                }
+            }
 
+            try {
             hrTrackerManager.heartRateFlow().collect { state ->
                 when (state) {
                     is TrackerState.Connecting -> {
@@ -148,9 +159,7 @@ class HeartRateMonitorService : Service() {
                         isWearingNow = reading.status != HrStatus.DEVICE_MOVING
                         updateNotification("HR: ${reading.bpm} bpm")
 
-                        val now = System.currentTimeMillis()
-                        if (!localSensorOnly && now - lastPublishMs >= MQTT_PUBLISH_INTERVAL_MS) {
-                            lastPublishMs = now
+                        if (!localSensorOnly && reading.bpm > 0) {
                             publishReading(patientId, deviceId, topic)
                         }
                     }
@@ -166,6 +175,9 @@ class HeartRateMonitorService : Service() {
                         updateNotification("Sensor disconnected")
                     }
                 }
+            }
+            } finally {
+                publishTicker.cancel()
             }
         }
     }

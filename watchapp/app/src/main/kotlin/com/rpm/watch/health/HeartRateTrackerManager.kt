@@ -15,12 +15,17 @@ import com.samsung.android.service.health.tracking.data.ValueKey
 import com.samsung.android.service.health.tracking.data.HealthTrackerType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "HeartRateTracker"
+/** Samsung batches HR when the watch display is off; flush() forces ~1 Hz delivery. */
+private const val HR_FLUSH_INTERVAL_MS = 1_000L
 
 /** Heart rate status values returned by Samsung Health Sensor SDK */
 enum class HrStatus(val code: Int) {
@@ -121,7 +126,7 @@ class HeartRateTrackerManager @Inject constructor(
                 Log.i(TAG, "Samsung Health connected")
                 try {
                     heartRateTracker = healthTrackingService
-                        ?.getHealthTracker(HealthTrackerType.HEART_RATE)
+                        ?.getHealthTracker(HealthTrackerType.HEART_RATE_CONTINUOUS)
                     heartRateTracker?.setEventListener(trackerEventListener)
                     Log.i(TAG, "Heart rate measurement listener set")
                 } catch (e: Exception) {
@@ -175,7 +180,19 @@ class HeartRateTrackerManager @Inject constructor(
         healthTrackingService = HealthTrackingService(connectionListener, context)
         healthTrackingService?.connectService()
 
+        val flushTicker = launch {
+            while (isActive) {
+                delay(HR_FLUSH_INTERVAL_MS)
+                try {
+                    heartRateTracker?.flush()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Periodic HR flush failed: ${e.message}")
+                }
+            }
+        }
+
         awaitClose {
+            flushTicker.cancel()
             Log.i(TAG, "Stopping heart rate measurement and disconnecting")
             try {
                 heartRateTracker?.unsetEventListener()

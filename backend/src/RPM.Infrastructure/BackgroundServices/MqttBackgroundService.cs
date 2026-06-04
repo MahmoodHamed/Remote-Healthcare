@@ -25,7 +25,7 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
     });
     private CancellationToken _stoppingToken;
     private const int MaxBatchSize = 100;
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(100);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -145,22 +145,25 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
         {
             batch.Clear();
             batch.Add(await _queue.Reader.ReadAsync(stoppingToken));
-            var flushDeadline = DateTime.UtcNow.Add(FlushInterval);
 
-            while (batch.Count < MaxBatchSize)
+            var deadline = DateTime.UtcNow.Add(FlushInterval);
+            while (batch.Count < MaxBatchSize && DateTime.UtcNow < deadline)
             {
-                while (batch.Count < MaxBatchSize && _queue.Reader.TryRead(out var next))
+                if (_queue.Reader.TryRead(out var next))
+                {
                     batch.Add(next);
+                    continue;
+                }
 
-                if (batch.Count >= MaxBatchSize)
-                    break;
-
-                var remaining = flushDeadline - DateTime.UtcNow;
+                var remaining = deadline - DateTime.UtcNow;
                 if (remaining <= TimeSpan.Zero)
                     break;
 
                 await Task.Delay(remaining, stoppingToken);
             }
+
+            while (batch.Count < MaxBatchSize && _queue.Reader.TryRead(out var leftover))
+                batch.Add(leftover);
 
             await mediator.Send(new IngestVitalsBatchCommand(batch.ToArray()), stoppingToken);
         }
