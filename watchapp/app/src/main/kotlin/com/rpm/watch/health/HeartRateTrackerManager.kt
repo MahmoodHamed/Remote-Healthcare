@@ -121,7 +121,7 @@ class HeartRateTrackerManager @Inject constructor(
                 Log.i(TAG, "Samsung Health connected")
                 try {
                     heartRateTracker = healthTrackingService
-                        ?.getHealthTracker(HealthTrackerType.HEART_RATE)
+                        ?.getHealthTracker(HealthTrackerType.HEART_RATE_CONTINUOUS)
                     heartRateTracker?.setEventListener(trackerEventListener)
                     Log.i(TAG, "Heart rate measurement listener set")
                 } catch (e: Exception) {

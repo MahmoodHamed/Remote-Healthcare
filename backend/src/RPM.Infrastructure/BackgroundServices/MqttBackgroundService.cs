@@ -25,7 +25,7 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
     });
     private CancellationToken _stoppingToken;
     private const int MaxBatchSize = 100;
-    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(500);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

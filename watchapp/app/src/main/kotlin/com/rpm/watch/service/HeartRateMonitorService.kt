@@ -37,7 +37,8 @@ import javax.inject.Inject
 private const val TAG = "HRMonitorService"
 private const val CHANNEL_ID = "rpm_watch_hr"
 private const val NOTIFICATION_ID = 1
-private const val MQTT_PUBLISH_INTERVAL_MS = 5_000L
+/** Minimum gap between MQTT publishes when BPM is unchanged (avoids broker flood). */
+private const val MQTT_PUBLISH_MIN_INTERVAL_MS = 1_000L
 
 enum class ServiceStatus { IDLE, CONNECTING, MEASURING, ERROR }
 
@@ -129,6 +130,7 @@ class HeartRateMonitorService : Service() {
             }
 
             var lastPublishMs = 0L
+            var lastPublishedBpm: Int? = null
 
             hrTrackerManager.heartRateFlow().collect { state ->
                 when (state) {
@@ -149,8 +151,16 @@ class HeartRateMonitorService : Service() {
                         updateNotification("HR: ${reading.bpm} bpm")
 
                         val now = System.currentTimeMillis()
-                        if (!localSensorOnly && now - lastPublishMs >= MQTT_PUBLISH_INTERVAL_MS) {
+                        val bpmChanged = lastPublishedBpm != reading.bpm
+                        val dueForHeartbeat =
+                            lastPublishedBpm != null && now - lastPublishMs >= MQTT_PUBLISH_MIN_INTERVAL_MS
+                        if (
+                            !localSensorOnly &&
+                            reading.bpm > 0 &&
+                            (bpmChanged || dueForHeartbeat)
+                        ) {
                             lastPublishMs = now
+                            lastPublishedBpm = reading.bpm
                             publishReading(patientId, deviceId, topic)
                         }
                     }

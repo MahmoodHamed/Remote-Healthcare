@@ -15,7 +15,7 @@ The watch app already publishes heart-rate telemetry to the RPM MQTT broker. Use
 3. Set the MQTT host to the server address if it is not already saved.
 4. Tap Start on the watch.
 
-The watch publishes a reading every 5 seconds while the heart-rate service is active.
+The watch publishes heart-rate readings as soon as the sensor reports a new BPM (typically every 1–2 seconds), with a 1-second heartbeat when the value is unchanged.
 
 ## Payload sent to the server
 
