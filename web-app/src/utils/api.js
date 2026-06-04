@@ -1,5 +1,11 @@
 import { getApiBase } from './apiBase'
-import { getAccessToken } from './authSession'
+import {
+  ensureValidSession,
+  getAccessToken,
+  isTokenExpired,
+  notifySessionExpired,
+  refreshAccessToken,
+} from './authSession'
 
 class ApiError extends Error {
   constructor(message, status, payload) {
@@ -30,8 +36,7 @@ const parseErrorMessage = async (response) => {
   return null
 }
 
-const request = async (path, { method = 'GET', body, signal, headers = {}, auth = true } = {}) => {
-  const url = new URL(path, getApiBase()).toString()
+const fetchWithAuth = async (url, { method, body, signal, headers, auth }) => {
   const finalHeaders = { Accept: 'application/json', ...headers }
   if (body !== undefined) finalHeaders['Content-Type'] = 'application/json'
   if (auth) {
@@ -39,12 +44,43 @@ const request = async (path, { method = 'GET', body, signal, headers = {}, auth 
     if (token) finalHeaders.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(url, {
+  return fetch(url, {
     method,
     headers: finalHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   })
+}
+
+const request = async (path, { method = 'GET', body, signal, headers = {}, auth = true } = {}) => {
+  const apiBase = getApiBase()
+  const url = new URL(path, apiBase).toString()
+
+  if (auth) {
+    const token = getAccessToken()
+    if (!token || isTokenExpired(token)) {
+      const ok = await ensureValidSession(apiBase)
+      if (!ok && getAccessToken()) {
+        /* token present but not yet expired per skew window */
+      } else if (!ok) {
+        notifySessionExpired()
+        throw new ApiError('Session expired. Please sign in again.', 401)
+      }
+    }
+  }
+
+  let response = await fetchWithAuth(url, { method, body, signal, headers, auth })
+
+  if (response.status === 401 && auth) {
+    const refreshed = await refreshAccessToken(apiBase)
+    if (refreshed) {
+      response = await fetchWithAuth(url, { method, body, signal, headers, auth })
+    }
+    if (response.status === 401) {
+      notifySessionExpired()
+      throw new ApiError('Session expired. Please sign in again.', 401)
+    }
+  }
 
   if (response.status === 204) return null
 

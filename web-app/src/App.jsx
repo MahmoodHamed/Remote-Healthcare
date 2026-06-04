@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 
 import { readProfile, logout as clearSession, homeRouteForRole } from './utils/auth'
+import { ensureValidSession, getAccessToken } from './utils/authSession'
+import { getApiBase } from './utils/apiBase'
 
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
@@ -50,7 +52,33 @@ export default function App() {
   useEffect(() => {
     const handler = () => setProfile(readProfile())
     window.addEventListener('storage', handler)
-    return () => window.removeEventListener('storage', handler)
+    window.addEventListener('auth:tokens-updated', handler)
+    return () => {
+      window.removeEventListener('storage', handler)
+      window.removeEventListener('auth:tokens-updated', handler)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onExpired = () => {
+      clearSession()
+      setProfile(null)
+    }
+    window.addEventListener('auth:session-expired', onExpired)
+    return () => window.removeEventListener('auth:session-expired', onExpired)
+  }, [])
+
+  useEffect(() => {
+    const session = readProfile()
+    if (!session || !getAccessToken()) return undefined
+    let active = true
+    ensureValidSession(getApiBase()).then((ok) => {
+      if (active && !ok) {
+        clearSession()
+        setProfile(null)
+      }
+    })
+    return () => { active = false }
   }, [])
 
   const handleSignedIn = (user) => setProfile(user)

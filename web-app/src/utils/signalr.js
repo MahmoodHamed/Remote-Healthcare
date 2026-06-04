@@ -1,6 +1,12 @@
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
-import { getAccessToken, isTokenExpired, isUnauthorizedError } from './authSession'
 import { getApiBase } from './apiBase'
+import {
+  ensureValidSession,
+  getAccessToken,
+  isTokenExpired,
+  isUnauthorizedError,
+  refreshAccessToken,
+} from './authSession'
 
 export const buildVitalsHubConnection = (handlers = {}) => {
   const hubUrl = new URL('/hubs/vitals', getApiBase()).toString()
@@ -22,11 +28,15 @@ export const buildVitalsHubConnection = (handlers = {}) => {
 }
 
 export const startVitalsHub = async (connection, patientId, { onUnauthorized } = {}) => {
+  const apiBase = getApiBase()
   const token = getAccessToken()
   if (!token || isTokenExpired(token)) {
-    const err = new Error('Session expired. Please sign in again.')
-    onUnauthorized?.(err)
-    throw err
+    const ok = await ensureValidSession(apiBase)
+    if (!ok) {
+      const err = new Error('Session expired. Please sign in again.')
+      onUnauthorized?.(err)
+      throw err
+    }
   }
 
   try {
@@ -34,6 +44,17 @@ export const startVitalsHub = async (connection, patientId, { onUnauthorized } =
     await connection.invoke('SubscribeToPatient', patientId)
   } catch (err) {
     if (isUnauthorizedError(err)) {
+      const refreshed = await refreshAccessToken(apiBase)
+      if (refreshed) {
+        try {
+          await connection.start()
+          await connection.invoke('SubscribeToPatient', patientId)
+          return
+        } catch (retryErr) {
+          onUnauthorized?.(retryErr)
+          throw retryErr
+        }
+      }
       onUnauthorized?.(err)
     }
     throw err

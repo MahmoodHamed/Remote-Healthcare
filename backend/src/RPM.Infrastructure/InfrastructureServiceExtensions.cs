@@ -22,6 +22,7 @@ public static class InfrastructureServiceExtensions
         // Auth Services
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddScoped<ITokenHasher, TokenHasher>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         // Cache
