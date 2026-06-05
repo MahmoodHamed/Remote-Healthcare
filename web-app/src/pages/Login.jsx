@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 import { api } from '../utils/api'
 import { setAuthSession, homeRouteForRole } from '../utils/auth'
 
@@ -42,6 +43,7 @@ export default function Login({ onSignedIn }) {
   return (
     <div className="auth-shell">
       <div className="auth-side">
+        <ThemeToggle className="auth-theme-toggle" />
         <div className="auth-card">
           <Link to="/" className="brand" style={{ marginBottom: '1.25rem' }}>
             <span className="brand-mark">RC</span>

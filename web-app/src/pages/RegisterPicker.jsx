@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function RegisterPicker() {
   return (
@@ -10,6 +11,7 @@ export default function RegisterPicker() {
             Remote Care
           </Link>
           <div className="nav-cta">
+            <ThemeToggle />
             <Link to="/login" className="btn btn-ghost btn-sm">Already have an account?</Link>
           </div>
         </div>

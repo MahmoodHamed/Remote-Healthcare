@@ -19,18 +19,55 @@
   --brand: #0ea5e9;
   --brand-strong: #0284c7;
   --brand-soft: #e0f2fe;
+  --brand-hover: #0369a1;
+  --brand-accent: #6366f1;
+  --on-brand: #ffffff;
 
   --admin: #4c1d95;
   --admin-soft: #ede9fe;
   --doctor: #0d9488;
   --doctor-soft: #ccfbf1;
+  --doctor-text: #0f766e;
   --patient: #ea580c;
   --patient-soft: #ffedd5;
+  --patient-text: #c2410c;
 
   --success: #16a34a;
+  --success-text: #15803d;
+  --success-bg: rgba(22, 163, 74, 0.12);
+  --success-border: rgba(22, 163, 74, 0.18);
   --warning: #f59e0b;
+  --warning-text: #b45309;
+  --warning-bg: rgba(245, 158, 11, 0.16);
   --danger: #dc2626;
+  --danger-text: #991b1b;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --danger-border: rgba(220, 38, 38, 0.2);
   --critical: #b91c1c;
+
+  --nav-bg: rgba(255, 255, 255, 0.92);
+  --backdrop: rgba(15, 23, 42, 0.45);
+  --surface-end: #ffffff;
+  --grid-line: rgba(15, 23, 42, 0.05);
+  --overlay-subtle: rgba(255, 255, 255, 0.12);
+  --hero-glow-1: rgba(14, 165, 233, 0.16);
+  --hero-glow-2: rgba(99, 102, 241, 0.14);
+  --focus-ring: rgba(14, 165, 233, 0.18);
+  --row-hover: rgba(14, 165, 233, 0.03);
+  --unread-border: rgba(14, 165, 233, 0.4);
+  --unread-bg-start: rgba(14, 165, 233, 0.04);
+
+  --tone-hr: linear-gradient(135deg, #fff1f2, #fff);
+  --tone-spo2: linear-gradient(135deg, #ecfeff, #fff);
+  --tone-bp: linear-gradient(135deg, #fef3c7, #fff);
+  --tone-temp: linear-gradient(135deg, #fef2f2, #fff);
+  --tone-steps: linear-gradient(135deg, #f0fdf4, #fff);
+  --tone-calories: linear-gradient(135deg, #fff7ed, #fff);
+  --tone-ecg: linear-gradient(135deg, #f3e8ff, #fff);
+  --tone-sleep: linear-gradient(135deg, #eef2ff, #fff);
+  --tone-stress: linear-gradient(135deg, #fff7ed, #fff);
+  --tone-bia: linear-gradient(135deg, #f1f5f9, #fff);
+  --tone-glucose: linear-gradient(135deg, #fef9c3, #fff);
 
   --radius: 14px;
   --radius-lg: 22px;
@@ -42,6 +79,78 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0b1220;
+  --surface: #111827;
+  --surface-2: #1a2234;
+  --surface-3: #243044;
+  --ink: #f1f5f9;
+  --ink-2: #e2e8f0;
+  --ink-muted: #94a3b8;
+  --ink-soft: #64748b;
+  --line: #1e293b;
+  --line-strong: #334155;
+
+  --brand: #38bdf8;
+  --brand-strong: #0ea5e9;
+  --brand-soft: rgba(14, 165, 233, 0.15);
+  --brand-hover: #0284c7;
+  --brand-accent: #818cf8;
+  --on-brand: #ffffff;
+
+  --admin: #a78bfa;
+  --admin-soft: rgba(124, 58, 237, 0.18);
+  --doctor: #2dd4bf;
+  --doctor-soft: rgba(13, 148, 136, 0.18);
+  --doctor-text: #5eead4;
+  --patient: #fb923c;
+  --patient-soft: rgba(234, 88, 12, 0.18);
+  --patient-text: #fdba74;
+
+  --success: #4ade80;
+  --success-text: #86efac;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --success-border: rgba(74, 222, 128, 0.22);
+  --warning: #fbbf24;
+  --warning-text: #fcd34d;
+  --warning-bg: rgba(251, 191, 36, 0.14);
+  --danger: #f87171;
+  --danger-text: #fca5a5;
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-border: rgba(248, 113, 113, 0.28);
+  --critical: #ef4444;
+
+  --nav-bg: rgba(17, 24, 39, 0.92);
+  --backdrop: rgba(0, 0, 0, 0.55);
+  --surface-end: #111827;
+  --grid-line: rgba(255, 255, 255, 0.04);
+  --overlay-subtle: rgba(255, 255, 255, 0.08);
+  --hero-glow-1: rgba(14, 165, 233, 0.12);
+  --hero-glow-2: rgba(99, 102, 241, 0.1);
+  --focus-ring: rgba(56, 189, 248, 0.22);
+  --row-hover: rgba(56, 189, 248, 0.06);
+  --unread-border: rgba(56, 189, 248, 0.35);
+  --unread-bg-start: rgba(56, 189, 248, 0.08);
+
+  --tone-hr: linear-gradient(135deg, rgba(244, 63, 94, 0.14), var(--surface));
+  --tone-spo2: linear-gradient(135deg, rgba(6, 182, 212, 0.14), var(--surface));
+  --tone-bp: linear-gradient(135deg, rgba(245, 158, 11, 0.14), var(--surface));
+  --tone-temp: linear-gradient(135deg, rgba(239, 68, 68, 0.14), var(--surface));
+  --tone-steps: linear-gradient(135deg, rgba(34, 197, 94, 0.14), var(--surface));
+  --tone-calories: linear-gradient(135deg, rgba(249, 115, 22, 0.14), var(--surface));
+  --tone-ecg: linear-gradient(135deg, rgba(168, 85, 247, 0.14), var(--surface));
+  --tone-sleep: linear-gradient(135deg, rgba(99, 102, 241, 0.14), var(--surface));
+  --tone-stress: linear-gradient(135deg, rgba(249, 115, 22, 0.14), var(--surface));
+  --tone-bia: linear-gradient(135deg, rgba(148, 163, 184, 0.14), var(--surface));
+  --tone-glucose: linear-gradient(135deg, rgba(234, 179, 8, 0.14), var(--surface));
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55);
 }
 
 * {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import { ThemeProvider } from './context/ThemeContext'
 
 import { readProfile, logout as clearSession, homeRouteForRole } from './utils/auth'
 import { ensureValidSession, getAccessToken } from './utils/authSession'
@@ -88,6 +89,7 @@ export default function App() {
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthContext>
         <Routes>
@@ -151,5 +153,6 @@ export default function App() {
         </Routes>
       </AuthContext>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

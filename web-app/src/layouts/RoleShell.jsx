@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 import { api } from '../utils/api'
 
 const initials = (name = '') =>
@@ -73,6 +74,10 @@ export default function RoleShell({ profile, onLogout, roleClass, brand, nav, ch
         </nav>
 
         <div className="sidebar-footer">
+          <div className="sidebar-theme-row">
+            <span className="sidebar-theme-label">Theme</span>
+            <ThemeToggle variant="topbar" />
+          </div>
           <div className="user-chip">
             <span className="avatar">{initials(profile?.fullName)}</span>
             <span className="meta">
@@ -109,6 +114,7 @@ export default function RoleShell({ profile, onLogout, roleClass, brand, nav, ch
             </div>
           </div>
           <div className="topbar-actions">
+            <ThemeToggle variant="topbar" />
             {notificationsRoute && (
               <Link
                 to={notificationsRoute}

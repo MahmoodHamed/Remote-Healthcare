@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ThemeToggle from '../components/ThemeToggle'
 import { homeRouteForRole } from '../utils/auth'
 
 const features = [
@@ -76,6 +77,7 @@ export default function Landing({ profile }) {
             <a href="#how">How it works</a>
           </nav>
           <div className="nav-cta">
+            <ThemeToggle />
             {profile ? (
               <Link to={homeRouteForRole(profile.role)} className="btn btn-primary btn-sm">
                 Open my workspace
