@@ -5,26 +5,63 @@ import { normalizePatientId } from '../utils/patientId'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
+function pick(payload, camel, pascal) {
+  if (payload[camel] !== undefined && payload[camel] !== null) return payload[camel]
+  if (payload[pascal] !== undefined && payload[pascal] !== null) return payload[pascal]
+  return null
+}
+
+function inferWearing(vitals) {
+  const explicit = vitals.isWearing
+  if (explicit === true) return true
+  // Off-body sensor is often wrong while Samsung vitals are live.
+  const hr = vitals.heartRateBpm
+  if (hr != null && hr >= 30) return true
+  if (vitals.spO2Percent != null) return true
+  if (vitals.temperatureC != null || vitals.skinTemperatureC != null) return true
+  if (vitals.stressScore != null) return true
+  return explicit !== false
+}
+
 function normalizePayload(payload) {
   if (!payload || typeof payload !== 'object') return null
-  return {
-    heartRateBpm: payload.heartRateBpm ?? null,
-    spO2Percent: payload.spO2Percent ?? null,
-    systolicBp: payload.systolicBp ?? null,
-    diastolicBp: payload.diastolicBp ?? null,
-    temperatureC: payload.temperatureC ?? null,
-    skinTemperatureC: payload.skinTemperatureC ?? null,
-    ambientTemperatureC: payload.ambientTemperatureC ?? null,
-    hrvMs: payload.hrvMs ?? null,
-    stressScore: payload.stressScore ?? null,
-    bodyFatPercent: payload.bodyFatPercent ?? null,
-    ecgAvgHeartRateBpm: payload.ecgAvgHeartRateBpm ?? null,
-    stepsCount: payload.stepsCount ?? null,
-    caloriesBurned: payload.caloriesBurned ?? null,
-    fallDetected: Boolean(payload.fallDetected),
-    isWearing: payload.isWearing !== false,
-    recordedAt: payload.recordedAt ?? new Date().toISOString(),
+  const vitals = {
+    heartRateBpm: pick(payload, 'heartRateBpm', 'HeartRateBpm'),
+    spO2Percent: pick(payload, 'spO2Percent', 'SpO2Percent'),
+    systolicBp: pick(payload, 'systolicBp', 'SystolicBp'),
+    diastolicBp: pick(payload, 'diastolicBp', 'DiastolicBp'),
+    temperatureC: pick(payload, 'temperatureC', 'TemperatureC'),
+    skinTemperatureC: pick(payload, 'skinTemperatureC', 'SkinTemperatureC'),
+    ambientTemperatureC: pick(payload, 'ambientTemperatureC', 'AmbientTemperatureC'),
+    hrvMs: pick(payload, 'hrvMs', 'HrvMs'),
+    stressScore: pick(payload, 'stressScore', 'StressScore'),
+    bodyFatPercent: pick(payload, 'bodyFatPercent', 'BodyFatPercent'),
+    ecgAvgHeartRateBpm: pick(payload, 'ecgAvgHeartRateBpm', 'EcgAvgHeartRateBpm'),
+    stepsCount: pick(payload, 'stepsCount', 'StepsCount'),
+    caloriesBurned: pick(payload, 'caloriesBurned', 'CaloriesBurned'),
+    fallDetected: Boolean(pick(payload, 'fallDetected', 'FallDetected')),
+    isWearing: pick(payload, 'isWearing', 'IsWearing'),
+    recordedAt: pick(payload, 'recordedAt', 'RecordedAt') ?? new Date().toISOString(),
   }
+  vitals.isWearing = inferWearing(vitals)
+  return vitals
+}
+
+const MERGE_KEYS = [
+  'heartRateBpm', 'spO2Percent', 'systolicBp', 'diastolicBp', 'temperatureC',
+  'skinTemperatureC', 'ambientTemperatureC', 'hrvMs', 'stressScore', 'bodyFatPercent',
+  'ecgAvgHeartRateBpm', 'stepsCount', 'caloriesBurned',
+]
+
+function mergeVitals(previous, incoming) {
+  if (!previous) return incoming
+  const merged = { ...incoming }
+  for (const key of MERGE_KEYS) {
+    if (merged[key] == null && previous[key] != null) merged[key] = previous[key]
+  }
+  merged.isWearing = inferWearing(merged)
+  merged.fallDetected = incoming.fallDetected || previous.fallDetected
+  return merged
 }
 
 function fmt(value, digits = 0) {
@@ -54,13 +91,6 @@ const METRIC_DEFS = [
 function metricValue(vitals, def) {
   if (!vitals) return '--'
   if (def.unsupported) return '--'
-  if (
-    vitals &&
-    !vitals.isWearing &&
-    (def.key === 'heartRateBpm' || def.key === 'hrvMs')
-  ) {
-    return '--'
-  }
   if (def.computed) {
     if (vitals.systolicBp == null && vitals.diastolicBp == null) return '--'
     return `${fmt(vitals.systolicBp)}/${fmt(vitals.diastolicBp)}`
@@ -126,9 +156,12 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
     connection.on('ReceiveVitals', (payload) => {
       const vitals = normalizePayload(payload)
       if (!vitals) return
-      setLatestVitals(vitals)
-      const stamp = new Date(vitals.recordedAt).toLocaleTimeString()
-      setTimeline((prev) => [{ stamp, ...vitals }, ...prev].slice(0, 12))
+      setLatestVitals((prev) => {
+        const merged = mergeVitals(prev, vitals)
+        const stamp = new Date(merged.recordedAt).toLocaleTimeString()
+        setTimeline((rows) => [{ stamp, ...merged }, ...rows].slice(0, 12))
+        return merged
+      })
     })
 
     connection.onreconnecting(() => setConnectionStatus('connecting'))

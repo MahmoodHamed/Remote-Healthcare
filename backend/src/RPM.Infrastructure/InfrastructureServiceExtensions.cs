@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RPM.Application.Common.Interfaces;
@@ -37,8 +39,13 @@ public static class InfrastructureServiceExtensions
         // MQTT Background Service
         services.AddHostedService<MqttBackgroundService>();
 
-        // SignalR Redis Backplane
+        // SignalR Redis Backplane — camelCase JSON for web/mobile clients
         services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            })
             .AddStackExchangeRedis(config.GetConnectionString("Redis") ?? "localhost:6379");
 
         return services;

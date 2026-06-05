@@ -29,6 +29,7 @@
     <queries>
         <package android:name="com.samsung.android.service.health" />
         <package android:name="com.sec.android.app.samsungapps" />
+        <package android:name="com.samsung.android.shealthmonitor" />
     </queries>
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

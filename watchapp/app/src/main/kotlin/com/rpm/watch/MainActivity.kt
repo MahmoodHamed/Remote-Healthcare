@@ -117,9 +117,11 @@ class MainActivity : ComponentActivity() {
         viewModel.onRequestBindService = { bindMonitoringService() }
 
         viewModel.onRequestPermissions = { _, onReady ->
-
             ensureAllVitalsPermissions(onReady)
+        }
 
+        viewModel.onRequestEcg = {
+            monitorService?.requestEcgMeasurement()
         }
 
 

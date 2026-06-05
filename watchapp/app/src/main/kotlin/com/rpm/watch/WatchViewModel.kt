@@ -8,6 +8,7 @@ import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.mqtt.MqttManager
 import com.rpm.watch.sensor.HeartRateStatus
+import com.rpm.watch.sensor.SamsungHealthLauncher
 import com.rpm.watch.sensor.SensorType
 import com.rpm.watch.service.VitalsMonitorService
 import com.rpm.watch.service.VitalsServiceStatus
@@ -32,6 +33,9 @@ data class WatchUiState(
     val selectedSensor: SensorType = SensorType.HEART_RATE,
     val isMonitoring: Boolean = false,
     val errorMessage: String = "",
+    val ecgMeasuring: Boolean = false,
+    val ecgAvgHeartRateBpm: Float? = null,
+    val samsungHealthMonitorInstalled: Boolean = false,
 )
 
 @HiltViewModel
@@ -51,10 +55,16 @@ class WatchViewModel @Inject constructor(
     private val _isMonitoring = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow("")
     private val _mqttState = MutableStateFlow(MqttConnectionState.DISCONNECTED)
+    private val _ecgMeasuring = MutableStateFlow(false)
+    private val _ecgAvgHeartRateBpm = MutableStateFlow<Float?>(null)
+    private val _samsungHealthInstalled = MutableStateFlow(
+        SamsungHealthLauncher.isHealthMonitorInstalled(context),
+    )
     private var serviceAttached = false
 
     var onRequestBindService: (() -> Unit)? = null
     var onRequestPermissions: ((SensorType, () -> Unit) -> Unit)? = null
+    var onRequestEcg: (() -> Unit)? = null
 
     private var pendingStartSensor: SensorType? = null
 
@@ -70,6 +80,9 @@ class WatchViewModel @Inject constructor(
             _selectedSensor,
             _isMonitoring,
             _errorMessage,
+            _ecgMeasuring,
+            _ecgAvgHeartRateBpm,
+            _samsungHealthInstalled,
         ),
     ) { values ->
         val svcSt = values[4] as VitalsServiceStatus
@@ -87,6 +100,9 @@ class WatchViewModel @Inject constructor(
                 svcSt == VitalsServiceStatus.MEASURING ||
                 svcSt == VitalsServiceStatus.CONNECTING,
             errorMessage = values[9] as String,
+            ecgMeasuring = values[10] as Boolean,
+            ecgAvgHeartRateBpm = values[11] as Float?,
+            samsungHealthMonitorInstalled = values[12] as Boolean,
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, WatchUiState())
 
@@ -115,6 +131,26 @@ class WatchViewModel @Inject constructor(
         viewModelScope.launch { service.svcStatus.collect { _svcStatus.value = it } }
         viewModelScope.launch { service.lastError.collect { _errorMessage.value = it } }
         viewModelScope.launch { service.mqttState.collect { _mqttState.value = it } }
+        viewModelScope.launch { service.ecgMeasuring.collect { _ecgMeasuring.value = it } }
+        viewModelScope.launch { service.ecgAvgHeartRateBpm.collect { _ecgAvgHeartRateBpm.value = it } }
+    }
+
+    fun startEcgMeasurement() {
+        if (!_isMonitoring.value) {
+            startMonitoring(SensorType.HEART_RATE)
+        }
+        onRequestBindService?.invoke()
+        onRequestEcg?.invoke()
+    }
+
+    fun openSamsungHealthMonitor(): Boolean {
+        _samsungHealthInstalled.value = SamsungHealthLauncher.isHealthMonitorInstalled(context)
+        val opened = SamsungHealthLauncher.openHealthMonitor(context)
+        if (!opened) {
+            _errorMessage.value = "Install Samsung Health Monitor on watch"
+            _svcStatus.value = VitalsServiceStatus.ERROR
+        }
+        return opened
     }
 
     fun selectSensor(sensor: SensorType) {

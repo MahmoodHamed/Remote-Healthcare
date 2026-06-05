@@ -48,6 +48,8 @@ fun VitalsMonitorScreen(viewModel: WatchViewModel) {
         },
         onSensorSelected = viewModel::selectSensor,
         onPatientIdChange = viewModel::savePatientId,
+        onMeasureEcg = viewModel::startEcgMeasurement,
+        onOpenSamsungHealth = viewModel::openSamsungHealthMonitor,
     )
 }
 
@@ -57,6 +59,8 @@ fun VitalsMonitorContent(
     onToggle: () -> Unit,
     onSensorSelected: (SensorType) -> Unit,
     onPatientIdChange: (String) -> Unit,
+    onMeasureEcg: () -> Unit,
+    onOpenSamsungHealth: () -> Unit,
 ) {
     Scaffold(
         timeText = { TimeText() },
@@ -173,6 +177,47 @@ fun VitalsMonitorContent(
                     lineHeight = 10.sp,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 )
+            }
+            if (state.isMonitoring) {
+                item {
+                    Button(
+                        onClick = onMeasureEcg,
+                        enabled = !state.ecgMeasuring,
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color(0xFF5E35B1),
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(26.dp),
+                    ) {
+                        Text(
+                            if (state.ecgMeasuring) "ECG…" else "Measure ECG",
+                            fontSize = 9.sp,
+                        )
+                    }
+                }
+                if (state.ecgAvgHeartRateBpm != null) {
+                    item {
+                        Text(
+                            text = "ECG avg HR: ${state.ecgAvgHeartRateBpm.toInt()} bpm → sent",
+                            fontSize = 8.sp,
+                            color = Color(0xFF43A047),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                if (state.samsungHealthMonitorInstalled) {
+                    item {
+                        Button(
+                            onClick = onOpenSamsungHealth,
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = MaterialTheme.colors.surface,
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(22.dp),
+                        ) {
+                            Text("Samsung Health", fontSize = 8.sp)
+                        }
+                    }
+                }
             }
             item {
                 Button(

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RPM.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45c5855606783a1583c611d26a6dd53346a4b0ce")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0a840c27d06a81e0ca4cb1ba61614ba2af7134af")]
 [assembly: System.Reflection.AssemblyProductAttribute("RPM.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RPM.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

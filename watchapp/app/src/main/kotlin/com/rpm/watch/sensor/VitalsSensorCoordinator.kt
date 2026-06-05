@@ -21,6 +21,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,6 +45,13 @@ data class SensorTrackerEvent(
 class VitalsSensorCoordinator @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    private val onDemandRequests = MutableSharedFlow<SensorType>(extraBufferCapacity = 2)
+
+    /** Request an immediate on-demand measurement (ECG, SpO₂, BIA). */
+    fun requestOnDemandMeasurement(sensor: SensorType) {
+        onDemandRequests.tryEmit(sensor)
+    }
+
     private val platformHub = PlatformSensorHub(context)
     private val continuousSensors = listOf(
         SensorType.HEART_RATE,
@@ -226,6 +234,22 @@ class VitalsSensorCoordinator @Inject constructor(
             SensorType.BIA -> SLOT_BIA_MS
             SensorType.ECG -> SLOT_ECG_MS
             else -> SLOT_SPO2_MS
+        }
+
+        launch {
+            onDemandRequests.collect { sensor ->
+                if (activeTrackers.isEmpty()) {
+                    Log.w(TAG, "On-demand request ignored — Samsung not connected yet: ${sensor.name}")
+                    trySend(
+                        SensorTrackerEvent(
+                            sensor,
+                            TrackerState.Error("Sensors not ready — tap Start first"),
+                        ),
+                    )
+                } else {
+                    switchOnDemand(sensor)
+                }
+            }
         }
 
         val connectionListener = object : ConnectionListener {

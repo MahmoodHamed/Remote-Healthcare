@@ -92,6 +92,8 @@ class VitalsMonitorService : Service() {
     private val _heartRateStatus = MutableStateFlow(HeartRateStatus.INITIAL)
     private val _svcStatus = MutableStateFlow(VitalsServiceStatus.IDLE)
     private val _lastError = MutableStateFlow("")
+    private val _ecgMeasuring = MutableStateFlow(false)
+    private val _ecgAvgHeartRateBpm = MutableStateFlow<Float?>(null)
 
     val heartRate: StateFlow<Int> = _heartRate
     val temperatureC: StateFlow<Float?> = _temperatureC
@@ -99,8 +101,22 @@ class VitalsMonitorService : Service() {
     val heartRateStatus: StateFlow<HeartRateStatus> = _heartRateStatus
     val svcStatus: StateFlow<VitalsServiceStatus> = _svcStatus
     val lastError: StateFlow<String> = _lastError
+    val ecgMeasuring: StateFlow<Boolean> = _ecgMeasuring
+    val ecgAvgHeartRateBpm: StateFlow<Float?> = _ecgAvgHeartRateBpm
     val mqttState: StateFlow<MqttConnectionState>
         get() = mqttManager.connectionState
+
+    fun requestEcgMeasurement() {
+        if (monitorJob?.isActive != true) {
+            _lastError.value = "Tap Start before ECG"
+            return
+        }
+        _ecgMeasuring.value = true
+        _ecgAvgHeartRateBpm.value = null
+        vitalsCoordinator.requestOnDemandMeasurement(SensorType.ECG)
+        updateNotification("ECG — rest arm, follow watch prompt")
+        Log.i(TAG, "ECG measurement requested")
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -119,7 +135,7 @@ class VitalsMonitorService : Service() {
             wearHub.confirmedOffWrist.collect { offWrist ->
                 confirmedOffWrist = offWrist
                 refreshWearingState()
-                if (offWrist && !hasSuccessfulHeartRate()) clearHeartRateDisplay()
+                if (offWrist && !hasLiveVitalsEvidence()) clearHeartRateDisplay()
             }
         }
     }
@@ -202,6 +218,7 @@ class VitalsMonitorService : Service() {
                             updateNotification(statusMessage(sensorType, state.reading))
                         }
                         is TrackerState.Error -> {
+                            if (sensorType == SensorType.ECG) _ecgMeasuring.value = false
                             _svcStatus.value = VitalsServiceStatus.ERROR
                             _lastError.value = state.message
                             updateNotification("Error: ${state.message}")
@@ -291,9 +308,7 @@ class VitalsMonitorService : Service() {
     private fun publishVitals(patientId: String, deviceId: String, topic: String) {
         val motion = motionHub.snapshot()
         val wearing = effectiveIsWearing()
-        val hrForMqtt = latestHeartRate?.toFloat()?.takeIf {
-            wearing && _heartRateStatus.value.isSuccessful
-        }
+        val hrForMqtt = latestHeartRate?.toFloat()?.takeIf { wearing && it >= 30f }
         val payload = VitalsPayload(
             patientId = patientId,
             deviceId = deviceId,
@@ -306,8 +321,8 @@ class VitalsMonitorService : Service() {
             stressScore = latestStressScore,
             bodyFatPercent = latestBodyFatPercent,
             ecgAvgHeartRateBpm = latestEcgAvgHeartRateBpm,
-            stepsCount = motion.stepsCount,
-            caloriesBurned = motion.caloriesBurned,
+            stepsCount = motion.stepsCount ?: 0,
+            caloriesBurned = motion.caloriesBurned ?: 0f,
             fallDetected = motion.fallDetected,
             isWearing = wearing,
         )
@@ -350,9 +365,17 @@ class VitalsMonitorService : Service() {
             }
             SensorType.ECG -> {
                 if (reading.ecgComplete) {
+                    _ecgMeasuring.value = false
                     latestEcgAvgHeartRateBpm = reading.ecgAvgHeartRateBpm
                         ?: latestHeartRate?.toFloat()?.takeIf { effectiveIsWearing() }
-                    maybePublishVitals()
+                    _ecgAvgHeartRateBpm.value = latestEcgAvgHeartRateBpm
+                    updateNotification(
+                        latestEcgAvgHeartRateBpm?.let { "ECG done — avg HR ${it.toInt()} bpm" }
+                            ?: "ECG recorded",
+                    )
+                    maybePublishVitals(force = true)
+                } else if (_ecgMeasuring.value) {
+                    updateNotification("ECG — follow watch prompt")
                 }
             }
             SensorType.SPO2 -> {
@@ -380,16 +403,22 @@ class VitalsMonitorService : Service() {
         maybePublishVitals(force = true)
     }
 
-    private fun hasSuccessfulHeartRate(): Boolean =
-        _heartRateStatus.value.isSuccessful && (latestHeartRate ?: 0) >= 30
+    private fun hasRecentHeartRate(): Boolean = (latestHeartRate ?: 0) >= 30
+
+    private fun hasLiveVitalsEvidence(): Boolean =
+        hasRecentHeartRate() ||
+            latestSpO2Percent != null ||
+            latestTemperatureC != null ||
+            latestSkinTemperatureC != null ||
+            latestStressScore != null
 
     /**
-     * Samsung HR status (-3 DETACHED) is more reliable than a single off-body sample.
-     * Successful HR while worn overrides a false off-body reading.
+     * Samsung HR status (-3 DETACHED) is authoritative only without recent vitals.
+     * Live HR/SpO₂/temp/stress overrides a false off-body reading.
      */
     private fun effectiveIsWearing(): Boolean {
-        if (_heartRateStatus.value == HeartRateStatus.DETACHED) return false
-        if (hasSuccessfulHeartRate()) return true
+        if (_heartRateStatus.value == HeartRateStatus.DETACHED && !hasRecentHeartRate()) return false
+        if (hasLiveVitalsEvidence()) return true
         if (confirmedOffWrist) return false
         return offBodyOnWrist ?: true
     }
