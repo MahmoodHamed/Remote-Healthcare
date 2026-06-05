@@ -23,8 +23,18 @@ object EcgSamsungParser {
             Log.d(TAG, "ECG in progress (progress=$progress)")
             return null
         }
-        Log.i(TAG, "ECG measurement complete")
-        return VitalReading(ecgComplete = true, status = HeartRateStatus.SUCCESS)
+        val avgHr = readKeyValue(
+            dp,
+            "EcgSet",
+            listOf("HEART_RATE", "AVG_HEART_RATE", "AVERAGE_HEART_RATE"),
+            emptyList(),
+        )?.toFloat()?.takeIf { it in 30f..220f }
+        Log.i(TAG, "ECG measurement complete avgHr=$avgHr")
+        return VitalReading(
+            ecgComplete = true,
+            ecgAvgHeartRateBpm = avgHr,
+            status = HeartRateStatus.SUCCESS,
+        )
     }
 
     fun isMeasuring(dp: DataPoint): Boolean {

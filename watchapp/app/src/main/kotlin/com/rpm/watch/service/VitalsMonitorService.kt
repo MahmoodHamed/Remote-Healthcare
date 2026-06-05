@@ -77,6 +77,8 @@ class VitalsMonitorService : Service() {
     @Volatile private var latestBodyFatPercent: Float? = null
     @Volatile private var latestEcgAvgHeartRateBpm: Float? = null
     @Volatile private var isWearingNow: Boolean = true
+    @Volatile private var offBodyOnWrist: Boolean? = null
+    @Volatile private var confirmedOffWrist: Boolean = false
 
     @Volatile private var vitalsMqttTopic: String? = null
     @Volatile private var vitalsPatientId: String? = null
@@ -109,14 +111,15 @@ class VitalsMonitorService : Service() {
         wearHub.start()
         wearCollectJob = serviceScope.launch {
             wearHub.onWrist.collect { onWrist ->
-                val worn = onWrist ?: true
-                motionHub.setWatchOnWrist(worn)
-                isWearingNow = worn
+                offBodyOnWrist = onWrist
+                refreshWearingState()
             }
         }
         serviceScope.launch {
             wearHub.confirmedOffWrist.collect { offWrist ->
-                if (offWrist) clearHeartRateDisplay()
+                confirmedOffWrist = offWrist
+                refreshWearingState()
+                if (offWrist && !hasSuccessfulHeartRate()) clearHeartRateDisplay()
             }
         }
     }
@@ -287,10 +290,10 @@ class VitalsMonitorService : Service() {
 
     private fun publishVitals(patientId: String, deviceId: String, topic: String) {
         val motion = motionHub.snapshot()
+        val wearing = effectiveIsWearing()
         val hrForMqtt = latestHeartRate?.toFloat()?.takeIf {
-            isWearingNow && _heartRateStatus.value.isSuccessful
+            wearing && _heartRateStatus.value.isSuccessful
         }
-        val hrvForMqtt = latestHrvMs?.takeIf { isWearingNow && hrForMqtt != null }
         val payload = VitalsPayload(
             patientId = patientId,
             deviceId = deviceId,
@@ -299,14 +302,14 @@ class VitalsMonitorService : Service() {
             temperatureC = latestTemperatureC,
             skinTemperatureC = latestSkinTemperatureC,
             ambientTemperatureC = latestAmbientTemperatureC,
-            hrvMs = hrvForMqtt,
+            hrvMs = latestHrvMs?.takeIf { wearing },
             stressScore = latestStressScore,
             bodyFatPercent = latestBodyFatPercent,
             ecgAvgHeartRateBpm = latestEcgAvgHeartRateBpm,
             stepsCount = motion.stepsCount,
             caloriesBurned = motion.caloriesBurned,
             fallDetected = motion.fallDetected,
-            isWearing = isWearingNow,
+            isWearing = wearing,
         )
         mqttManager.publish(topic, Json.encodeToString(payload))
         Log.d(
@@ -319,16 +322,15 @@ class VitalsMonitorService : Service() {
         when (sensor) {
             SensorType.HEART_RATE -> {
                 _heartRateStatus.value = reading.status
+                refreshWearingState()
                 if (reading.status == HeartRateStatus.DETACHED) {
                     clearHeartRateDisplay()
                     maybePublishVitals()
                     return
                 }
-                if (isWearingNow) {
-                    reading.hrvMs?.let { latestHrvMs = it }
-                }
+                reading.hrvMs?.let { latestHrvMs = it }
                 val bpm = reading.heartRateBpm
-                if (bpm != null && reading.status.isSuccessful && isWearingNow) {
+                if (bpm != null && reading.status.isSuccessful && effectiveIsWearing()) {
                     latestHeartRate = bpm
                     _heartRate.value = bpm
                     maybePublishVitals()
@@ -348,7 +350,8 @@ class VitalsMonitorService : Service() {
             }
             SensorType.ECG -> {
                 if (reading.ecgComplete) {
-                    latestEcgAvgHeartRateBpm = latestHeartRate?.toFloat()?.takeIf { isWearingNow }
+                    latestEcgAvgHeartRateBpm = reading.ecgAvgHeartRateBpm
+                        ?: latestHeartRate?.toFloat()?.takeIf { effectiveIsWearing() }
                     maybePublishVitals()
                 }
             }
@@ -377,9 +380,32 @@ class VitalsMonitorService : Service() {
         maybePublishVitals(force = true)
     }
 
+    private fun hasSuccessfulHeartRate(): Boolean =
+        _heartRateStatus.value.isSuccessful && (latestHeartRate ?: 0) >= 30
+
+    /**
+     * Samsung HR status (-3 DETACHED) is more reliable than a single off-body sample.
+     * Successful HR while worn overrides a false off-body reading.
+     */
+    private fun effectiveIsWearing(): Boolean {
+        if (_heartRateStatus.value == HeartRateStatus.DETACHED) return false
+        if (hasSuccessfulHeartRate()) return true
+        if (confirmedOffWrist) return false
+        return offBodyOnWrist ?: true
+    }
+
+    private fun refreshWearingState() {
+        val wearing = effectiveIsWearing()
+        if (isWearingNow != wearing) {
+            isWearingNow = wearing
+            motionHub.setWatchOnWrist(wearing)
+            maybePublishVitals(force = true)
+        }
+    }
+
     private fun statusMessage(sensor: SensorType, reading: VitalReading): String = when (sensor) {
         SensorType.HEART_RATE -> when {
-            !isWearingNow -> "Watch off wrist"
+            !effectiveIsWearing() -> "Watch off wrist"
             reading.status == HeartRateStatus.DETACHED -> "Watch off wrist"
             reading.heartRateBpm != null -> "HR: ${reading.heartRateBpm} bpm"
             reading.status == HeartRateStatus.MOVEMENT -> "Hold still"

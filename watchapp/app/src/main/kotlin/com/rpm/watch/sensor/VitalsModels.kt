@@ -45,6 +45,8 @@ data class VitalReading(
     val bodyFatPercent: Float? = null,
     /** Set when an ECG on-demand session completes. */
     val ecgComplete: Boolean = false,
+    /** Average HR from a completed ECG session (bpm). */
+    val ecgAvgHeartRateBpm: Float? = null,
     val status: HeartRateStatus = HeartRateStatus.INITIAL,
     val timestampMs: Long = System.currentTimeMillis(),
 )

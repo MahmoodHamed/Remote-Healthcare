@@ -35,7 +35,7 @@ function fmt(value, digits = 0) {
 const METRIC_DEFS = [
   { key: 'heartRateBpm', label: 'Heart rate', unit: 'bpm', tone: 'accent', digits: 0 },
   { key: 'spO2Percent', label: 'SpO₂', unit: '%', tone: 'teal', digits: 1 },
-  { key: 'bp', label: 'Blood pressure', unit: 'mmHg', tone: 'warm', computed: true },
+  { key: 'bp', label: 'Blood pressure', unit: 'mmHg', tone: 'warm', computed: true, unsupported: true },
   { key: 'temperatureC', label: 'Body temp.', unit: '°C', tone: 'amber', digits: 1 },
   { key: 'skinTemperatureC', label: 'Skin temp.', unit: '°C', tone: 'blue', digits: 1 },
   { key: 'hrvMs', label: 'HRV', unit: 'ms', tone: 'violet', digits: 0 },
@@ -44,8 +44,8 @@ const METRIC_DEFS = [
   { key: 'sleep', label: 'Sleep score', unit: '/100', tone: 'ink', unsupported: true },
   { key: 'stepsCount', label: 'Steps', unit: 'today', tone: 'ink', digits: 0 },
   { key: 'caloriesBurned', label: 'Calories', unit: 'kcal', tone: 'ink', digits: 0 },
-  { key: 'ecgAvgHeartRateBpm', label: 'ECG', unit: 'avg HR', tone: 'ink', digits: 0 },
-  { key: 'bodyFatPercent', label: 'Body fat', unit: '%', tone: 'ink', digits: 1 },
+  { key: 'ecgAvgHeartRateBpm', label: 'ECG', unit: 'avg HR', tone: 'ink', digits: 0, onDemand: true },
+  { key: 'bodyFatPercent', label: 'Body fat', unit: '%', tone: 'ink', digits: 1, onDemand: true },
   { key: 'glucose', label: 'Blood glucose', unit: 'mg/dL', tone: 'ink', unsupported: true },
   { key: 'fallDetected', label: 'Fall detection', unit: '', tone: 'danger', boolean: true },
   { key: 'isWearing', label: 'Watch status', unit: '', tone: 'teal', wearing: true },
@@ -228,6 +228,9 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
                       ) : null}
                     </strong>
                     {def.unsupported ? <span className="sensor-hint">Not on SDK</span> : null}
+                    {def.onDemand && !def.unsupported ? (
+                      <span className="sensor-hint">On-demand on watch</span>
+                    ) : null}
                   </div>
                 ))}
               </div>
