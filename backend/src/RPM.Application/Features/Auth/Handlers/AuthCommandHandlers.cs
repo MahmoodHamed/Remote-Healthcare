@@ -41,7 +41,7 @@ public class RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJw
         var refreshToken = jwt.GenerateRefreshToken();
         var expiry = DateTime.UtcNow.AddDays(30);
         var rt = RefreshToken.Create(user.Id, hasher.Hash(refreshToken), expiry);
-        // track the refresh token (uow is tracking user already, attach new token via separate repo)
+        await uow.Users.AddRefreshTokenAsync(rt, ct);
         await uow.SaveChangesAsync(ct);
 
         return new LoginResponseDto(
@@ -64,7 +64,7 @@ public class LoginCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJwtSe
         var accessToken = jwt.GenerateAccessToken(user.Id, user.Email, user.Role.ToString());
         var refreshToken = jwt.GenerateRefreshToken();
         var rt = RefreshToken.Create(user.Id, hasher.Hash(refreshToken), DateTime.UtcNow.AddDays(30), cmd.DeviceInfo);
-        // note: refresh token is persisted by EF change tracking
+        await uow.Users.AddRefreshTokenAsync(rt, ct);
         await uow.SaveChangesAsync(ct);
 
         return new LoginResponseDto(

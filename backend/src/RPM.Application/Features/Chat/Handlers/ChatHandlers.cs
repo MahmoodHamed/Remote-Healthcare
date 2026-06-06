@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using RPM.Application.Common.Exceptions;
+using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Chat;
 using RPM.Application.Features.Chat.Commands;
 using RPM.Application.Features.Chat.Queries;
@@ -28,7 +29,7 @@ public class CreateConversationHandler(IUnitOfWork uow)
     }
 }
 
-public class SendMessageHandler(IUnitOfWork uow)
+public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub)
     : IRequestHandler<SendMessageCommand, MessageDto>
 {
     public async Task<MessageDto> Handle(SendMessageCommand cmd, CancellationToken ct)
@@ -43,9 +44,12 @@ public class SendMessageHandler(IUnitOfWork uow)
         await uow.SaveChangesAsync(ct);
 
         var sender = await uow.Users.GetByIdAsync(cmd.SenderId, ct);
-        return new MessageDto(msg.Id, msg.ConversationId, msg.SenderId,
+        var dto = new MessageDto(msg.Id, msg.ConversationId, msg.SenderId,
             sender?.FullName ?? "Unknown", msg.Content, msg.Type.ToString(),
             msg.MediaUrl, msg.IsDeleted, msg.SentAt);
+
+        await chatHub.BroadcastMessageAsync(dto, ct);
+        return dto;
     }
 }
 
