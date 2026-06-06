@@ -13,12 +13,24 @@ export default function AdminLogin({ onSignedIn }) {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (busy) return
     setError('')
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !password) {
+      setError('Please enter your email and password.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+
     setBusy(true)
     try {
       const response = await api.post(
         '/api/auth/admin/login',
-        { email, password, deviceInfo: 'web-admin' },
+        { email: trimmedEmail, password, deviceInfo: 'web-admin' },
         { auth: false },
       )
       const user = setAuthSession(response)
@@ -26,7 +38,11 @@ export default function AdminLogin({ onSignedIn }) {
       onSignedIn?.(user)
       navigate('/admin/dashboard', { replace: true })
     } catch (err) {
-      setError(err.message || 'Sign-in failed.')
+      if (err.status === 401) {
+        setError('Invalid email or password.')
+      } else {
+        setError(err.message || 'Sign-in failed.')
+      }
     } finally {
       setBusy(false)
     }

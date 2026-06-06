@@ -23,12 +23,12 @@ const parseErrorMessage = async (response) => {
     if (typeof data.message === 'string') return data.message
     if (typeof data.title === 'string') return data.title
     if (data.errors && typeof data.errors === 'object') {
-      const [firstKey] = Object.keys(data.errors)
-      if (firstKey) {
-        const detail = data.errors[firstKey]
-        if (Array.isArray(detail) && detail[0]) return `${firstKey}: ${detail[0]}`
-        if (typeof detail === 'string') return `${firstKey}: ${detail}`
-      }
+      const lines = Object.entries(data.errors).flatMap(([field, detail]) => {
+        if (Array.isArray(detail)) return detail.map((m) => `${field}: ${m}`)
+        if (typeof detail === 'string') return [`${field}: ${detail}`]
+        return []
+      })
+      if (lines.length > 0) return lines[0]
     }
   } catch {
     return null

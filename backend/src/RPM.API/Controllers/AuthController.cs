@@ -39,7 +39,11 @@ public class AuthController(IMediator mediator, IAuditService audit, ICurrentUse
     public async Task<IActionResult> Login([FromBody] LoginCommand cmd, CancellationToken ct)
     {
         var result = await mediator.Send(cmd, ct);
-        await audit.LogAsync(new(null, cmd.Email, "Login", "Auth", null, HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+        try
+        {
+            await audit.LogAsync(new(null, cmd.Email, "Login", "Auth", null, HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+        }
+        catch { /* audit must not block sign-in */ }
         return Ok(result);
     }
 
@@ -48,7 +52,11 @@ public class AuthController(IMediator mediator, IAuditService audit, ICurrentUse
     public async Task<IActionResult> AdminLogin([FromBody] AdminLoginCommand cmd, CancellationToken ct)
     {
         var result = await mediator.Send(cmd, ct);
-        await audit.LogAsync(new(null, cmd.Email, "AdminLogin", "Auth", null, HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+        try
+        {
+            await audit.LogAsync(new(null, cmd.Email, "AdminLogin", "Auth", null, HttpContext.Connection.RemoteIpAddress?.ToString()), ct);
+        }
+        catch { /* audit must not block sign-in */ }
         return Ok(result);
     }
 

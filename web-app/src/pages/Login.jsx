@@ -17,12 +17,26 @@ export default function Login({ onSignedIn }) {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (busy) return
     setError('')
+
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password
+
+    if (!trimmedEmail || !trimmedPassword) {
+      setError('Please enter your email and password.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+
     setBusy(true)
     try {
       const response = await api.post(
         '/api/auth/login',
-        { email, password, deviceInfo: 'web' },
+        { email: trimmedEmail, password: trimmedPassword, deviceInfo: 'web' },
         { auth: false },
       )
       const user = setAuthSession(response)
@@ -34,7 +48,11 @@ export default function Login({ onSignedIn }) {
       onSignedIn?.(user)
       navigate(homeRouteForRole(user.role), { replace: true })
     } catch (err) {
-      setError(err.message || 'Sign-in failed.')
+      if (err.status === 401) {
+        setError('Invalid email or password.')
+      } else {
+        setError(err.message || 'Sign-in failed.')
+      }
     } finally {
       setBusy(false)
     }
