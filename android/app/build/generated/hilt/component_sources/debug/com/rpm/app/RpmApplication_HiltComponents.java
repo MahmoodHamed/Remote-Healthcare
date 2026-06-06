@@ -1,10 +1,12 @@
 package com.rpm.app;
 
 import com.rpm.app.di.NetworkModule;
+import com.rpm.app.fcm.FcmServiceEntryPoint;
 import com.rpm.app.ui.feature.alerts.AlertsViewModel_HiltModules;
 import com.rpm.app.ui.feature.auth.AuthViewModel_HiltModules;
 import com.rpm.app.ui.feature.chat.ChatRoomViewModel_HiltModules;
 import com.rpm.app.ui.feature.chat.ConversationListViewModel_HiltModules;
+import com.rpm.app.ui.feature.notifications.NotificationsViewModel_HiltModules;
 import com.rpm.app.ui.feature.patients.PatientDetailViewModel_HiltModules;
 import com.rpm.app.ui.feature.patients.PatientListViewModel_HiltModules;
 import dagger.Binds;
@@ -140,6 +142,7 @@ public final class RpmApplication_HiltComponents {
   )
   @Singleton
   public abstract static class SingletonC implements RpmApplication_GeneratedInjector,
+      FcmServiceEntryPoint,
       FragmentGetContextFix.FragmentGetContextFixEntryPoint,
       HiltWrapper_ActivityRetainedComponentManager_ActivityRetainedComponentBuilderEntryPoint,
       ServiceComponentManager.ServiceComponentBuilderEntryPoint,
@@ -164,6 +167,7 @@ public final class RpmApplication_HiltComponents {
           ConversationListViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
+          NotificationsViewModel_HiltModules.KeyModule.class,
           PatientDetailViewModel_HiltModules.KeyModule.class,
           PatientListViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
@@ -208,6 +212,7 @@ public final class RpmApplication_HiltComponents {
           ChatRoomViewModel_HiltModules.BindsModule.class,
           ConversationListViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
+          NotificationsViewModel_HiltModules.BindsModule.class,
           PatientDetailViewModel_HiltModules.BindsModule.class,
           PatientListViewModel_HiltModules.BindsModule.class
       }

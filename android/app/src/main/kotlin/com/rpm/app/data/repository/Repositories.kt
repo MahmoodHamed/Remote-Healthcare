@@ -88,10 +88,31 @@ class ChatRepository @Inject constructor(private val api: RpmApiService) {
         safeCall { api.getConversations() }
 
     suspend fun createConversation(
+        type: String,
         participantIds: List<String>,
-        title: String? = null
+        name: String? = null,
     ): Resource<ConversationDto> =
-        safeCall { api.createConversation(CreateConversationRequest(participantIds, title)) }
+        safeCall { api.createConversation(CreateConversationRequest(type, name, participantIds)) }
+
+    suspend fun findOrCreateDoctorPatientConversation(
+        doctorId: String,
+        patientId: String,
+        patientName: String,
+    ): Resource<ConversationDto> {
+        val existing = getConversations()
+        if (existing is Resource.Success) {
+            existing.data.firstOrNull { conv ->
+                conv.type == "DoctorPatient" &&
+                    conv.participants.any { it.userId.equals(doctorId, ignoreCase = true) } &&
+                    conv.participants.any { it.userId.equals(patientId, ignoreCase = true) }
+            }?.let { return Resource.Success(it) }
+        }
+        return createConversation(
+            type = "DoctorPatient",
+            name = "Care: $patientName",
+            participantIds = listOf(doctorId, patientId),
+        )
+    }
 
     suspend fun getMessages(conversationId: String, page: Int = 1): Resource<MessagePagedDto> =
         safeCall { api.getMessages(conversationId, page) }
@@ -101,6 +122,26 @@ class ChatRepository @Inject constructor(private val api: RpmApiService) {
 
     suspend fun deleteMessage(messageId: String): Resource<Unit> =
         safeCall { api.deleteMessage(messageId) }
+}
+
+class NotificationRepository @Inject constructor(private val api: RpmApiService) {
+
+    suspend fun getNotifications(page: Int = 1): Resource<List<NotificationDto>> =
+        safeCall { api.getNotifications(page) }
+
+    suspend fun getUnreadCount(): Resource<Long> {
+        return try {
+            val response = api.getUnreadNotificationCount()
+            if (response.isSuccessful) Resource.Success(response.body()?.count ?: 0L)
+            else Resource.Error(httpErrorMessage(response))
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Network error")
+        }
+    }
+
+    suspend fun markRead(id: String): Resource<Unit> = safeCall { api.markNotificationRead(id) }
+
+    suspend fun markAllRead(): Resource<Unit> = safeCall { api.markAllNotificationsRead() }
 }
 
 private fun PatientDetailDto.toSummary() = PatientSummaryDto(

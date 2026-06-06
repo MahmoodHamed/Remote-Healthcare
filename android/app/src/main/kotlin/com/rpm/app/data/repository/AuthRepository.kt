@@ -117,4 +117,14 @@ class AuthRepository @Inject constructor(
         try { api.logout() } catch (_: Exception) {}
         tokenStore.clearSession()
     }
+
+    suspend fun updateFcmToken(fcmToken: String): Resource<Unit> {
+        return try {
+            val response = api.updateFcmToken(UpdateFcmTokenRequest(fcmToken))
+            if (response.isSuccessful) Resource.Success(Unit)
+            else Resource.Error(httpErrorMessage(response))
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to update FCM token")
+        }
+    }
 }

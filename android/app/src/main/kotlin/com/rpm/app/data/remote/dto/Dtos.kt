@@ -124,19 +124,21 @@ data class AlertPagedDto(
 @Serializable
 data class ConversationDto(
     val id: String,
-    val title: String? = null,
+    val name: String? = null,
     val type: String,
-    val lastMessage: String? = null,
     val lastMessageAt: String? = null,
-    val unreadCount: Int = 0,
-    val participants: List<ParticipantDto> = emptyList()
-)
+    val participants: List<ParticipantDto> = emptyList(),
+) {
+    /** Display title — maps backend `name` field. */
+    val title: String? get() = name
+}
 
 @Serializable
 data class ParticipantDto(
     val userId: String,
     val fullName: String,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val isAdmin: Boolean = false,
 )
 
 @Serializable
@@ -148,21 +150,23 @@ data class MessageDto(
     val content: String,
     val type: String,
     val sentAt: String,
-    val fileUrl: String? = null
+    val mediaUrl: String? = null,
+    val isDeleted: Boolean = false,
 )
 
 @Serializable
 data class MessagePagedDto(
     val items: List<MessageDto>,
-    val totalCount: Int,
+    val totalCount: Long = 0,
     val page: Int,
     val pageSize: Int
 )
 
 @Serializable
 data class CreateConversationRequest(
-    val participantUserIds: List<String>,
-    val title: String? = null
+    val type: String,
+    val name: String? = null,
+    val participantIds: List<String>,
 )
 
 @Serializable
@@ -235,3 +239,19 @@ data class LinkRelativeRequest(
     val relativeUserId: String,
     val relationship: String
 )
+
+
+// ── Push notification inbox ───────────────────────────────────────────────
+
+@Serializable
+data class NotificationDto(
+    val id: String,
+    val title: String,
+    val body: String,
+    val alertId: String? = null,
+    val isRead: Boolean = false,
+    val sentAt: String,
+)
+
+@Serializable
+data class UnreadCountDto(val count: Long = 0)

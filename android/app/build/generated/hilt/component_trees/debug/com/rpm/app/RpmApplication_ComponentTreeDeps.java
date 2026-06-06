@@ -20,6 +20,7 @@ import dagger.hilt.processor.internal.definecomponent.codegen._dagger_hilt_compo
 import hilt_aggregated_deps._com_rpm_app_MainActivity_GeneratedInjector;
 import hilt_aggregated_deps._com_rpm_app_RpmApplication_GeneratedInjector;
 import hilt_aggregated_deps._com_rpm_app_di_NetworkModule;
+import hilt_aggregated_deps._com_rpm_app_fcm_FcmServiceEntryPoint;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_alerts_AlertsViewModel_HiltModules_BindsModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_alerts_AlertsViewModel_HiltModules_KeyModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_auth_AuthViewModel_HiltModules_BindsModule;
@@ -28,6 +29,8 @@ import hilt_aggregated_deps._com_rpm_app_ui_feature_chat_ChatRoomViewModel_HiltM
 import hilt_aggregated_deps._com_rpm_app_ui_feature_chat_ChatRoomViewModel_HiltModules_KeyModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_chat_ConversationListViewModel_HiltModules_BindsModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_chat_ConversationListViewModel_HiltModules_KeyModule;
+import hilt_aggregated_deps._com_rpm_app_ui_feature_notifications_NotificationsViewModel_HiltModules_BindsModule;
+import hilt_aggregated_deps._com_rpm_app_ui_feature_notifications_NotificationsViewModel_HiltModules_KeyModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_patients_PatientDetailViewModel_HiltModules_BindsModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_patients_PatientDetailViewModel_HiltModules_KeyModule;
 import hilt_aggregated_deps._com_rpm_app_ui_feature_patients_PatientListViewModel_HiltModules_BindsModule;
@@ -75,6 +78,7 @@ import hilt_aggregated_deps._dagger_hilt_android_internal_modules_HiltWrapper_Ac
         _com_rpm_app_MainActivity_GeneratedInjector.class,
         _com_rpm_app_RpmApplication_GeneratedInjector.class,
         _com_rpm_app_di_NetworkModule.class,
+        _com_rpm_app_fcm_FcmServiceEntryPoint.class,
         _com_rpm_app_ui_feature_alerts_AlertsViewModel_HiltModules_BindsModule.class,
         _com_rpm_app_ui_feature_alerts_AlertsViewModel_HiltModules_KeyModule.class,
         _com_rpm_app_ui_feature_auth_AuthViewModel_HiltModules_BindsModule.class,
@@ -83,6 +87,8 @@ import hilt_aggregated_deps._dagger_hilt_android_internal_modules_HiltWrapper_Ac
         _com_rpm_app_ui_feature_chat_ChatRoomViewModel_HiltModules_KeyModule.class,
         _com_rpm_app_ui_feature_chat_ConversationListViewModel_HiltModules_BindsModule.class,
         _com_rpm_app_ui_feature_chat_ConversationListViewModel_HiltModules_KeyModule.class,
+        _com_rpm_app_ui_feature_notifications_NotificationsViewModel_HiltModules_BindsModule.class,
+        _com_rpm_app_ui_feature_notifications_NotificationsViewModel_HiltModules_KeyModule.class,
         _com_rpm_app_ui_feature_patients_PatientDetailViewModel_HiltModules_BindsModule.class,
         _com_rpm_app_ui_feature_patients_PatientDetailViewModel_HiltModules_KeyModule.class,
         _com_rpm_app_ui_feature_patients_PatientListViewModel_HiltModules_BindsModule.class,

@@ -18,9 +18,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun PatientDetailScreen(
     userRole: String?,
     onBack: () -> Unit,
-    onOpenChat: (patientId: String) -> Unit,
+    onOpenChat: (conversationId: String) -> Unit,
     onOpenAlerts: (patientId: String) -> Unit,
-    viewModel: PatientDetailViewModel = hiltViewModel()
+    viewModel: PatientDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val patient = uiState.patient
@@ -35,7 +35,7 @@ fun PatientDetailScreen(
                         when (userRole) {
                             "Patient" -> "My Health"
                             else -> patient?.fullName ?: "Patient Detail"
-                        }
+                        },
                     )
                 },
                 navigationIcon = {
@@ -49,12 +49,23 @@ fun PatientDetailScreen(
                     IconButton(onClick = { patient?.let { onOpenAlerts(it.userId) } }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Alerts")
                     }
-                    IconButton(onClick = { patient?.let { onOpenChat(it.userId) } }) {
-                        Icon(Icons.Default.Chat, contentDescription = "Chat")
+                    if (userRole == "Doctor") {
+                        IconButton(
+                            onClick = {
+                                viewModel.openDoctorChat(onConversationReady = onOpenChat)
+                            },
+                            enabled = !uiState.isOpeningChat && patient != null,
+                        ) {
+                            if (uiState.isOpeningChat) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Chat, contentDescription = "New Chat")
+                            }
+                        }
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
@@ -95,6 +106,18 @@ fun PatientDetailScreen(
                                 patient.doctor?.let {
                                     VitalRow("Doctor", it.fullName)
                                     it.specialization?.let { s -> VitalRow("Specialization", s) }
+                                }
+                                if (userRole == "Doctor") {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(
+                                        onClick = { viewModel.openDoctorChat(onConversationReady = onOpenChat) },
+                                        enabled = !uiState.isOpeningChat,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Icon(Icons.Default.Chat, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("New Chat")
+                                    }
                                 }
                             }
                         }

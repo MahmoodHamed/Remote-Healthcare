@@ -19,7 +19,7 @@ interface RpmApiService {
     @POST("api/auth/logout")
     suspend fun logout(): Response<Unit>
 
-    @PUT("api/auth/fcm-token")
+    @PATCH("api/auth/fcm-token")
     suspend fun updateFcmToken(@Body request: UpdateFcmTokenRequest): Response<Unit>
 
     @GET("api/auth/me")
@@ -118,4 +118,20 @@ interface RpmApiService {
 
     @DELETE("api/chat/messages/{messageId}")
     suspend fun deleteMessage(@Path("messageId") messageId: String): Response<Unit>
+
+    // ── Notifications (push inbox) ────────────────────────────────────────
+    @GET("api/notifications")
+    suspend fun getNotifications(
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 30,
+    ): Response<List<NotificationDto>>
+
+    @GET("api/notifications/unread-count")
+    suspend fun getUnreadNotificationCount(): Response<UnreadCountDto>
+
+    @PATCH("api/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: String): Response<Unit>
+
+    @PATCH("api/notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<Unit>
 }

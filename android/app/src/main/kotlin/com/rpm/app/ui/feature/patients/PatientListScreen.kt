@@ -23,6 +23,7 @@ fun PatientListScreen(
     onPatientClick: (patientId: String) -> Unit,
     onLogout: () -> Unit,
     autoOpenSinglePatient: Boolean = false,
+    modifier: Modifier = Modifier,
     viewModel: PatientListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -36,6 +37,7 @@ fun PatientListScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(title) },

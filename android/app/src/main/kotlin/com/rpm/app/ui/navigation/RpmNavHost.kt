@@ -10,22 +10,22 @@ import com.rpm.app.ui.feature.chat.*
 import com.rpm.app.ui.feature.patients.*
 
 object Routes {
-    const val LOGIN               = "login"
-    const val REGISTER            = "register"
-    const val PATIENT_LIST        = "patients"
-    const val PATIENT_DETAIL      = "patients/{patientId}"
-    const val ALERTS              = "alerts?patientId={patientId}"
-    const val CONVERSATION_LIST   = "conversations"
-    const val CHAT_ROOM           = "conversations/{conversationId}"
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val MAIN = "main"
+    const val PATIENT_DETAIL = "patients/{patientId}"
+    const val ALERTS = "alerts?patientId={patientId}"
+    const val CHAT_ROOM = "conversations/{conversationId}"
 
     fun patientDetail(id: String) = "patients/$id"
-    fun alerts(patientId: String? = null) = if (patientId != null) "alerts?patientId=$patientId" else "alerts"
+    fun alerts(patientId: String? = null) =
+        if (patientId != null) "alerts?patientId=$patientId" else "alerts"
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
 }
 
 fun homeRouteForRole(role: String?, userId: String?): String = when (role) {
-    "Doctor", "Patient", "Relative" -> Routes.PATIENT_LIST
-    else -> Routes.PATIENT_LIST
+    "Patient" -> userId?.let { Routes.patientDetail(it) } ?: Routes.MAIN
+    else -> Routes.MAIN
 }
 
 fun patientListTitle(role: String?): String = when (role) {
@@ -45,17 +45,17 @@ fun patientListEmptyMessage(role: String?): String = when (role) {
 @Composable
 fun RpmNavHost() {
     val navController = rememberNavController()
-
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
 
     val startDest = when {
         authState.isLoggedIn -> homeRouteForRole(authState.userRole, authState.userId)
-        else                 -> Routes.LOGIN
+        else -> Routes.LOGIN
     }
 
     val navigateHome: () -> Unit = {
-        navController.navigate(homeRouteForRole(authState.userRole, authState.userId)) {
+        val dest = homeRouteForRole(authState.userRole, authState.userId)
+        navController.navigate(dest) {
             popUpTo(Routes.LOGIN) { inclusive = true }
         }
     }
@@ -65,64 +65,61 @@ fun RpmNavHost() {
         composable(Routes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = { navigateHome() },
-                onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = { navigateHome() },
-                onNavigateToLogin = { navController.popBackStack() }
+                onNavigateToLogin = { navController.popBackStack() },
             )
         }
 
-        composable(Routes.PATIENT_LIST) {
-            PatientListScreen(
-                title = patientListTitle(authState.userRole),
-                emptyMessage = patientListEmptyMessage(authState.userRole),
+        composable(Routes.MAIN) {
+            MainShell(
+                navController = navController,
                 userRole = authState.userRole,
-                onPatientClick = { navController.navigate(Routes.patientDetail(it)) },
+                userId = authState.userId,
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                autoOpenSinglePatient = authState.userRole == "Patient" || authState.userRole == "Relative",
             )
         }
 
         composable(
             route = Routes.PATIENT_DETAIL,
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
         ) {
             PatientDetailScreen(
                 userRole = authState.userRole,
                 onBack = { navController.popBackStack() },
-                onOpenChat = { navController.navigate(Routes.CONVERSATION_LIST) },
-                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) }
+                onOpenChat = { conversationId ->
+                    navController.navigate(Routes.chatRoom(conversationId))
+                },
+                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) },
             )
         }
 
         composable(
             route = Routes.ALERTS,
-            arguments = listOf(navArgument("patientId") {
-                type = NavType.StringType; nullable = true; defaultValue = null
-            })
+            arguments = listOf(
+                navArgument("patientId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) {
             AlertsScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(Routes.CONVERSATION_LIST) {
-            ConversationListScreen(
-                onConversationClick = { navController.navigate(Routes.chatRoom(it)) },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         composable(
             route = Routes.CHAT_ROOM,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
         ) {
             ChatRoomScreen(onBack = { navController.popBackStack() })
         }

@@ -9,27 +9,40 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.rpm.app.MainActivity
+import com.rpm.app.data.fcm.FcmTokenRegistrar
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class RpmFirebaseMessagingService : FirebaseMessagingService() {
 
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "RPM Alert"
-        val body  = message.notification?.body  ?: message.data["body"]  ?: ""
-
+        val body = message.notification?.body ?: message.data["body"] ?: ""
         showNotification(title, body)
     }
 
     override fun onNewToken(token: String) {
-        // TODO: save token and call API to update FCM token
+        serviceScope.launch {
+            val registrar = EntryPointAccessors.fromApplication(
+                applicationContext,
+                FcmServiceEntryPoint::class.java,
+            ).fcmTokenRegistrar()
+            registrar.registerToken(token)
+        }
     }
 
     private fun showNotification(title: String, body: String) {
         val channelId = "rpm_alerts"
-        val manager   = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(channelId, "RPM Alerts", NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(channelId, "RPM Alerts", NotificationManager.IMPORTANCE_HIGH),
             )
         }
 
@@ -38,7 +51,7 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
         }
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
@@ -52,4 +65,10 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
 
         manager.notify(System.currentTimeMillis().toInt(), notification)
     }
+}
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+interface FcmServiceEntryPoint {
+    fun fcmTokenRegistrar(): FcmTokenRegistrar
 }

@@ -3,8 +3,10 @@ package com.rpm.app.ui.feature.patients
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.PatientDetailDto
 import com.rpm.app.data.remote.dto.VitalRecordDto
+import com.rpm.app.data.repository.ChatRepository
 import com.rpm.app.data.repository.PatientRepository
 import com.rpm.app.data.signalr.RealTimeVitals
 import com.rpm.app.data.signalr.VitalsSignalRClient
@@ -13,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,14 +24,17 @@ data class PatientDetailUiState(
     val patient: PatientDetailDto? = null,
     val latestVitals: VitalRecordDto? = null,
     val realtimeVitals: RealTimeVitals? = null,
-    val error: String? = null
+    val error: String? = null,
+    val isOpeningChat: Boolean = false,
 )
 
 @HiltViewModel
 class PatientDetailViewModel @Inject constructor(
     private val repo: PatientRepository,
+    private val chatRepo: ChatRepository,
+    private val tokenStore: TokenDataStore,
     private val signalR: VitalsSignalRClient,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val patientId: String = checkNotNull(savedStateHandle["patientId"])
@@ -65,6 +71,30 @@ class PatientDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(realtimeVitals = v)
                 }
             }
+        }
+    }
+
+    fun openDoctorChat(onConversationReady: (conversationId: String) -> Unit) {
+        viewModelScope.launch {
+            val doctorId = tokenStore.userId.firstOrNull()
+            val patient = _uiState.value.patient
+            if (doctorId == null || patient == null) return@launch
+            _uiState.value = _uiState.value.copy(isOpeningChat = true)
+            when (
+                val result = chatRepo.findOrCreateDoctorPatientConversation(
+                    doctorId = doctorId,
+                    patientId = patient.userId,
+                    patientName = patient.fullName,
+                )
+            ) {
+                is Resource.Success -> onConversationReady(result.data.id)
+                is Resource.Error -> _uiState.value = _uiState.value.copy(
+                    error = result.message,
+                    isOpeningChat = false,
+                )
+                Resource.Loading -> {}
+            }
+            _uiState.value = _uiState.value.copy(isOpeningChat = false)
         }
     }
 
