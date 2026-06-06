@@ -131,8 +131,10 @@ services:
       Storage__BucketName: rpm-files
       Admin__Email: "${RPM_ADMIN_EMAIL:-mahmoodjob8@gmail.com}"
       Admin__Password: "${RPM_ADMIN_PASSWORD:-M1@a2@h3&m4&}"
+      Firebase__CredentialPath: "/app/firebase-credentials.json"
     volumes:
       - dataprotection_keys:/app/.aspnet/DataProtection-Keys
+      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     ports:
       - "8080:8080"
     depends_on:

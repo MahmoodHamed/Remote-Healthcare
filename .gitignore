@@ -47,6 +47,8 @@ secrets/
 # Firebase / Google services (add your own copy per environment)
 **/google-services.json
 **/GoogleService-Info.plist
+docker/firebase-credentials.json
+**/firebase-credentials.json
 
 # ─── .NET / backend ──────────────────────────────────────────────────────────
 [Bb]in/
