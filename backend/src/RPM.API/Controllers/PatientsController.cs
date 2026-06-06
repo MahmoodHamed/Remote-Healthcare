@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RPM.Application.DTOs.Patients;
 using RPM.Application.Common.Interfaces;
+using RPM.Application.Features.Devices;
 using RPM.Domain.Interfaces;
 namespace RPM.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : ControllerBase
+public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMediator mediator) : ControllerBase
 {
     [HttpGet]
     [Authorize(Roles = "Doctor")]
@@ -91,4 +92,9 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
         await uow.SaveChangesAsync(ct);
         return Ok(new { message = "Relative linked successfully" });
     }
+
+    /// <summary>Returns linked smartwatch devices for a patient (visible to Doctor and Relative).</summary>
+    [HttpGet("{userId}/devices")]
+    public async Task<IActionResult> GetPatientDevices(Guid userId, CancellationToken ct) =>
+        Ok(await mediator.Send(new GetPatientDevicesQuery(userId), ct));
 }

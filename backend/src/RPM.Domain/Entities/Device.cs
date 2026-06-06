@@ -24,8 +24,14 @@ public class Device : BaseEntity
     public void UpdateStatus(DeviceStatus status, float? battery = null)
     {
         Status = status;
-        BatteryLevel = battery;
+        if (battery.HasValue) BatteryLevel = battery;
         LastSeenAt = DateTime.UtcNow;
+        SetUpdatedAt();
+    }
+
+    public void UpdateName(string name)
+    {
+        DeviceName = name;
         SetUpdatedAt();
     }
 }

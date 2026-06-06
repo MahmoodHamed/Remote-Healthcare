@@ -8,7 +8,10 @@ using RPM.Domain.Interfaces;
 using RPM.Infrastructure.BackgroundServices;
 using RPM.Infrastructure.Persistence;
 using RPM.Infrastructure.Services;
+
 namespace RPM.Infrastructure;
+
+file sealed record MqttBrokerSettings(string Host, int Port) : IMqttBrokerSettings;
 
 public static class InfrastructureServiceExtensions
 {
@@ -35,6 +38,11 @@ public static class InfrastructureServiceExtensions
         // HttpContext
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
+
+        // MQTT settings (exposed as abstraction to Application layer)
+        services.AddSingleton<IMqttBrokerSettings>(new MqttBrokerSettings(
+            config["Mqtt:Host"] ?? "localhost",
+            int.TryParse(config["Mqtt:Port"], out var mqttPort) ? mqttPort : 1883));
 
         // MQTT Background Service
         services.AddHostedService<MqttBackgroundService>();

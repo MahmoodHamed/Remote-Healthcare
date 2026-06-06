@@ -61,6 +61,16 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
             cmd.Steps, cmd.Calories, cmd.FallDetected, cmd.IsWearing);
 
         await uow.Vitals.AddAsync(record, ct);
+
+        // Keep the device's last-seen timestamp and status current
+        var device = await uow.Devices.GetByIdAsync(cmd.DeviceId, ct);
+        if (device is not null)
+        {
+            var newStatus = Domain.Enums.DeviceStatus.Online;
+            device.UpdateStatus(newStatus);
+            uow.Devices.Update(device);
+        }
+
         await uow.SaveChangesAsync(ct);
 
         var dto = VitalRecordDtoMapper.MapToDto(record);

@@ -118,7 +118,9 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
   const [connectionError, setConnectionError] = useState('')
   const [latestVitals, setLatestVitals] = useState(null)
   const [timeline, setTimeline] = useState([])
+  const [devices, setDevices] = useState([])
   const connectionRef = useRef(null)
+  const patientGuidRef = useRef('')
 
   useEffect(() => {
     if (!accessToken || !authProfile) navigate('/login')
@@ -137,6 +139,7 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
       setConnectionError('Patient ID must be 6 characters (A-Z, 0-9), matching the watch (default ABC123).')
       return
     }
+    patientGuidRef.current = patientId
 
     const hubUrl = new URL('/hubs/vitals', DEFAULT_API_BASE).toString()
     setConnectionStatus('connecting')
@@ -180,6 +183,15 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
       await connection.start()
       await connection.invoke('SubscribeToPatient', patientId)
       setConnectionStatus('connected')
+
+      // Fetch linked devices for this patient
+      try {
+        const res = await fetch(
+          new URL(`/api/patients/${patientId}/devices`, DEFAULT_API_BASE).toString(),
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        )
+        if (res.ok) setDevices(await res.json())
+      } catch { /* non-critical */ }
     } catch (err) {
       setConnectionStatus('error')
       setConnectionError(err?.message || 'Failed to connect to the patient monitor.')
@@ -228,6 +240,28 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
               </div>
             </div>
             {connectionError ? <p className="live-error">{connectionError}</p> : null}
+
+            {/* Linked devices panel */}
+            {devices.length > 0 && (
+              <div className="device-panel">
+                <p className="eyebrow" style={{marginBottom: '0.5rem', marginTop: '1.5rem'}}>Linked Watch</p>
+                {devices.map((d) => (
+                  <div key={d.id} className="device-card">
+                    <div className="device-status-dot" data-status={d.status?.toLowerCase()} />
+                    <div className="device-info">
+                      <strong>{d.deviceName !== 'unknown' ? d.deviceName : d.deviceModel}</strong>
+                      <span className={`device-badge badge-${d.status?.toLowerCase()}`}>{d.status}</span>
+                      {d.batteryLevel != null && (
+                        <span className="device-meta">🔋 {Math.round(d.batteryLevel)}%</span>
+                      )}
+                      {d.lastSeenAt && (
+                        <span className="device-meta">Last seen: {new Date(d.lastSeenAt).toLocaleTimeString()}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="live-panel">
