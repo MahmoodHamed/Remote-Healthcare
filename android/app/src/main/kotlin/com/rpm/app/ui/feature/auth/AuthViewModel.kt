@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.repository.AuthRepository
 import com.rpm.app.domain.model.Resource
+import com.rpm.app.fcm.FcmTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val tokenStore: TokenDataStore
+    private val tokenStore: TokenDataStore,
+    private val fcmRegistrar: FcmTokenRegistrar,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -39,6 +41,7 @@ class AuthViewModel @Inject constructor(
             val role  = tokenStore.userRole.firstOrNull()
             if (token != null) {
                 _uiState.value = AuthUiState(isLoggedIn = true, userRole = role)
+                launch { fcmRegistrar.registerCurrentToken() }
             }
         }
     }
@@ -61,10 +64,13 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = block()) {
-                is Resource.Success -> _uiState.value = AuthUiState(
-                    isLoggedIn = true,
-                    userRole = result.data.user.role,
-                )
+                is Resource.Success -> {
+                    _uiState.value = AuthUiState(
+                        isLoggedIn = true,
+                        userRole = result.data.user.role,
+                    )
+                    fcmRegistrar.registerCurrentToken()
+                }
                 is Resource.Error -> _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = result.message,

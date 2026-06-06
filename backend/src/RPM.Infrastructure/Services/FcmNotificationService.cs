@@ -22,24 +22,20 @@ public class FcmNotificationService : INotificationService
     }
 
     public async Task SendPushAsync(string fcmToken, string title, string body,
-        Dictionary<string, string>? data = null, CancellationToken ct = default)
+        Dictionary<string, string>? data = null, string channelId = "rpm_alerts", CancellationToken ct = default)
     {
         var msg = new Message
         {
             Token = fcmToken,
             Notification = new Notification { Title = title, Body = body },
             Data = data,
-            Android = new AndroidConfig
-            {
-                Priority = Priority.High,
-                Notification = new AndroidNotification { Sound = "default", ChannelId = "rpm_alerts" }
-            }
+            Android = BuildAndroidConfig(channelId)
         };
         await FirebaseMessaging.DefaultInstance.SendAsync(msg, ct);
     }
 
     public async Task SendPushToManyAsync(IEnumerable<string> fcmTokens, string title, string body,
-        Dictionary<string, string>? data = null, CancellationToken ct = default)
+        Dictionary<string, string>? data = null, string channelId = "rpm_alerts", CancellationToken ct = default)
     {
         var tokens = fcmTokens.Distinct().ToList();
         if (tokens.Count == 0) return;
@@ -49,12 +45,20 @@ public class FcmNotificationService : INotificationService
             Tokens = tokens,
             Notification = new Notification { Title = title, Body = body },
             Data = data,
-            Android = new AndroidConfig
-            {
-                Priority = Priority.High,
-                Notification = new AndroidNotification { Sound = "default", ChannelId = "rpm_alerts" }
-            }
+            Android = BuildAndroidConfig(channelId)
         };
         await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(multicast, ct);
     }
+
+    private static AndroidConfig BuildAndroidConfig(string channelId) => new()
+    {
+        Priority = Priority.High,
+        Notification = new AndroidNotification
+        {
+            Sound = "default",
+            ChannelId = channelId,
+            DefaultSound = true,
+            Priority = NotificationPriority.HIGH
+        }
+    };
 }

@@ -28,7 +28,7 @@ interface RpmApiService {
     @POST("api/auth/logout")
     suspend fun logout(): Response<Unit>
 
-    @PUT("api/auth/fcm-token")
+    @PATCH("api/auth/fcm-token")
     suspend fun updateFcmToken(@Body request: UpdateFcmTokenRequest): Response<Unit>
 
     @GET("api/auth/me")

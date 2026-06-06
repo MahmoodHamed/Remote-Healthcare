@@ -53,7 +53,8 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
                     ["patientId"] = evt.PatientId.ToString(),
                     ["type"] = evt.Type.ToString(),
                     ["severity"] = evt.Severity.ToString()
-                }, ct);
+                },
+                channelId: "rpm_alerts", ct: ct);
         }
 
         await hub.BroadcastAlertAsync(evt.PatientId, new

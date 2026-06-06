@@ -46,8 +46,10 @@ public class MessageSentNotificationHandler(
                         {
                             ["conversationId"] = msg.ConversationId.ToString(),
                             ["messageId"] = msg.Id.ToString(),
-                            ["type"] = "ChatMessage"
-                        }, ct);
+                            ["type"] = "ChatMessage",
+                            ["channelId"] = "rpm_chat"
+                        },
+                        channelId: "rpm_chat", ct);
                 }
                 catch
                 {

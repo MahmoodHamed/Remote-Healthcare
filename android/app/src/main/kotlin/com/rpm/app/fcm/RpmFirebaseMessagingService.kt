@@ -1,10 +1,7 @@
 package com.rpm.app.fcm
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -28,10 +25,17 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: message.data["title"] ?: "RPM Alert"
-        val body  = message.notification?.body  ?: message.data["body"]  ?: ""
+        NotificationChannels.createAll(this)
 
-        showNotification(title, body)
+        val data = message.data
+        val title = message.notification?.title ?: data["title"] ?: "Remote Care"
+        val body = message.notification?.body ?: data["body"] ?: ""
+        val channelId = data["channelId"]
+            ?: if (data["type"] == "ChatMessage") NotificationChannels.CHAT
+            else NotificationChannels.ALERTS
+        val conversationId = data["conversationId"]
+
+        showNotification(title, body, channelId, conversationId)
     }
 
     override fun onNewToken(token: String) {
@@ -43,31 +47,38 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, body: String) {
-        val channelId = "rpm_alerts"
-        val manager   = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(channelId, "RPM Alerts", NotificationManager.IMPORTANCE_HIGH)
-            )
-        }
+    private fun showNotification(
+        title: String,
+        body: String,
+        channelId: String,
+        conversationId: String?,
+    ) {
+        val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
 
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            conversationId?.let { putExtra("conversationId", it) }
+            putExtra("openNotifications", conversationId == null)
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            this,
+            (conversationId ?: title).hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION))
+            .setVibrate(longArrayOf(0, 250, 150, 250))
             .build()
 
         manager.notify(System.currentTimeMillis().toInt(), notification)
