@@ -254,4 +254,12 @@ data class NotificationDto(
 )
 
 @Serializable
+data class NotificationPagedDto(
+    val items: List<NotificationDto>,
+    val unreadCount: Long = 0,
+    val page: Int = 1,
+    val pageSize: Int = 30,
+)
+
+@Serializable
 data class UnreadCountDto(val count: Long = 0)

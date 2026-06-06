@@ -49,13 +49,13 @@ class NotificationsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = NotificationsUiState(isLoading = true)
-            val notifs = repo.getNotifications()
-            val count = repo.getUnreadCount()
-            _unreadCount.value = (count as? Resource.Success)?.data ?: 0L
-            _uiState.value = when (notifs) {
-                is Resource.Success -> NotificationsUiState(notifications = notifs.data)
-                is Resource.Error -> NotificationsUiState(error = notifs.message)
-                Resource.Loading -> NotificationsUiState(isLoading = true)
+            when (val result = repo.getNotifications()) {
+                is Resource.Success -> {
+                    _unreadCount.value = result.data.unreadCount
+                    _uiState.value = NotificationsUiState(notifications = result.data.items)
+                }
+                is Resource.Error -> _uiState.value = NotificationsUiState(error = result.message)
+                Resource.Loading -> _uiState.value = NotificationsUiState(isLoading = true)
             }
         }
     }

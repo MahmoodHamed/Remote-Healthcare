@@ -124,7 +124,7 @@ interface RpmApiService {
     suspend fun getNotifications(
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 30,
-    ): Response<List<NotificationDto>>
+    ): Response<NotificationPagedDto>
 
     @GET("api/notifications/unread-count")
     suspend fun getUnreadNotificationCount(): Response<UnreadCountDto>

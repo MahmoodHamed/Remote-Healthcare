@@ -126,7 +126,7 @@ class ChatRepository @Inject constructor(private val api: RpmApiService) {
 
 class NotificationRepository @Inject constructor(private val api: RpmApiService) {
 
-    suspend fun getNotifications(page: Int = 1): Resource<List<NotificationDto>> =
+    suspend fun getNotifications(page: Int = 1): Resource<NotificationPagedDto> =
         safeCall { api.getNotifications(page) }
 
     suspend fun getUnreadCount(): Resource<Long> {
