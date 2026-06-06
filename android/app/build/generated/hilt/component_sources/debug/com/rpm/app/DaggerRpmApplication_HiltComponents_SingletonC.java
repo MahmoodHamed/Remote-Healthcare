@@ -8,10 +8,13 @@ import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.rpm.app.data.auth.SessionManager;
 import com.rpm.app.data.fcm.FcmTokenRegistrar;
 import com.rpm.app.data.local.TokenDataStore;
 import com.rpm.app.data.remote.api.AuthInterceptor;
 import com.rpm.app.data.remote.api.RpmApiService;
+import com.rpm.app.data.remote.api.TokenAuthenticator;
+import com.rpm.app.data.remote.api.TokenRefresher;
 import com.rpm.app.data.repository.AlertRepository;
 import com.rpm.app.data.repository.AuthRepository;
 import com.rpm.app.data.repository.ChatRepository;
@@ -417,40 +420,40 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
+      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
 
       static String com_rpm_app_ui_feature_notifications_NotificationsViewModel = "com.rpm.app.ui.feature.notifications.NotificationsViewModel";
 
-      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
+      static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
+
+      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
+
+      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
+
+      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
+
+      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
 
       @KeepFieldType
-      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
-
-      @KeepFieldType
-      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
-
-      @KeepFieldType
-      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
-
-      @KeepFieldType
-      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
-
-      @KeepFieldType
-      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
 
       @KeepFieldType
       NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
 
       @KeepFieldType
-      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
+      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+
+      @KeepFieldType
+      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
+
+      @KeepFieldType
+      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
+
+      @KeepFieldType
+      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
+
+      @KeepFieldType
+      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
     }
   }
 
@@ -488,23 +491,23 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
     }
 
     private AlertRepository alertRepository() {
-      return new AlertRepository(singletonCImpl.provideApiServiceProvider.get());
+      return new AlertRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
     private AuthRepository authRepository() {
-      return new AuthRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get());
+      return new AuthRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.tokenRefresherProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
     private ChatRepository chatRepository() {
-      return new ChatRepository(singletonCImpl.provideApiServiceProvider.get());
+      return new ChatRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
     private NotificationRepository notificationRepository() {
-      return new NotificationRepository(singletonCImpl.provideApiServiceProvider.get());
+      return new NotificationRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
     private PatientRepository patientRepository() {
-      return new PatientRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get());
+      return new PatientRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
     @SuppressWarnings("unchecked")
@@ -531,28 +534,19 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
+      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
+
+      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
+
       static String com_rpm_app_ui_feature_notifications_NotificationsViewModel = "com.rpm.app.ui.feature.notifications.NotificationsViewModel";
+
+      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
 
       static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
 
       static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
 
-      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
-
-      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
-
       static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
-
-      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
-
-      @KeepFieldType
-      NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
-
-      @KeepFieldType
-      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
-
-      @KeepFieldType
-      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
 
       @KeepFieldType
       PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
@@ -561,10 +555,19 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
       AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
 
       @KeepFieldType
-      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
+      NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
 
       @KeepFieldType
       AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
+
+      @KeepFieldType
+      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
+
+      @KeepFieldType
+      ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+
+      @KeepFieldType
+      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -592,7 +595,7 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
           return (T) new AlertsViewModel(viewModelCImpl.alertRepository(), viewModelCImpl.savedStateHandle);
 
           case 1: // com.rpm.app.ui.feature.auth.AuthViewModel 
-          return (T) new AuthViewModel(viewModelCImpl.authRepository(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.fcmTokenRegistrarProvider.get());
+          return (T) new AuthViewModel(viewModelCImpl.authRepository(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.fcmTokenRegistrarProvider.get(), singletonCImpl.sessionManagerProvider.get());
 
           case 2: // com.rpm.app.ui.feature.chat.ChatRoomViewModel 
           return (T) new ChatRoomViewModel(viewModelCImpl.chatRepository(), singletonCImpl.chatSignalRClientProvider.get(), viewModelCImpl.savedStateHandle);
@@ -693,6 +696,12 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     private Provider<AuthInterceptor> provideAuthInterceptorProvider;
 
+    private Provider<TokenRefresher> tokenRefresherProvider;
+
+    private Provider<SessionManager> sessionManagerProvider;
+
+    private Provider<TokenAuthenticator> tokenAuthenticatorProvider;
+
     private Provider<OkHttpClient> provideOkHttpClientProvider;
 
     private Provider<Retrofit> provideRetrofitProvider;
@@ -715,12 +724,15 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.tokenDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<TokenDataStore>(singletonCImpl, 5));
       this.provideAuthInterceptorProvider = DoubleCheck.provider(new SwitchingProvider<AuthInterceptor>(singletonCImpl, 4));
+      this.tokenRefresherProvider = DoubleCheck.provider(new SwitchingProvider<TokenRefresher>(singletonCImpl, 7));
+      this.sessionManagerProvider = DoubleCheck.provider(new SwitchingProvider<SessionManager>(singletonCImpl, 8));
+      this.tokenAuthenticatorProvider = DoubleCheck.provider(new SwitchingProvider<TokenAuthenticator>(singletonCImpl, 6));
       this.provideOkHttpClientProvider = DoubleCheck.provider(new SwitchingProvider<OkHttpClient>(singletonCImpl, 3));
       this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 2));
       this.provideApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<RpmApiService>(singletonCImpl, 1));
       this.fcmTokenRegistrarProvider = DoubleCheck.provider(new SwitchingProvider<FcmTokenRegistrar>(singletonCImpl, 0));
-      this.chatSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<ChatSignalRClient>(singletonCImpl, 6));
-      this.vitalsSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<VitalsSignalRClient>(singletonCImpl, 7));
+      this.chatSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<ChatSignalRClient>(singletonCImpl, 9));
+      this.vitalsSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<VitalsSignalRClient>(singletonCImpl, 10));
     }
 
     @Override
@@ -771,7 +783,7 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
           return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.provideOkHttpClientProvider.get());
 
           case 3: // okhttp3.OkHttpClient 
-          return (T) NetworkModule_ProvideOkHttpClientFactory.provideOkHttpClient(singletonCImpl.provideAuthInterceptorProvider.get());
+          return (T) NetworkModule_ProvideOkHttpClientFactory.provideOkHttpClient(singletonCImpl.provideAuthInterceptorProvider.get(), singletonCImpl.tokenAuthenticatorProvider.get());
 
           case 4: // com.rpm.app.data.remote.api.AuthInterceptor 
           return (T) NetworkModule_ProvideAuthInterceptorFactory.provideAuthInterceptor(singletonCImpl.tokenDataStoreProvider.get());
@@ -779,10 +791,19 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
           case 5: // com.rpm.app.data.local.TokenDataStore 
           return (T) new TokenDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 6: // com.rpm.app.data.signalr.ChatSignalRClient 
+          case 6: // com.rpm.app.data.remote.api.TokenAuthenticator 
+          return (T) new TokenAuthenticator(singletonCImpl.tokenRefresherProvider.get(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.sessionManagerProvider.get());
+
+          case 7: // com.rpm.app.data.remote.api.TokenRefresher 
+          return (T) new TokenRefresher(singletonCImpl.tokenDataStoreProvider.get());
+
+          case 8: // com.rpm.app.data.auth.SessionManager 
+          return (T) new SessionManager();
+
+          case 9: // com.rpm.app.data.signalr.ChatSignalRClient 
           return (T) new ChatSignalRClient(singletonCImpl.tokenDataStoreProvider.get());
 
-          case 7: // com.rpm.app.data.signalr.VitalsSignalRClient 
+          case 10: // com.rpm.app.data.signalr.VitalsSignalRClient 
           return (T) new VitalsSignalRClient(singletonCImpl.tokenDataStoreProvider.get());
 
           default: throw new AssertionError(id);

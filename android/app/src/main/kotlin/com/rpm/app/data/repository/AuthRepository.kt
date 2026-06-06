@@ -1,7 +1,9 @@
 package com.rpm.app.data.repository
 
+import com.rpm.app.data.auth.SessionManager
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.api.RpmApiService
+import com.rpm.app.data.remote.api.TokenRefresher
 import com.rpm.app.data.remote.dto.*
 import com.rpm.app.data.remote.httpErrorMessage
 import com.rpm.app.domain.model.Resource
@@ -10,7 +12,9 @@ import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
     private val api: RpmApiService,
-    private val tokenStore: TokenDataStore
+    private val tokenStore: TokenDataStore,
+    private val tokenRefresher: TokenRefresher,
+    private val sessionManager: SessionManager,
 ) {
     suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> {
         return try {
@@ -74,7 +78,10 @@ class AuthRepository @Inject constructor(
 
     suspend fun refreshProfile(): Resource<UserProfileDto> {
         return try {
-            val response = api.getMe()
+            var response = api.getMe()
+            if (response.code() == 401 && tokenRefresher.refreshTokens()) {
+                response = api.getMe()
+            }
             if (response.isSuccessful) {
                 val body = response.body()!!
                 val existingToken = tokenStore.getAccessToken()
@@ -103,10 +110,11 @@ class AuthRepository @Inject constructor(
                         )
                     )
                 } else {
-                    Resource.Error(httpErrorMessage(response))
+                    Resource.Error(httpErrorMessage(response), response.code())
                 }
             } else {
-                Resource.Error(httpErrorMessage(response))
+                if (response.code() == 401) sessionManager.notifySessionExpired()
+                Resource.Error(httpErrorMessage(response), response.code())
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unknown error")

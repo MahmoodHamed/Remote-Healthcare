@@ -23,10 +23,7 @@ object Routes {
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
 }
 
-fun homeRouteForRole(role: String?, userId: String?): String = when (role) {
-    "Patient" -> userId?.let { Routes.patientDetail(it) } ?: Routes.MAIN
-    else -> Routes.MAIN
-}
+fun homeRouteForRole(role: String?, userId: String?): String = Routes.MAIN
 
 fun patientListTitle(role: String?): String = when (role) {
     "Doctor" -> "My Patients"
@@ -47,16 +44,22 @@ fun RpmNavHost() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
+    var wasLoggedIn by remember { mutableStateOf(false) }
 
-    // Always start at login; navigate home once session is restored (avoids crash on cold start).
     LaunchedEffect(authState.isLoggedIn, authState.userRole, authState.userId) {
         if (authState.isLoggedIn) {
+            wasLoggedIn = true
             val dest = homeRouteForRole(authState.userRole, authState.userId)
             val current = navController.currentDestination?.route
             if (current == Routes.LOGIN || current == Routes.REGISTER) {
                 navController.navigate(dest) {
                     popUpTo(Routes.LOGIN) { inclusive = true }
                 }
+            }
+        } else if (wasLoggedIn) {
+            wasLoggedIn = false
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(0) { inclusive = true }
             }
         }
     }

@@ -50,6 +50,13 @@ class TokenDataStore @Inject constructor(
         }
     }
 
+    suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        context.dataStore.edit { prefs ->
+            prefs[ACCESS_TOKEN] = accessToken
+            prefs[REFRESH_TOKEN] = refreshToken
+        }
+    }
+
     suspend fun clearSession() {
         context.dataStore.edit { it.clear() }
     }

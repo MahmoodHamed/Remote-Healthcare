@@ -46,7 +46,11 @@ data class UserProfileDto(
 )
 
 @Serializable
-data class RefreshTokenRequest(val refreshToken: String)
+data class RefreshTokenRequest(
+    val accessToken: String,
+    val refreshToken: String,
+    val deviceInfo: String? = null,
+)
 
 @Serializable
 data class UpdateFcmTokenRequest(val fcmToken: String)

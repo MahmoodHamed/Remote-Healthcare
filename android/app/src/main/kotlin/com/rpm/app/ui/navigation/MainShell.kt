@@ -73,7 +73,7 @@ fun MainShell(
                 userRole = userRole,
                 onPatientClick = { navController.navigate(Routes.patientDetail(it)) },
                 onLogout = onLogout,
-                autoOpenSinglePatient = userRole == "Patient" || userRole == "Relative",
+                autoOpenSinglePatient = false,
             )
             MainTab.Messages -> ConversationListScreen(
                 modifier = Modifier.padding(padding),

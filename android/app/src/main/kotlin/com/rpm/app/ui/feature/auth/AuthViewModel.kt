@@ -2,6 +2,7 @@ package com.rpm.app.ui.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.app.data.auth.SessionManager
 import com.rpm.app.data.fcm.FcmTokenRegistrar
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.repository.AuthRepository
@@ -27,6 +28,7 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val tokenStore: TokenDataStore,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val sessionManager: SessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -34,6 +36,11 @@ class AuthViewModel @Inject constructor(
 
     init {
         checkSession()
+        viewModelScope.launch {
+            sessionManager.sessionExpired.collect {
+                clearSessionAndNavigateToLogin()
+            }
+        }
     }
 
     private fun checkSession() {
@@ -46,6 +53,7 @@ class AuthViewModel @Inject constructor(
         if (tokenStore.getAccessToken() == null) return
         when (val result = authRepository.refreshProfile()) {
             is Resource.Success -> {
+                sessionManager.reset()
                 _uiState.value = AuthUiState(
                     isLoggedIn = true,
                     userRole = result.data.role,
@@ -54,14 +62,18 @@ class AuthViewModel @Inject constructor(
                 registerFcmToken()
             }
             is Resource.Error -> {
+                if (result.httpCode == 401) {
+                    clearSessionAndNavigateToLogin()
+                    return
+                }
                 val role = tokenStore.userRole.firstOrNull()
                 val userId = tokenStore.userId.firstOrNull()
                 if (role != null && userId != null) {
+                    sessionManager.reset()
                     _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
                     registerFcmToken()
                 } else {
-                    authRepository.logout()
-                    _uiState.value = AuthUiState()
+                    clearSessionAndNavigateToLogin()
                 }
             }
             Resource.Loading -> {}
@@ -73,6 +85,7 @@ class AuthViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             when (val result = authRepository.login(email, password, fcmToken = null)) {
                 is Resource.Success -> {
+                    sessionManager.reset()
                     _uiState.value = AuthUiState(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
@@ -101,6 +114,7 @@ class AuthViewModel @Inject constructor(
                 email, password, fullName, phone, role, licenseNumber, specialization,
             )) {
                 is Resource.Success -> {
+                    sessionManager.reset()
                     _uiState.value = AuthUiState(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
@@ -116,9 +130,14 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            authRepository.logout()
-            _uiState.value = AuthUiState()
+            clearSessionAndNavigateToLogin()
         }
+    }
+
+    private suspend fun clearSessionAndNavigateToLogin() {
+        authRepository.logout()
+        sessionManager.reset()
+        _uiState.value = AuthUiState()
     }
 
     private fun registerFcmToken() {

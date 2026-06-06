@@ -1,5 +1,6 @@
 package com.rpm.app.data.repository;
 
+import com.rpm.app.data.auth.SessionManager;
 import com.rpm.app.data.remote.api.RpmApiService;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -25,20 +26,26 @@ import javax.inject.Provider;
 public final class NotificationRepository_Factory implements Factory<NotificationRepository> {
   private final Provider<RpmApiService> apiProvider;
 
-  public NotificationRepository_Factory(Provider<RpmApiService> apiProvider) {
+  private final Provider<SessionManager> sessionManagerProvider;
+
+  public NotificationRepository_Factory(Provider<RpmApiService> apiProvider,
+      Provider<SessionManager> sessionManagerProvider) {
     this.apiProvider = apiProvider;
+    this.sessionManagerProvider = sessionManagerProvider;
   }
 
   @Override
   public NotificationRepository get() {
-    return newInstance(apiProvider.get());
+    return newInstance(apiProvider.get(), sessionManagerProvider.get());
   }
 
-  public static NotificationRepository_Factory create(Provider<RpmApiService> apiProvider) {
-    return new NotificationRepository_Factory(apiProvider);
+  public static NotificationRepository_Factory create(Provider<RpmApiService> apiProvider,
+      Provider<SessionManager> sessionManagerProvider) {
+    return new NotificationRepository_Factory(apiProvider, sessionManagerProvider);
   }
 
-  public static NotificationRepository newInstance(RpmApiService api) {
-    return new NotificationRepository(api);
+  public static NotificationRepository newInstance(RpmApiService api,
+      SessionManager sessionManager) {
+    return new NotificationRepository(api, sessionManager);
   }
 }

@@ -1,5 +1,6 @@
 package com.rpm.app.data.repository;
 
+import com.rpm.app.data.auth.SessionManager;
 import com.rpm.app.data.remote.api.RpmApiService;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -25,20 +26,25 @@ import javax.inject.Provider;
 public final class AlertRepository_Factory implements Factory<AlertRepository> {
   private final Provider<RpmApiService> apiProvider;
 
-  public AlertRepository_Factory(Provider<RpmApiService> apiProvider) {
+  private final Provider<SessionManager> sessionManagerProvider;
+
+  public AlertRepository_Factory(Provider<RpmApiService> apiProvider,
+      Provider<SessionManager> sessionManagerProvider) {
     this.apiProvider = apiProvider;
+    this.sessionManagerProvider = sessionManagerProvider;
   }
 
   @Override
   public AlertRepository get() {
-    return newInstance(apiProvider.get());
+    return newInstance(apiProvider.get(), sessionManagerProvider.get());
   }
 
-  public static AlertRepository_Factory create(Provider<RpmApiService> apiProvider) {
-    return new AlertRepository_Factory(apiProvider);
+  public static AlertRepository_Factory create(Provider<RpmApiService> apiProvider,
+      Provider<SessionManager> sessionManagerProvider) {
+    return new AlertRepository_Factory(apiProvider, sessionManagerProvider);
   }
 
-  public static AlertRepository newInstance(RpmApiService api) {
-    return new AlertRepository(api);
+  public static AlertRepository newInstance(RpmApiService api, SessionManager sessionManager) {
+    return new AlertRepository(api, sessionManager);
   }
 }
