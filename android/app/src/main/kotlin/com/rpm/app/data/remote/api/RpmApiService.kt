@@ -134,4 +134,20 @@ interface RpmApiService {
 
     @PATCH("api/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<Unit>
+
+    // ── Devices / Watch ───────────────────────────────────────────────────
+    @GET("api/devices")
+    suspend fun getMyDevices(): Response<List<DeviceDto>>
+
+    @GET("api/devices/pairing-info")
+    suspend fun getDevicePairingInfo(): Response<PairingInfoDto>
+
+    @PATCH("api/devices/{id}/name")
+    suspend fun renameDevice(
+        @Path("id") id: String,
+        @Body request: RenameDeviceRequest,
+    ): Response<Unit>
+
+    @GET("api/patients/{patientId}/devices")
+    suspend fun getPatientDevices(@Path("patientId") patientId: String): Response<List<DeviceDto>>
 }

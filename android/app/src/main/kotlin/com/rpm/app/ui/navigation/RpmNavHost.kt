@@ -2,7 +2,13 @@ package com.rpm.app.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,6 +20,8 @@ import com.rpm.app.ui.feature.alerts.AlertsScreen
 import com.rpm.app.ui.feature.auth.*
 import com.rpm.app.ui.feature.chat.*
 import com.rpm.app.ui.feature.patients.*
+import com.rpm.app.ui.feature.patients.DeviceManagementScreen
+import com.rpm.app.ui.feature.patients.LiveMonitorScreen
 
 object Routes {
     const val LOGIN = "login"
@@ -22,11 +30,14 @@ object Routes {
     const val PATIENT_DETAIL = "patients/{patientId}"
     const val ALERTS = "alerts?patientId={patientId}"
     const val CHAT_ROOM = "conversations/{conversationId}"
+    const val DEVICE_MANAGEMENT = "devices"
+    const val LIVE_MONITOR = "patients/{patientId}/live"
 
     fun patientDetail(id: String) = "patients/$id"
     fun alerts(patientId: String? = null) =
         if (patientId != null) "alerts?patientId=$patientId" else "alerts"
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
+    fun liveMonitor(patientId: String) = "patients/$patientId/live"
 }
 
 fun homeRouteForRole(role: String?, userId: String?): String = Routes.MAIN
@@ -57,6 +68,21 @@ fun RpmNavHost(
 
     if (authState.isLoggedIn) {
         RequestNotificationPermission()
+    }
+
+    // Session-expired dialog
+    if (authState.showSessionExpiredDialog) {
+        AlertDialog(
+            onDismissRequest = { authViewModel.dismissSessionExpiredDialog() },
+            icon             = { Icon(Icons.Default.Lock, contentDescription = null) },
+            title            = { Text("Session Expired") },
+            text             = { Text("Your session has expired. Please sign in again to continue.") },
+            confirmButton    = {
+                Button(onClick = { authViewModel.dismissSessionExpiredDialog() }) {
+                    Text("Sign In")
+                }
+            },
+        )
     }
 
     LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, initialConversationId) {
@@ -133,16 +159,21 @@ fun RpmNavHost(
         }
 
         composable(
-            route = Routes.PATIENT_DETAIL,
+            route     = Routes.PATIENT_DETAIL,
             arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
         ) {
             PatientDetailScreen(
                 userRole = authState.userRole,
-                onBack = { navController.popBackStack() },
+                userId   = authState.userId,
+                onBack   = { navController.popBackStack() },
                 onOpenChat = { conversationId ->
                     navController.navigate(Routes.chatRoom(conversationId))
                 },
                 onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) },
+                onOpenLiveMonitor = { pid -> navController.navigate(Routes.liveMonitor(pid)) },
+                onOpenDeviceManagement = if (authState.userRole == "Patient") {
+                    { navController.navigate(Routes.DEVICE_MANAGEMENT) }
+                } else null,
             )
         }
 
@@ -164,6 +195,17 @@ fun RpmNavHost(
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
         ) {
             ChatRoomScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.DEVICE_MANAGEMENT) {
+            DeviceManagementScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route     = Routes.LIVE_MONITOR,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
+        ) {
+            LiveMonitorScreen(onBack = { navController.popBackStack() })
         }
     }
 }

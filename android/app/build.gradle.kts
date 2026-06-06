@@ -102,6 +102,9 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.messaging)
 
+    // QR code generation
+    implementation("com.google.zxing:core:3.5.3")
+
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

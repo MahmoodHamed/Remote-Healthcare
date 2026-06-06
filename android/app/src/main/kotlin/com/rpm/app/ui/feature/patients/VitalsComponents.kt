@@ -1,31 +1,43 @@
 package com.rpm.app.ui.feature.patients
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rpm.app.data.remote.dto.VitalRecordDto
 import com.rpm.app.data.remote.dto.VitalRecordLatestDto
 import com.rpm.app.data.signalr.RealTimeVitals
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
+
+// ── Section title ──────────────────────────────────────────────────────────
 
 fun vitalsSectionTitle(role: String?, subjectName: String?): String = when (role) {
-    "Patient" -> "My Vitals"
-    "Doctor" -> subjectName?.let { "Vitals — $it" } ?: "Patient Vitals"
+    "Patient"  -> "My Vitals"
+    "Doctor"   -> subjectName?.let { "Vitals — $it" } ?: "Patient Vitals"
     "Relative" -> subjectName?.let { "Vitals — $it" } ?: "Family Member Vitals"
-    else -> "Vitals"
+    else       -> "Vitals"
 }
+
+// ── Summary text for list cards ────────────────────────────────────────────
 
 @Composable
 fun VitalsSummaryText(vitals: VitalRecordLatestDto, modifier: Modifier = Modifier) {
     Text(
         buildVitalsSummary(vitals),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style    = MaterialTheme.typography.bodySmall,
+        color    = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier,
     )
 }
@@ -33,152 +45,288 @@ fun VitalsSummaryText(vitals: VitalRecordLatestDto, modifier: Modifier = Modifie
 fun buildVitalsSummary(v: VitalRecordLatestDto): String = buildString {
     v.heartRateBpm?.let { append("HR: ${it.toInt()} bpm") }
     v.spO2Percent?.let {
-        if (isNotEmpty()) append("  ")
+        if (isNotEmpty()) append("  •  ")
         append("SpO₂: ${it.toInt()}%")
     }
     v.temperatureC?.let {
-        if (isNotEmpty()) append("  ")
-        append(String.format("%.1f °C", it))
+        if (isNotEmpty()) append("  •  ")
+        append("%.1f °C".format(it))
     }
     if (v.systolicBp != null && v.diastolicBp != null) {
-        if (isNotEmpty()) append("  ")
+        if (isNotEmpty()) append("  •  ")
         append("BP: ${v.systolicBp.toInt()}/${v.diastolicBp.toInt()}")
     }
-    if (isEmpty()) append("No vitals yet")
+    if (isEmpty()) append("No vitals recorded yet")
 }
+
+// ── Detail card dispatcher ─────────────────────────────────────────────────
 
 @Composable
 fun VitalsDetailCard(
-    title: String,
-    latest: VitalRecordLatestDto?,
-    full: VitalRecordDto? = null,
-    live: RealTimeVitals? = null,
-    modifier: Modifier = Modifier,
+    title:    String,
+    latest:   VitalRecordLatestDto? = null,
+    full:     VitalRecordDto?       = null,
+    live:     RealTimeVitals?       = null,
+    modifier: Modifier              = Modifier,
 ) {
     when {
-        live != null -> LiveVitalsCard(title, live, modifier)
+        live   != null -> LiveVitalsCard(title, live, modifier)
         latest != null -> StaticVitalsCard(title, latest, modifier)
-        full != null -> FullVitalsCard(title, full, modifier)
-        else -> EmptyVitalsCard(title, modifier)
+        full   != null -> FullVitalsCard(title, full, modifier)
+        else           -> EmptyVitalsCard(title, modifier)
     }
 }
 
+// ── Empty ──────────────────────────────────────────────────────────────────
+
 @Composable
 private fun EmptyVitalsCard(title: String, modifier: Modifier = Modifier) {
-    Card(modifier.fillMaxWidth()) {
+    Card(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            VitalsCardHeader(title = title, live = false)
             Spacer(Modifier.height(8.dp))
-            Text(
-                "No vitals recorded yet. Data will appear when the wearable syncs.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.WatchOff,
+                    contentDescription = null,
+                    tint     = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "No vitals recorded yet. Data will appear when the wearable syncs.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
 
+// ── Static (last snapshot) ─────────────────────────────────────────────────
+
 @Composable
 private fun StaticVitalsCard(title: String, v: VitalRecordLatestDto, modifier: Modifier = Modifier) {
-    Card(modifier.fillMaxWidth()) {
+    Card(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            VitalsCardHeader(title = title, live = false)
             v.recordedAt?.let {
-                Spacer(Modifier.height(4.dp))
-                Text("Last updated: $it", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    "Updated: ${formatVitalTimestamp(it)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             renderLatestRows(v)
         }
     }
 }
 
+// ── Full VitalRecordDto ────────────────────────────────────────────────────
+
 @Composable
 private fun FullVitalsCard(title: String, v: VitalRecordDto, modifier: Modifier = Modifier) {
-    Card(modifier.fillMaxWidth()) {
+    Card(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text("Last updated: ${v.recordedAt}", style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.height(8.dp))
+            VitalsCardHeader(title = title, live = false)
+            Text(
+                "Updated: ${formatVitalTimestamp(v.recordedAt)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
             renderLatestRows(
                 VitalRecordLatestDto(
                     heartRateBpm = v.heartRateBpm,
-                    spO2Percent = v.spO2Percent,
-                    systolicBp = v.systolicBp,
-                    diastolicBp = v.diastolicBp,
+                    spO2Percent  = v.spO2Percent,
+                    systolicBp   = v.systolicBp,
+                    diastolicBp  = v.diastolicBp,
                     temperatureC = v.temperatureC,
-                    recordedAt = v.recordedAt,
+                    hrvMs        = v.hrvMs,
+                    stressScore  = v.stressScore,
+                    recordedAt   = v.recordedAt,
                 )
             )
-            VitalRow("Wearing Watch", if (v.isWearing) "Yes" else "No")
+            v.stepsCount?.let   { VitalRow("Steps",    "$it", normalIcon = true) }
+            v.caloriesBurned?.let { VitalRow("Calories", "%.0f kcal".format(it), normalIcon = true) }
+            VitalRow("Watch", if (v.isWearing) "On wrist ✓" else "Off wrist", normalIcon = v.isWearing)
             if (v.fallDetected) {
-                Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(4.dp))
+                FallAlert()
             }
         }
     }
 }
+
+// ── Live ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier = Modifier) {
     Card(
         modifier.fillMaxWidth(),
+        shape  = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(3.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.FiberManualRecord,
-                    contentDescription = null,
-                    tint = Color(0xFF2E7D32),
-                    modifier = Modifier.size(12.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text("$title (Live)", style = MaterialTheme.typography.titleMedium)
-            }
-            Spacer(Modifier.height(8.dp))
+            VitalsCardHeader(title = title, live = true)
+            Spacer(Modifier.height(12.dp))
+
             if (rv.isWearing) {
-                rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-                rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms") }
+                rv.heartRateBpm?.let {
+                    VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f))
+                }
+                rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
             }
-            rv.spO2Percent?.let { VitalRow("SpO₂", "${it.toInt()}%") }
-            rv.temperatureC?.let { VitalRow("Body temp.", String.format("%.1f °C", it)) }
-            rv.skinTemperatureC?.let { VitalRow("Skin temp.", String.format("%.1f °C", it)) }
-            rv.stressScore?.let { VitalRow("Stress", "${it.toInt()} / 100") }
-            rv.bodyFatPercent?.let { VitalRow("Body fat", String.format("%.1f %%", it)) }
-            rv.ecgAvgHeartRateBpm?.let { VitalRow("ECG avg HR", "${it.toInt()} bpm") }
-            rv.stepsCount?.let { VitalRow("Steps", "$it") }
-            rv.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
+            rv.spO2Percent?.let {
+                VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f))
+            }
+            rv.temperatureC?.let {
+                VitalRow("Body Temp.", "%.1f °C".format(it), statusFor(it, 36f..37.5f))
+            }
+            rv.skinTemperatureC?.let {
+                VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true)
+            }
             if (rv.systolicBp != null && rv.diastolicBp != null) {
-                VitalRow("Blood Pressure", "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg")
+                VitalRow(
+                    "Blood Pressure",
+                    "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg",
+                    statusFor(rv.systolicBp, 80f..130f),
+                )
             }
-            VitalRow("Watch", if (rv.isWearing) "On wrist" else "Off wrist")
+            rv.stressScore?.let   { VitalRow("Stress",    "${it.toInt()} / 100", stressStatus(it)) }
+            rv.bodyFatPercent?.let { VitalRow("Body Fat",  "%.1f%%".format(it), normalIcon = true) }
+            rv.ecgAvgHeartRateBpm?.let { VitalRow("ECG Avg HR", "${it.toInt()} bpm", normalIcon = true) }
+            rv.stepsCount?.let    { VitalRow("Steps",     "$it", normalIcon = true) }
+            rv.caloriesBurned?.let { VitalRow("Calories",  "%.0f kcal".format(it), normalIcon = true) }
+            VitalRow("Watch", if (rv.isWearing) "On wrist ✓" else "Off wrist", normalIcon = rv.isWearing)
             if (rv.fallDetected) {
-                Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(4.dp))
+                FallAlert()
             }
         }
     }
 }
 
+// ── Shared row rendering ───────────────────────────────────────────────────
+
 @Composable
 private fun ColumnScope.renderLatestRows(v: VitalRecordLatestDto) {
-    v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-    v.spO2Percent?.let { VitalRow("SpO₂", "${it.toInt()}%") }
-    v.temperatureC?.let { VitalRow("Temperature", String.format("%.1f °C", it)) }
+    v.heartRateBpm?.let { VitalRow("Heart Rate",     "${it.toInt()} bpm",  statusFor(it, 40f..100f)) }
+    v.spO2Percent?.let  { VitalRow("SpO₂",           "${it.toInt()}%",     statusFor(it, 95f..100f)) }
+    v.temperatureC?.let { VitalRow("Temperature",    "%.1f °C".format(it), statusFor(it, 36f..37.5f)) }
     if (v.systolicBp != null && v.diastolicBp != null) {
-        VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
+        VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg", statusFor(v.systolicBp, 80f..130f))
+    }
+    v.hrvMs?.let        { VitalRow("HRV",      "${it.toInt()} ms",  normalIcon = true) }
+    v.stressScore?.let  { VitalRow("Stress",   "${it.toInt()} / 100", stressStatus(it)) }
+}
+
+// ── Vital Row ──────────────────────────────────────────────────────────────
+
+@Composable
+fun VitalRow(
+    label:      String,
+    value:      String,
+    status:     VitalStatus = VitalStatus.Normal,
+    normalIcon: Boolean     = false,
+) {
+    val dotColor = when (status) {
+        VitalStatus.Normal   -> Color(0xFF2E7D32)
+        VitalStatus.Warning  -> Color(0xFFF57C00)
+        VitalStatus.Critical -> MaterialTheme.colorScheme.error
+    }
+    Row(
+        modifier  = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment   = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(
+                Icons.Default.FiberManualRecord,
+                contentDescription = null,
+                tint     = if (normalIcon) dotColor else dotColor,
+                modifier = Modifier.size(10.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
+    }
+}
+
+// ── Header ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun VitalsCardHeader(title: String, live: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = if (live) Icons.Default.FiberManualRecord else Icons.Default.Favorite,
+            contentDescription = null,
+            tint     = if (live) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(if (live) 12.dp else 18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (live) "$title  •  Live" else title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        )
     }
 }
 
 @Composable
-fun VitalRow(label: String, value: String) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun FallAlert() {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
     ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value)
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Fall Detected!", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        }
     }
 }
+
+// ── Status helpers ─────────────────────────────────────────────────────────
+
+enum class VitalStatus { Normal, Warning, Critical }
+
+private fun statusFor(value: Float, normalRange: ClosedFloatingPointRange<Float>): VitalStatus = when {
+    value in normalRange -> VitalStatus.Normal
+    else                 -> VitalStatus.Warning
+}
+
+private fun stressStatus(score: Float) = when {
+    score < 40f  -> VitalStatus.Normal
+    score < 70f  -> VitalStatus.Warning
+    else         -> VitalStatus.Critical
+}
+
+// ── Timestamp ─────────────────────────────────────────────────────────────
+
+fun formatVitalTimestamp(isoString: String): String = runCatching {
+    val instant = Instant.parse(isoString)
+    val local   = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
+    val today   = LocalDateTime.now(ZoneId.systemDefault()).toLocalDate()
+    val date    = local.toLocalDate()
+    val timeFmt = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(Locale.getDefault())
+    when (date) {
+        today                  -> "Today ${local.format(timeFmt)}"
+        today.minusDays(1)     -> "Yesterday ${local.format(timeFmt)}"
+        else                   -> {
+            val dateFmt = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+            "${local.format(dateFmt)} ${local.format(timeFmt)}"
+        }
+    }
+}.getOrDefault(isoString)

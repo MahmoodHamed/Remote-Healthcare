@@ -20,12 +20,14 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class PatientDetailUiState(
-    val isLoading: Boolean = false,
-    val patient: PatientDetailDto? = null,
-    val latestVitals: VitalRecordDto? = null,
+    val isLoading: Boolean              = false,
+    val patient: PatientDetailDto?      = null,
+    val latestVitals: VitalRecordDto?   = null,
     val realtimeVitals: RealTimeVitals? = null,
-    val error: String? = null,
-    val isOpeningChat: Boolean = false,
+    val vitalsHistory: List<VitalRecordDto> = emptyList(),
+    val isLoadingHistory: Boolean       = false,
+    val error: String?                  = null,
+    val isOpeningChat: Boolean          = false,
 )
 
 @HiltViewModel
@@ -47,19 +49,37 @@ class PatientDetailViewModel @Inject constructor(
         subscribeRealtime()
     }
 
+    fun refresh() = loadPatient()
+
     private fun loadPatient() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val detail = repo.getPatientDetail(patientId)
-            val vitals = repo.getLatestVitals(patientId)
+            val detail  = repo.getPatientDetail(patientId)
+            val vitals  = repo.getLatestVitals(patientId)
             val patient = (detail as? Resource.Success)?.data
             _uiState.value = PatientDetailUiState(
-                isLoading = false,
-                patient = patient,
+                isLoading    = false,
+                patient      = patient,
                 latestVitals = (vitals as? Resource.Success)?.data,
-                error = (detail as? Resource.Error)?.message
+                error        = (detail as? Resource.Error)?.message
                     ?: (vitals as? Resource.Error)?.message.takeIf { patient == null },
             )
+            // Load vitals history in background after main data is shown
+            loadVitalsHistory()
+        }
+    }
+
+    private fun loadVitalsHistory() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHistory = true)
+            when (val result = repo.getVitals(patientId)) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    vitalsHistory    = result.data.items.sortedByDescending { it.recordedAt },
+                    isLoadingHistory = false,
+                )
+                is Resource.Error   -> _uiState.value = _uiState.value.copy(isLoadingHistory = false)
+                Resource.Loading    -> {}
+            }
         }
     }
 
@@ -79,27 +99,67 @@ class PatientDetailViewModel @Inject constructor(
         }
     }
 
-    fun openDoctorChat(onConversationReady: (conversationId: String) -> Unit) {
+    /**
+     * Works for all roles:
+     * - Doctor    → starts/opens conversation with this patient.
+     * - Patient   → starts/opens conversation with their assigned doctor.
+     * - Relative  → opens the doctor-patient conversation for the linked patient.
+     */
+    fun startChat(
+        currentUserId: String?,
+        currentRole: String?,
+        onConversationReady: (conversationId: String) -> Unit,
+    ) {
+        val patient = _uiState.value.patient ?: return
+        if (currentUserId == null) return
         viewModelScope.launch {
-            val doctorId = tokenStore.userId.firstOrNull()
-            val patient = _uiState.value.patient
-            if (doctorId == null || patient == null) return@launch
-            _uiState.value = _uiState.value.copy(isOpeningChat = true)
+            _uiState.value = _uiState.value.copy(isOpeningChat = true, error = null)
+            val convDoctorId: String
+            val convPatientId: String
+            when (currentRole) {
+                "Doctor" -> {
+                    convDoctorId  = currentUserId
+                    convPatientId = patient.userId
+                }
+                "Patient", "Relative" -> {
+                    val doc = patient.doctor
+                    if (doc == null) {
+                        _uiState.value = _uiState.value.copy(
+                            isOpeningChat = false,
+                            error         = "No doctor is assigned to this patient yet.",
+                        )
+                        return@launch
+                    }
+                    convDoctorId  = doc.userId
+                    convPatientId = patient.userId
+                }
+                else -> {
+                    _uiState.value = _uiState.value.copy(isOpeningChat = false)
+                    return@launch
+                }
+            }
             when (
                 val result = chatRepo.findOrCreateDoctorPatientConversation(
-                    doctorId = doctorId,
-                    patientId = patient.userId,
+                    doctorId    = convDoctorId,
+                    patientId   = convPatientId,
                     patientName = patient.fullName,
                 )
             ) {
                 is Resource.Success -> onConversationReady(result.data.id)
-                is Resource.Error -> _uiState.value = _uiState.value.copy(
-                    error = result.message,
+                is Resource.Error   -> _uiState.value = _uiState.value.copy(
+                    error         = result.message,
                     isOpeningChat = false,
                 )
-                Resource.Loading -> {}
+                Resource.Loading    -> {}
             }
             _uiState.value = _uiState.value.copy(isOpeningChat = false)
+        }
+    }
+
+    fun openDoctorChat(onConversationReady: (conversationId: String) -> Unit) {
+        viewModelScope.launch {
+            val doctorId = tokenStore.userId.firstOrNull()
+            startChat(doctorId, "Doctor", onConversationReady)
         }
     }
 

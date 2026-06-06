@@ -267,3 +267,27 @@ data class NotificationPagedDto(
 
 @Serializable
 data class UnreadCountDto(val count: Long = 0)
+
+
+// ── Devices / Watch pairing ───────────────────────────────────────────────
+
+@Serializable
+data class DeviceDto(
+    val id: String,
+    val deviceName: String,
+    val deviceModel: String,
+    val status: String,                // "Online" | "Offline" | "LowBattery"
+    val batteryLevel: Float? = null,
+    val lastSeenAt: String? = null,
+    val registeredAt: String,
+)
+
+@Serializable
+data class PairingInfoDto(
+    val patientId: String,
+    val mqttHost: String,
+    val mqttPort: Int,
+)
+
+@Serializable
+data class RenameDeviceRequest(val newName: String)

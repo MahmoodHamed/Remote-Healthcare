@@ -158,6 +158,23 @@ class NotificationRepository @Inject constructor(
         sessionManager.safeCall { api.markAllNotificationsRead() }
 }
 
+class DeviceRepository @Inject constructor(
+    private val api: RpmApiService,
+    private val sessionManager: SessionManager,
+) {
+    suspend fun getMyDevices(): Resource<List<DeviceDto>> =
+        sessionManager.safeCall { api.getMyDevices() }
+
+    suspend fun getDevicePairingInfo(): Resource<PairingInfoDto> =
+        sessionManager.safeCall { api.getDevicePairingInfo() }
+
+    suspend fun renameDevice(id: String, newName: String): Resource<Unit> =
+        sessionManager.safeCall { api.renameDevice(id, RenameDeviceRequest(newName)) }
+
+    suspend fun getPatientDevices(patientId: String): Resource<List<DeviceDto>> =
+        sessionManager.safeCall { api.getPatientDevices(patientId) }
+}
+
 private fun PatientDetailDto.toSummary() = PatientSummaryDto(
     userId = userId,
     fullName = fullName,

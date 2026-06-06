@@ -23,6 +23,8 @@ data class AuthUiState(
     val userId: String? = null,
     /** False until cached session is read / validated on cold start. */
     val isSessionReady: Boolean = false,
+    /** True when the session expired automatically (not a manual logout). */
+    val showSessionExpiredDialog: Boolean = false,
 )
 
 @HiltViewModel
@@ -40,7 +42,7 @@ class AuthViewModel @Inject constructor(
         checkSession()
         viewModelScope.launch {
             sessionManager.sessionExpired.collect {
-                clearSessionAndNavigateToLogin()
+                navigateToLoginDueToExpiry()
             }
         }
     }
@@ -172,6 +174,17 @@ class AuthViewModel @Inject constructor(
         authRepository.logout()
         sessionManager.reset()
         _uiState.value = AuthUiState(isSessionReady = true)
+    }
+
+    /** Called when the server returns 401 — shows an expiry notice before going to login. */
+    private suspend fun navigateToLoginDueToExpiry() {
+        authRepository.logout()
+        sessionManager.reset()
+        _uiState.value = AuthUiState(isSessionReady = true, showSessionExpiredDialog = true)
+    }
+
+    fun dismissSessionExpiredDialog() {
+        _uiState.value = _uiState.value.copy(showSessionExpiredDialog = false)
     }
 
     private fun registerFcmToken() {
