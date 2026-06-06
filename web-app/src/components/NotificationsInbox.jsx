@@ -3,6 +3,7 @@ import { api } from '../utils/api'
 
 const iconFor = (title = '') => {
   const lower = title.toLowerCase()
+  if (lower.includes('message from')) return { cls: 'info', icon: '💬' }
   if (lower.includes('critical')) return { cls: 'critical', icon: '🚨' }
   if (lower.includes('urgent') || lower.includes('high')) return { cls: 'warning', icon: '⚠️' }
   return { cls: 'info', icon: '🔔' }

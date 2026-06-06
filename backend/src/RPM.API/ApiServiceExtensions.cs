@@ -7,6 +7,7 @@ public static class ApiServiceExtensions
     public static IServiceCollection AddApiServices(this IServiceCollection services)
     {
         services.AddScoped<IVitalsHubService, VitalsHubService>();
+        services.AddScoped<IChatHubService, ChatHubService>();
         return services;
     }
 }

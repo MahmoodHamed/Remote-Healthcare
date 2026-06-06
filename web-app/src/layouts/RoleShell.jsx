@@ -28,7 +28,7 @@ export default function RoleShell({ profile, onLogout, roleClass, brand, nav, ch
       }
     }
     load()
-    const id = setInterval(load, 30_000)
+    const id = setInterval(load, 15_000)
     return () => {
       active = false
       clearInterval(id)

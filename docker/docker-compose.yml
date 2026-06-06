@@ -132,6 +132,7 @@ services:
       Admin__Email: "${RPM_ADMIN_EMAIL:-mahmoodjob8@gmail.com}"
       Admin__Password: "${RPM_ADMIN_PASSWORD:-M1@a2@h3&m4&}"
       Firebase__CredentialPath: "/app/firebase-credentials.json"
+      Swagger__Enabled: "true"
     volumes:
       - dataprotection_keys:/app/.aspnet/DataProtection-Keys
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
