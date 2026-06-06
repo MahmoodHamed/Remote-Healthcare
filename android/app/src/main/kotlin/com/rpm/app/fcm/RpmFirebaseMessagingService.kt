@@ -21,9 +21,19 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: message.data["title"] ?: "RPM Alert"
-        val body = message.notification?.body ?: message.data["body"] ?: ""
-        showNotification(title, body)
+        val data = message.data
+        val type = data["type"] ?: "alert"
+        val title = data["title"] ?: message.notification?.title ?: "RPM"
+        val body = data["body"] ?: message.notification?.body ?: ""
+
+        when (type) {
+            "chat" -> showChatNotification(
+                title = title,
+                body = body,
+                conversationId = data["conversationId"],
+            )
+            else -> showAlertNotification(title, body)
+        }
     }
 
     override fun onNewToken(token: String) {
@@ -36,34 +46,71 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun showNotification(title: String, body: String) {
-        val channelId = "rpm_alerts"
+    private fun showChatNotification(title: String, body: String, conversationId: String?) {
+        showNotification(
+            channelId = CHANNEL_MESSAGES,
+            channelName = "RPM Messages",
+            notificationId = conversationId?.hashCode() ?: System.currentTimeMillis().toInt(),
+            title = title,
+            body = body,
+            conversationId = conversationId,
+        )
+    }
+
+    private fun showAlertNotification(title: String, body: String) {
+        showNotification(
+            channelId = CHANNEL_ALERTS,
+            channelName = "RPM Alerts",
+            notificationId = System.currentTimeMillis().toInt(),
+            title = title,
+            body = body,
+            conversationId = null,
+        )
+    }
+
+    private fun showNotification(
+        channelId: String,
+        channelName: String,
+        notificationId: Int,
+        title: String,
+        body: String,
+        conversationId: String?,
+    ) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(channelId, "RPM Alerts", NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH),
             )
         }
 
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            conversationId?.let { putExtra(MainActivity.EXTRA_CONVERSATION_ID, it) }
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE,
+            this,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
             .setContentTitle(title)
             .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+        manager.notify(notificationId, notification)
+    }
+
+    companion object {
+        const val CHANNEL_ALERTS = "rpm_alerts"
+        const val CHANNEL_MESSAGES = "rpm_messages"
     }
 }
 

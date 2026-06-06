@@ -43,7 +43,7 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
                     ["patientId"] = evt.PatientId.ToString(),
                     ["type"] = evt.Type.ToString(),
                     ["severity"] = evt.Severity.ToString()
-                }, ct);
+                }, ct: ct);
         }
 
         // Real-time hub broadcast

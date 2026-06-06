@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import com.rpm.app.ui.RequestNotificationPermission
 import com.rpm.app.ui.feature.alerts.AlertsScreen
 import com.rpm.app.ui.feature.auth.*
 import com.rpm.app.ui.feature.chat.*
@@ -45,11 +46,28 @@ fun patientListEmptyMessage(role: String?): String = when (role) {
 }
 
 @Composable
-fun RpmNavHost() {
+fun RpmNavHost(
+    initialConversationId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
     var wasLoggedIn by remember { mutableStateOf(false) }
+
+    if (authState.isLoggedIn) {
+        RequestNotificationPermission()
+    }
+
+    LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, initialConversationId) {
+        if (!authState.isSessionReady || !authState.isLoggedIn) return@LaunchedEffect
+        if (!initialConversationId.isNullOrBlank()) {
+            navController.navigate(Routes.chatRoom(initialConversationId)) {
+                launchSingleTop = true
+            }
+            onDeepLinkConsumed()
+        }
+    }
 
     LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, authState.userRole, authState.userId) {
         if (!authState.isSessionReady) return@LaunchedEffect

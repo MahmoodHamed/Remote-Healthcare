@@ -3,6 +3,7 @@ package com.rpm.app.ui.feature.chat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.ConversationDto
 import com.rpm.app.data.remote.dto.MessageDto
 import com.rpm.app.data.repository.ChatRepository
@@ -10,8 +11,10 @@ import com.rpm.app.data.signalr.ChatSignalRClient
 import com.rpm.app.domain.model.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -56,31 +59,61 @@ data class ChatRoomUiState(
     val messages: List<MessageDto> = emptyList(),
     val error: String? = null,
     val isSending: Boolean = false,
+    val conversationTitle: String = "Chat",
 )
 
 @HiltViewModel
 class ChatRoomViewModel @Inject constructor(
     private val repo: ChatRepository,
     private val chatSignalR: ChatSignalRClient,
+    private val tokenStore: TokenDataStore,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     val conversationId: String = checkNotNull(savedStateHandle["conversationId"])
 
+    val currentUserId: StateFlow<String?> = tokenStore.userId.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        null,
+    )
+
     private val _uiState = MutableStateFlow(ChatRoomUiState(isLoading = true))
     val uiState: StateFlow<ChatRoomUiState> = _uiState.asStateFlow()
 
     init {
+        loadConversationMeta()
         loadMessages()
         subscribeRealtime()
+    }
+
+    private fun loadConversationMeta() {
+        viewModelScope.launch {
+            when (val result = repo.getConversations()) {
+                is Resource.Success -> {
+                    val conv = result.data.firstOrNull { it.id.equals(conversationId, ignoreCase = true) }
+                    val title = conv?.title
+                        ?: conv?.participants?.joinToString { it.fullName }
+                        ?: "Chat"
+                    _uiState.value = _uiState.value.copy(conversationTitle = title)
+                }
+                else -> {}
+            }
+        }
     }
 
     private fun loadMessages() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             _uiState.value = when (val result = repo.getMessages(conversationId)) {
-                is Resource.Success -> ChatRoomUiState(messages = result.data.items.reversed())
-                is Resource.Error -> ChatRoomUiState(error = result.message)
+                is Resource.Success -> ChatRoomUiState(
+                    conversationTitle = _uiState.value.conversationTitle,
+                    messages = ChatMessageUtils.sortAscending(result.data.items),
+                )
+                is Resource.Error -> ChatRoomUiState(
+                    conversationTitle = _uiState.value.conversationTitle,
+                    error = result.message,
+                )
                 Resource.Loading -> ChatRoomUiState(isLoading = true)
             }
         }
@@ -88,9 +121,7 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun subscribeRealtime() {
         viewModelScope.launch {
-            launch {
-                chatSignalR.connect(conversationId)
-            }
+            launch { chatSignalR.connect(conversationId) }
             chatSignalR.messages.collect { message ->
                 appendMessage(message)
             }
@@ -123,7 +154,9 @@ class ChatRoomViewModel @Inject constructor(
         if (!message.conversationId.equals(conversationId, ignoreCase = true)) return
         val current = _uiState.value.messages
         if (current.any { it.id.equals(message.id, ignoreCase = true) }) return
-        _uiState.value = _uiState.value.copy(messages = current + message)
+        _uiState.value = _uiState.value.copy(
+            messages = ChatMessageUtils.sortAscending(current + message),
+        )
     }
 
     override fun onCleared() {

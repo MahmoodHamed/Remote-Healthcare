@@ -1,6 +1,7 @@
 package com.rpm.app.ui.feature.chat;
 
 import androidx.lifecycle.SavedStateHandle;
+import com.rpm.app.data.local.TokenDataStore;
 import com.rpm.app.data.repository.ChatRepository;
 import com.rpm.app.data.signalr.ChatSignalRClient;
 import dagger.internal.DaggerGenerated;
@@ -29,29 +30,32 @@ public final class ChatRoomViewModel_Factory implements Factory<ChatRoomViewMode
 
   private final Provider<ChatSignalRClient> chatSignalRProvider;
 
+  private final Provider<TokenDataStore> tokenStoreProvider;
+
   private final Provider<SavedStateHandle> savedStateHandleProvider;
 
   public ChatRoomViewModel_Factory(Provider<ChatRepository> repoProvider,
-      Provider<ChatSignalRClient> chatSignalRProvider,
+      Provider<ChatSignalRClient> chatSignalRProvider, Provider<TokenDataStore> tokenStoreProvider,
       Provider<SavedStateHandle> savedStateHandleProvider) {
     this.repoProvider = repoProvider;
     this.chatSignalRProvider = chatSignalRProvider;
+    this.tokenStoreProvider = tokenStoreProvider;
     this.savedStateHandleProvider = savedStateHandleProvider;
   }
 
   @Override
   public ChatRoomViewModel get() {
-    return newInstance(repoProvider.get(), chatSignalRProvider.get(), savedStateHandleProvider.get());
+    return newInstance(repoProvider.get(), chatSignalRProvider.get(), tokenStoreProvider.get(), savedStateHandleProvider.get());
   }
 
   public static ChatRoomViewModel_Factory create(Provider<ChatRepository> repoProvider,
-      Provider<ChatSignalRClient> chatSignalRProvider,
+      Provider<ChatSignalRClient> chatSignalRProvider, Provider<TokenDataStore> tokenStoreProvider,
       Provider<SavedStateHandle> savedStateHandleProvider) {
-    return new ChatRoomViewModel_Factory(repoProvider, chatSignalRProvider, savedStateHandleProvider);
+    return new ChatRoomViewModel_Factory(repoProvider, chatSignalRProvider, tokenStoreProvider, savedStateHandleProvider);
   }
 
   public static ChatRoomViewModel newInstance(ChatRepository repo, ChatSignalRClient chatSignalR,
-      SavedStateHandle savedStateHandle) {
-    return new ChatRoomViewModel(repo, chatSignalR, savedStateHandle);
+      TokenDataStore tokenStore, SavedStateHandle savedStateHandle) {
+    return new ChatRoomViewModel(repo, chatSignalR, tokenStore, savedStateHandle);
   }
 }

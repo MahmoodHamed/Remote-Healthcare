@@ -29,7 +29,7 @@ public class CreateConversationHandler(IUnitOfWork uow)
     }
 }
 
-public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub)
+public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub, INotificationService notif)
     : IRequestHandler<SendMessageCommand, MessageDto>
 {
     public async Task<MessageDto> Handle(SendMessageCommand cmd, CancellationToken ct)
@@ -49,6 +49,33 @@ public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub)
             msg.MediaUrl, msg.IsDeleted, msg.SentAt);
 
         await chatHub.BroadcastMessageAsync(dto, ct);
+
+        var preview = msg.Content.Length > 120 ? msg.Content[..117] + "..." : msg.Content;
+        var recipientTokens = conv.Participants
+            .Where(p => p.UserId != cmd.SenderId)
+            .Select(p => p.User?.FcmToken)
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Cast<string>()
+            .ToList();
+
+        if (recipientTokens.Count > 0)
+        {
+            await notif.SendPushToManyAsync(
+                recipientTokens,
+                sender?.FullName ?? "New message",
+                preview,
+                new Dictionary<string, string>
+                {
+                    ["type"] = "chat",
+                    ["channelId"] = "rpm_messages",
+                    ["conversationId"] = msg.ConversationId.ToString(),
+                    ["messageId"] = msg.Id.ToString(),
+                    ["senderName"] = sender?.FullName ?? "Unknown",
+                },
+                dataOnly: true,
+                ct);
+        }
+
         return dto;
     }
 }
