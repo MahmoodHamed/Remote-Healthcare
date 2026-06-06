@@ -5,4 +5,4 @@ public record RegisterCommand(string FullName, string Email, string Phone, strin
 public record LoginCommand(string Email, string Password, string? DeviceInfo) : IRequest<LoginResponseDto>;
 public record RefreshTokenCommand(string AccessToken, string RefreshToken, string? DeviceInfo) : IRequest<AuthTokensDto>;
 public record LogoutCommand(string RefreshToken) : IRequest;
-public record UpdateFcmTokenCommand(Guid UserId, string FcmToken) : IRequest;
+public record UpdateFcmTokenCommand(string FcmToken) : IRequest;

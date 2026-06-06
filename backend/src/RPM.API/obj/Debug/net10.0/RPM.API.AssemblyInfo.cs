@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RPM.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d7c56847bbb2718a18036f2b42ed1d93bbdb5789")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5b876231b84be45afcd0d75c73abde4eaaea3c9a")]
 [assembly: System.Reflection.AssemblyProductAttribute("RPM.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RPM.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -78,8 +78,8 @@ public class UpdateFcmTokenCommandHandler(IUnitOfWork uow, ICurrentUser currentU
 {
     public async Task Handle(UpdateFcmTokenCommand cmd, CancellationToken ct)
     {
-        var user = await uow.Users.GetByIdAsync(cmd.UserId, ct)
-            ?? throw new NotFoundException(nameof(User), cmd.UserId);
+        var user = await uow.Users.GetByIdAsync(currentUser.UserId, ct)
+            ?? throw new NotFoundException(nameof(User), currentUser.UserId);
         user.UpdateFcmToken(cmd.FcmToken);
         uow.Users.Update(user);
         await uow.SaveChangesAsync(ct);

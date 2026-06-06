@@ -17,6 +17,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -36,6 +37,13 @@ data class WatchUiState(
     val ecgMeasuring: Boolean = false,
     val ecgAvgHeartRateBpm: Float? = null,
     val samsungHealthMonitorInstalled: Boolean = false,
+)
+
+data class WatchSettingsState(
+    val patientId: String = "",
+    val mqttHost: String = com.rpm.watch.BuildConfig.MQTT_HOST,
+    val mqttPort: String = com.rpm.watch.BuildConfig.MQTT_PORT.toString(),
+    val wasMonitoring: Boolean = false,
 )
 
 @HiltViewModel
@@ -60,6 +68,8 @@ class WatchViewModel @Inject constructor(
     private val _samsungHealthInstalled = MutableStateFlow(
         SamsungHealthLauncher.isHealthMonitorInstalled(context),
     )
+    private val _settingsState = MutableStateFlow(WatchSettingsState())
+    val settingsState: StateFlow<WatchSettingsState> = _settingsState.asStateFlow()
     private var serviceAttached = false
 
     var onRequestBindService: (() -> Unit)? = null
@@ -112,6 +122,34 @@ class WatchViewModel @Inject constructor(
         }
         viewModelScope.launch {
             mqttManager.connectionState.collect { _mqttState.value = it }
+        }
+        viewModelScope.launch {
+            combine(dataStore.patientId, dataStore.mqttHost, dataStore.mqttPort) { pid, host, port ->
+                Triple(pid, host, port)
+            }.collect { (pid, host, port) ->
+                _settingsState.value = _settingsState.value.copy(
+                    patientId = pid ?: "",
+                    mqttHost = host,
+                    mqttPort = port.toString(),
+                )
+            }
+        }
+    }
+
+    fun saveSettings(patientId: String, mqttHost: String, mqttPort: Int) {
+        viewModelScope.launch {
+            val wasMonitoring = _isMonitoring.value
+            dataStore.savePatientId(patientId.trim())
+            dataStore.saveMqttConfig(mqttHost.trim(), mqttPort.coerceIn(1, 65535))
+            _settingsState.value = _settingsState.value.copy(
+                patientId = patientId.trim(),
+                mqttHost = mqttHost.trim(),
+                mqttPort = mqttPort.toString(),
+                wasMonitoring = wasMonitoring,
+            )
+            if (wasMonitoring) {
+                stopMonitoring()
+            }
         }
     }
 

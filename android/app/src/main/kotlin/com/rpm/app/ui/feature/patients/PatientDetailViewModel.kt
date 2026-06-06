@@ -65,7 +65,12 @@ class PatientDetailViewModel @Inject constructor(
 
     private fun subscribeRealtime() {
         viewModelScope.launch {
-            signalR.connect(patientId)
+            val connected = signalR.connect(patientId)
+            if (!connected) {
+                _uiState.value = _uiState.value.copy(
+                    error = _uiState.value.error ?: "Live vitals unavailable (check login or network)",
+                )
+            }
             signalR.vitals.collect { v ->
                 if (v.patientId == patientId) {
                     _uiState.value = _uiState.value.copy(realtimeVitals = v)

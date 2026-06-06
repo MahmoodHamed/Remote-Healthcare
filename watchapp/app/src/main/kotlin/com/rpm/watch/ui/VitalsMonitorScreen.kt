@@ -38,7 +38,10 @@ import com.rpm.watch.service.VitalsServiceStatus
 import java.util.Locale
 
 @Composable
-fun VitalsMonitorScreen(viewModel: WatchViewModel) {
+fun VitalsMonitorScreen(
+    viewModel: WatchViewModel,
+    onOpenSettings: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     VitalsMonitorContent(
         state = state,
@@ -47,7 +50,7 @@ fun VitalsMonitorScreen(viewModel: WatchViewModel) {
             else viewModel.startMonitoring(state.selectedSensor)
         },
         onSensorSelected = viewModel::selectSensor,
-        onPatientIdChange = viewModel::savePatientId,
+        onOpenSettings = onOpenSettings,
         onMeasureEcg = viewModel::startEcgMeasurement,
         onOpenSamsungHealth = viewModel::openSamsungHealthMonitor,
     )
@@ -58,7 +61,7 @@ fun VitalsMonitorContent(
     state: WatchUiState,
     onToggle: () -> Unit,
     onSensorSelected: (SensorType) -> Unit,
-    onPatientIdChange: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onMeasureEcg: () -> Unit,
     onOpenSamsungHealth: () -> Unit,
 ) {
@@ -90,17 +93,15 @@ fun VitalsMonitorContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (!state.isMonitoring && state.patientId != "ABC123") {
-                item {
-                    Button(
-                        onClick = { onPatientIdChange("ABC123") },
-                        modifier = Modifier.fillMaxWidth().height(22.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.surface,
-                        ),
-                    ) {
-                        Text("ABC123", fontSize = 8.sp)
-                    }
+            item {
+                Button(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth().height(22.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = MaterialTheme.colors.surface,
+                    ),
+                ) {
+                    Text("Settings", fontSize = 8.sp)
                 }
             }
             if (state.isMonitoring) {

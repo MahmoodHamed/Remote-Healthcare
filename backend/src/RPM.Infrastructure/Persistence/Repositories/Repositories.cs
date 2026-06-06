@@ -24,6 +24,26 @@ public class UserRepository(AppDbContext db) : IUserRepository
     public async Task AddNotificationAsync(Notification notification, CancellationToken ct = default) =>
         await db.Notifications.AddAsync(notification, ct);
 
+    public async Task<IEnumerable<Notification>> GetNotificationsAsync(Guid userId, int page, int pageSize, CancellationToken ct = default) =>
+        await db.Notifications
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+    public Task<long> GetUnreadNotificationCountAsync(Guid userId, CancellationToken ct = default) =>
+        db.Notifications.LongCountAsync(n => n.UserId == userId && !n.IsRead, ct);
+
+    public Task<Notification?> GetNotificationByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+
+    public async Task MarkAllNotificationsReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        var unread = await db.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync(ct);
+        foreach (var n in unread) n.MarkRead();
+    }
+
     public void Update(User user) => db.Users.Update(user);
     public async Task AddRefreshTokenAsync(RefreshToken token, CancellationToken ct = default) =>
         await db.RefreshTokens.AddAsync(token, ct);

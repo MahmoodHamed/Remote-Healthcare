@@ -48,9 +48,17 @@ fun RpmNavHost() {
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
 
-    val startDest = when {
-        authState.isLoggedIn -> homeRouteForRole(authState.userRole, authState.userId)
-        else -> Routes.LOGIN
+    // Always start at login; navigate home once session is restored (avoids crash on cold start).
+    LaunchedEffect(authState.isLoggedIn, authState.userRole, authState.userId) {
+        if (authState.isLoggedIn) {
+            val dest = homeRouteForRole(authState.userRole, authState.userId)
+            val current = navController.currentDestination?.route
+            if (current == Routes.LOGIN || current == Routes.REGISTER) {
+                navController.navigate(dest) {
+                    popUpTo(Routes.LOGIN) { inclusive = true }
+                }
+            }
+        }
     }
 
     val navigateHome: () -> Unit = {
@@ -60,7 +68,7 @@ fun RpmNavHost() {
         }
     }
 
-    NavHost(navController, startDestination = startDest) {
+    NavHost(navController, startDestination = Routes.LOGIN) {
 
         composable(Routes.LOGIN) {
             LoginScreen(

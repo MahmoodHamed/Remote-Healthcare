@@ -24,6 +24,11 @@ import androidx.activity.ComponentActivity
 
 import androidx.activity.compose.setContent
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 import androidx.activity.result.contract.ActivityResultContracts
 
 import androidx.activity.viewModels
@@ -32,6 +37,11 @@ import com.rpm.watch.sensor.SensorType
 
 import com.rpm.watch.service.VitalsMonitorService
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.rpm.watch.ui.SettingsScreen
 import com.rpm.watch.ui.VitalsMonitorScreen
 
 import com.rpm.watch.ui.theme.WatchTheme
@@ -127,13 +137,20 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-
             WatchTheme {
-
-                VitalsMonitorScreen(viewModel = viewModel)
-
+                var showSettings by remember { mutableStateOf(false) }
+                if (showSettings) {
+                    SettingsScreen(
+                        viewModel = viewModel,
+                        onBack = { showSettings = false },
+                    )
+                } else {
+                    VitalsMonitorScreen(
+                        viewModel = viewModel,
+                        onOpenSettings = { showSettings = true },
+                    )
+                }
             }
-
         }
 
 
