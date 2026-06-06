@@ -59,45 +59,85 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
 public class VitalRecordedEventHandler(IUnitOfWork uow)
     : INotificationHandler<VitalRecordedEvent>
 {
+    // Minimum time between duplicate alerts of the same type for the same patient.
+    private static readonly TimeSpan FallAlertCooldown    = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan VitalAlertCooldown   = TimeSpan.FromMinutes(2);
+
+    // Sanity ranges — values outside these are sensor artifacts, not patient conditions.
+    private static bool IsValidHr(float v)   => v is >= 30 and <= 220;
+    private static bool IsValidSpo2(float v) => v is >= 70 and <= 100;
+    private static bool IsValidTemp(float v) => v is >= 34 and <= 43;
+    private static bool IsValidBp(float v)   => v is >= 50 and <= 250;
+
     public async Task Handle(VitalRecordedEvent evt, CancellationToken ct)
     {
         var record = await uow.Vitals.GetByIdAsync(evt.VitalRecordId, ct);
         if (record is null) return;
 
-        var threshold = await uow.Alerts.GetThresholdByPatientIdAsync(evt.PatientId, ct);
+        // evt.PatientId is User.Id; AlertThreshold.PatientId is PatientProfile.Id — use the join method.
+        var threshold = await uow.Alerts.GetThresholdByUserIdAsync(evt.PatientId, ct);
         if (threshold is null) return;
 
         var alerts = new List<Alert>();
 
-        if (record.HeartRateBpm.HasValue)
+        if (record.HeartRateBpm.HasValue && IsValidHr(record.HeartRateBpm.Value))
         {
             if (record.HeartRateBpm > threshold.MaxHeartRate)
-                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighHeartRate, AlertSeverity.High,
-                    $"Heart rate is {record.HeartRateBpm} bpm - above maximum {threshold.MaxHeartRate} bpm"));
+            {
+                if (await NoDuplicateAlert(evt.PatientId, AlertType.HighHeartRate, VitalAlertCooldown, ct))
+                    alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighHeartRate, AlertSeverity.High,
+                        $"Heart rate is {record.HeartRateBpm:F0} bpm — above limit {threshold.MaxHeartRate} bpm"));
+            }
             else if (record.HeartRateBpm < threshold.MinHeartRate)
-                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowHeartRate, AlertSeverity.High,
-                    $"Heart rate is {record.HeartRateBpm} bpm - below minimum {threshold.MinHeartRate} bpm"));
+            {
+                if (await NoDuplicateAlert(evt.PatientId, AlertType.LowHeartRate, VitalAlertCooldown, ct))
+                    alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowHeartRate, AlertSeverity.High,
+                        $"Heart rate is {record.HeartRateBpm:F0} bpm — below limit {threshold.MinHeartRate} bpm"));
+            }
         }
-        if (record.SpO2Percent.HasValue && record.SpO2Percent < threshold.MinSpO2)
-            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowSpO2, AlertSeverity.Critical,
-                $"SpO2 is {record.SpO2Percent}% - below minimum {threshold.MinSpO2}%"));
+
+        if (record.SpO2Percent.HasValue && IsValidSpo2(record.SpO2Percent.Value)
+            && record.SpO2Percent < threshold.MinSpO2)
+        {
+            if (await NoDuplicateAlert(evt.PatientId, AlertType.LowSpO2, VitalAlertCooldown, ct))
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.LowSpO2, AlertSeverity.Critical,
+                    $"SpO₂ is {record.SpO2Percent:F1}% — below limit {threshold.MinSpO2}%"));
+        }
 
         if (record.FallDetected)
-            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.FallDetected, AlertSeverity.Critical,
-                "Fall detected! Patient may need immediate assistance."));
+        {
+            // 5-minute cooldown: the watch latches fall=true for 15 s, generating many MQTT messages.
+            if (await NoDuplicateAlert(evt.PatientId, AlertType.FallDetected, FallAlertCooldown, ct))
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.FallDetected, AlertSeverity.Critical,
+                    "Fall detected — patient may need immediate assistance."));
+        }
 
-        if (record.SystolicBp.HasValue && record.SystolicBp > threshold.MaxSystolicBp)
-            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighBloodPressure, AlertSeverity.High,
-                $"Systolic BP is {record.SystolicBp} mmHg - above maximum {threshold.MaxSystolicBp} mmHg"));
+        if (record.SystolicBp.HasValue && IsValidBp(record.SystolicBp.Value)
+            && record.SystolicBp > threshold.MaxSystolicBp)
+        {
+            if (await NoDuplicateAlert(evt.PatientId, AlertType.HighBloodPressure, VitalAlertCooldown, ct))
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighBloodPressure, AlertSeverity.High,
+                    $"Systolic BP is {record.SystolicBp:F0} mmHg — above limit {threshold.MaxSystolicBp} mmHg"));
+        }
 
-        if (record.TemperatureC.HasValue && record.TemperatureC > threshold.MaxTemperatureC)
-            alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighTemperature, AlertSeverity.Medium,
-                $"Temperature is {record.TemperatureC}°C - above maximum {threshold.MaxTemperatureC}°C"));
+        if (record.TemperatureC.HasValue && IsValidTemp(record.TemperatureC.Value)
+            && record.TemperatureC > threshold.MaxTemperatureC)
+        {
+            if (await NoDuplicateAlert(evt.PatientId, AlertType.HighTemperature, VitalAlertCooldown, ct))
+                alerts.Add(Alert.Create(evt.PatientId, evt.VitalRecordId, AlertType.HighTemperature, AlertSeverity.Medium,
+                    $"Temperature is {record.TemperatureC:F1}°C — above limit {threshold.MaxTemperatureC}°C"));
+        }
 
         foreach (var alert in alerts)
             await uow.Alerts.AddAsync(alert, ct);
 
         if (alerts.Count > 0)
             await uow.SaveChangesAsync(ct);
+    }
+
+    private async Task<bool> NoDuplicateAlert(Guid patientId, AlertType type, TimeSpan cooldown, CancellationToken ct)
+    {
+        var recent = await uow.Alerts.GetRecentAlertAsync(patientId, type, cooldown, ct);
+        return recent is null;
     }
 }

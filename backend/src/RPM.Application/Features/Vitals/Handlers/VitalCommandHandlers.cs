@@ -75,10 +75,15 @@ public class UpdateAlertThresholdHandler(IUnitOfWork uow)
 {
     public async Task Handle(UpdateAlertThresholdCommand cmd, CancellationToken ct)
     {
-        var threshold = await uow.Alerts.GetThresholdByPatientIdAsync(cmd.PatientId, ct);
+        // cmd.PatientId is User.Id. AlertThreshold.PatientId is PatientProfile.Id, so we
+        // resolve the profile first to get the correct FK value.
+        var profile = await uow.Patients.GetByUserIdAsync(cmd.PatientId, ct)
+            ?? throw new InvalidOperationException($"No patient profile found for user {cmd.PatientId}");
+
+        var threshold = await uow.Alerts.GetThresholdByPatientIdAsync(profile.Id, ct);
         if (threshold is null)
         {
-            var t = AlertThreshold.CreateDefault(cmd.PatientId);
+            var t = AlertThreshold.CreateDefault(profile.Id);
             t.Update(cmd.MinHeartRate, cmd.MaxHeartRate, cmd.MinSpO2, cmd.MaxSystolicBp, cmd.MaxDiastolicBp, cmd.MaxTemperatureC);
             await uow.Alerts.AddThresholdAsync(t, ct);
         }

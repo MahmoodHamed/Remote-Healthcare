@@ -72,8 +72,30 @@ public class AlertRepository(AppDbContext db) : IAlertRepository
             (a.Status == Domain.Enums.AlertStatus.Unread || a.Status == Domain.Enums.AlertStatus.Read))
             .OrderByDescending(a => a.TriggeredAt).ToListAsync(ct);
 
-    public Task<AlertThreshold?> GetThresholdByPatientIdAsync(Guid patientId, CancellationToken ct = default) =>
-        db.AlertThresholds.FirstOrDefaultAsync(t => t.PatientId == patientId, ct);
+    // Threshold stored with PatientProfile.Id as FK.
+    public Task<AlertThreshold?> GetThresholdByPatientIdAsync(Guid patientProfileId, CancellationToken ct = default) =>
+        db.AlertThresholds.FirstOrDefaultAsync(t => t.PatientId == patientProfileId, ct);
+
+    // Resolve User.Id → PatientProfile.Id via join, then fetch threshold.
+    public Task<AlertThreshold?> GetThresholdByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        db.AlertThresholds
+            .Join(db.PatientProfiles,
+                threshold => threshold.PatientId,
+                profile   => profile.Id,
+                (threshold, profile) => new { threshold, profile })
+            .Where(x => x.profile.UserId == userId)
+            .Select(x => x.threshold)
+            .FirstOrDefaultAsync(ct);
+
+    // Returns the most recent alert of a given type within the lookback window (for deduplication).
+    public Task<Alert?> GetRecentAlertAsync(Guid patientId, Domain.Enums.AlertType type, TimeSpan lookback, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow - lookback;
+        return db.Alerts
+            .Where(a => a.PatientId == patientId && a.Type == type && a.TriggeredAt >= since)
+            .OrderByDescending(a => a.TriggeredAt)
+            .FirstOrDefaultAsync(ct);
+    }
 
     public async Task AddAsync(Alert alert, CancellationToken ct = default) =>
         await db.Alerts.AddAsync(alert, ct);

@@ -68,7 +68,12 @@ class MotionSensorHub(context: Context) {
         }
         listener = l
         stepSensor?.let { sm.registerListener(l, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        accelSensor?.let { sm.registerListener(l, it, SensorManager.SENSOR_DELAY_GAME) }
+        // SENSOR_DELAY_GAME (~50 Hz) is excessive for fall detection.
+        // 20 ms sampling (50 Hz custom) with 200 ms max report latency gives Sensor Batching:
+        // the hardware buffers events and wakes the CPU only ~5 times/second instead of 50.
+        accelSensor?.let {
+            sm.registerListener(l, it, 20_000 /* µs = 50 Hz */, 200_000 /* µs max latency */)
+        }
     }
 
     private fun processAccelerometer(e: SensorEvent) {

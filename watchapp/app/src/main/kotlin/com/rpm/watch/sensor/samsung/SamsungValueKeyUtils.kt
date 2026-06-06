@@ -50,7 +50,13 @@ private fun resolveValueKeyField(
     }
 }
 
+/**
+ * Dumps every field of a Samsung DataPoint to Logcat.
+ * Only runs in DEBUG builds — reflection over every field on every callback
+ * causes measurable CPU overhead and excessive log output in production.
+ */
 internal fun logDataPointContents(dp: DataPoint) {
+    if (!com.rpm.watch.BuildConfig.DEBUG) return
     try {
         val nestedNames = listOf(
             "HeartRateSet", "SpO2Set", "SkinTemperatureSet", "PpgSet",

@@ -46,9 +46,22 @@ import javax.inject.Inject
 private const val TAG = "VitalsMonitorService"
 private const val CHANNEL_ID = "rpm_watch_vitals"
 private const val NOTIFICATION_ID = 1
-private const val MQTT_PUBLISH_MIN_INTERVAL_MS = 500L
-private const val MQTT_HEARTBEAT_INTERVAL_MS = 2_000L
+
+// Minimum gap between any two MQTT publishes (rate limiter).
+private const val MQTT_PUBLISH_MIN_INTERVAL_MS = 2_000L
+
+// Fallback periodic publish — only fires if no sensor event caused a publish sooner.
+// 30 s keeps the server informed without generating 43 K rows/day.
+private const val MQTT_KEEPALIVE_INTERVAL_MS = 30_000L
+
 private const val MQTT_CONNECT_TIMEOUT_MS = 5_000L
+
+// WakeLock renewal period — shorter than the acquire timeout to ensure continuous coverage.
+private const val WAKELOCK_ACQUIRE_MS   = 65 * 60 * 1000L   // 65 minutes per acquisition
+private const val WAKELOCK_RENEW_MS     = 60 * 60 * 1000L   // renew every 60 minutes
+
+// Vitals older than this are treated as stale and do not count as "wearing evidence".
+private const val VITAL_TTL_MS = 60_000L   // 60 seconds
 
 @AndroidEntryPoint
 class VitalsMonitorService : Service() {
@@ -68,12 +81,16 @@ class VitalsMonitorService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     @Volatile private var latestHeartRate: Int? = null
+    @Volatile private var latestHeartRateAtMs: Long = 0L
     @Volatile private var latestTemperatureC: Float? = null
     @Volatile private var latestSkinTemperatureC: Float? = null
+    @Volatile private var latestSkinTempAtMs: Long = 0L
     @Volatile private var latestAmbientTemperatureC: Float? = null
     @Volatile private var latestHrvMs: Float? = null
     @Volatile private var latestSpO2Percent: Float? = null
+    @Volatile private var latestSpO2AtMs: Long = 0L
     @Volatile private var latestStressScore: Float? = null
+    @Volatile private var latestStressAtMs: Long = 0L
     @Volatile private var latestBodyFatPercent: Float? = null
     @Volatile private var latestEcgAvgHeartRateBpm: Float? = null
     @Volatile private var isWearingNow: Boolean = true
@@ -253,9 +270,11 @@ class VitalsMonitorService : Service() {
                 }
             }
 
+            // Keepalive: only fires if sensors haven't caused a publish recently.
+            // 30 s interval replaces the old 2 s heartbeat — 15× fewer idle publishes.
             launch {
                 while (isActive) {
-                    delay(MQTT_HEARTBEAT_INTERVAL_MS)
+                    delay(MQTT_KEEPALIVE_INTERVAL_MS)
                     maybePublishVitals(force = true)
                 }
             }
@@ -264,11 +283,18 @@ class VitalsMonitorService : Service() {
 
     private fun resetAllSensorState() {
         latestHeartRate = null
+        latestHeartRateAtMs = 0L
         latestTemperatureC = null
         latestSkinTemperatureC = null
+        latestSkinTempAtMs = 0L
         latestAmbientTemperatureC = null
         latestHrvMs = null
         latestSpO2Percent = null
+        latestSpO2AtMs = 0L
+        latestStressScore = null
+        latestStressAtMs = 0L
+        latestBodyFatPercent = null
+        latestEcgAvgHeartRateBpm = null
         _heartRate.value = 0
         _temperatureC.value = null
         _spO2Percent.value = null
@@ -280,7 +306,17 @@ class VitalsMonitorService : Service() {
         val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "rpm:vitals").apply {
             setReferenceCounted(false)
-            acquire(60 * 60 * 1000L)
+            acquire(WAKELOCK_ACQUIRE_MS)
+        }
+        // Renew before the timeout expires so long monitoring sessions never lose the lock.
+        serviceScope.launch {
+            while (true) {
+                delay(WAKELOCK_RENEW_MS)
+                val wl = wakeLock ?: break
+                if (!wl.isHeld) break
+                wl.acquire(WAKELOCK_ACQUIRE_MS)
+                Log.d(TAG, "WakeLock renewed")
+            }
         }
     }
 
@@ -334,6 +370,7 @@ class VitalsMonitorService : Service() {
     }
 
     private fun applyReading(sensor: SensorType, reading: VitalReading) {
+        val now = System.currentTimeMillis()
         when (sensor) {
             SensorType.HEART_RATE -> {
                 _heartRateStatus.value = reading.status
@@ -347,6 +384,7 @@ class VitalsMonitorService : Service() {
                 val bpm = reading.heartRateBpm
                 if (bpm != null && reading.status.isSuccessful && effectiveIsWearing()) {
                     latestHeartRate = bpm
+                    latestHeartRateAtMs = now
                     _heartRate.value = bpm
                     maybePublishVitals()
                 }
@@ -354,6 +392,7 @@ class VitalsMonitorService : Service() {
             SensorType.EDA -> {
                 reading.stressScore?.let {
                     latestStressScore = it
+                    latestStressAtMs = now
                     maybePublishVitals()
                 }
             }
@@ -381,11 +420,15 @@ class VitalsMonitorService : Service() {
             SensorType.SPO2 -> {
                 val pct = reading.spO2Percent ?: return
                 latestSpO2Percent = pct
+                latestSpO2AtMs = now
                 _spO2Percent.value = pct
                 maybePublishVitals()
             }
             SensorType.SKIN_TEMPERATURE -> {
-                reading.skinTemperatureC?.let { latestSkinTemperatureC = it }
+                reading.skinTemperatureC?.let {
+                    latestSkinTemperatureC = it
+                    latestSkinTempAtMs = now
+                }
                 reading.ambientTemperatureC?.let { latestAmbientTemperatureC = it }
                 reading.temperatureC?.let {
                     latestTemperatureC = it
@@ -398,19 +441,30 @@ class VitalsMonitorService : Service() {
 
     private fun clearHeartRateDisplay() {
         latestHeartRate = null
+        latestHeartRateAtMs = 0L
         latestHrvMs = null
         _heartRate.value = 0
         maybePublishVitals(force = true)
     }
 
-    private fun hasRecentHeartRate(): Boolean = (latestHeartRate ?: 0) >= 30
+    private fun hasRecentHeartRate(): Boolean {
+        val hr = latestHeartRate ?: return false
+        return hr >= 30 && (System.currentTimeMillis() - latestHeartRateAtMs) < VITAL_TTL_MS
+    }
 
-    private fun hasLiveVitalsEvidence(): Boolean =
-        hasRecentHeartRate() ||
-            latestSpO2Percent != null ||
-            latestTemperatureC != null ||
-            latestSkinTemperatureC != null ||
-            latestStressScore != null
+    /**
+     * Returns true only if fresh (within TTL) vitals from multiple sensor types confirm
+     * the watch is on the wrist. Stale cached values no longer count — this prevents the
+     * service from reporting "wearing" minutes after the watch was removed.
+     */
+    private fun hasLiveVitalsEvidence(): Boolean {
+        val now = System.currentTimeMillis()
+        if (hasRecentHeartRate()) return true
+        if (latestSpO2Percent != null && now - latestSpO2AtMs < VITAL_TTL_MS) return true
+        if (latestSkinTemperatureC != null && now - latestSkinTempAtMs < VITAL_TTL_MS) return true
+        if (latestStressScore != null && now - latestStressAtMs < VITAL_TTL_MS) return true
+        return false
+    }
 
     /**
      * Samsung HR status (-3 DETACHED) is authoritative only without recent vitals.

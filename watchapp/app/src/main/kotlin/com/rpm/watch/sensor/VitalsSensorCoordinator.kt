@@ -29,12 +29,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "VitalsSensorCoordinator"
-private const val CONTINUOUS_FLUSH_MS = 2_000L
-private const val ON_DEMAND_BURST_COUNT = 8
-private const val ON_DEMAND_BURST_DELAY_MS = 200L
-private const val SLOT_SPO2_MS = 45_000L
-private const val SLOT_BIA_MS = 90_000L
-private const val SLOT_ECG_MS = 60_000L
+
+// HR: flush every 2s — tight loop needed for real-time monitoring.
+private const val HR_FLUSH_MS = 2_000L
+
+// Skin temp and EDA: flush far less often — these change slowly.
+private const val SKIN_TEMP_FLUSH_MS = 5 * 60_000L   // 5 minutes
+private const val EDA_FLUSH_MS       = 5 * 60_000L   // 5 minutes
+
+// SpO₂ autonomous schedule: independent measurement every 3 minutes.
+// Samsung needs ~15–30 s per measurement; we give the slot 40 s to complete.
+private const val SPO2_INTERVAL_MS    = 3 * 60_000L  // 3 minutes between measurements
+private const val SPO2_SLOT_MS        = 40_000L       // max time for one measurement
+
+// On-demand burst: flush rapidly after setEventListener to retrieve buffered data.
+private const val ON_DEMAND_BURST_COUNT    = 6
+private const val ON_DEMAND_BURST_DELAY_MS = 500L
 
 data class SensorTrackerEvent(
     val sensor: SensorType,
@@ -45,26 +55,30 @@ data class SensorTrackerEvent(
 class VitalsSensorCoordinator @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    private val onDemandRequests = MutableSharedFlow<SensorType>(extraBufferCapacity = 2)
+    /**
+     * BIA and ECG require user interaction (touch crown + side keys) and have no real-time
+     * medical value at sub-minute intervals. They are only triggered by explicit user action.
+     * SpO₂ is scheduled autonomously every [SPO2_INTERVAL_MS].
+     */
+    private val manualOnDemandRequests = MutableSharedFlow<SensorType>(extraBufferCapacity = 4)
 
-    /** Request an immediate on-demand measurement (ECG, SpO₂, BIA). */
+    /** Trigger BIA or ECG measurement manually (called from UI/service). */
     fun requestOnDemandMeasurement(sensor: SensorType) {
-        onDemandRequests.tryEmit(sensor)
+        manualOnDemandRequests.tryEmit(sensor)
     }
 
     private val platformHub = PlatformSensorHub(context)
+
+    // HR is the only truly continuous sensor; skin temp and EDA are registered continuous
+    // but flushed at a much lower rate to save power.
     private val continuousSensors = listOf(
         SensorType.HEART_RATE,
         SensorType.SKIN_TEMPERATURE,
         SensorType.EDA,
     )
-    /** Samsung allows only one on-demand tracker listener at a time. */
-    private val onDemandRotation = listOf(
-        SensorType.SPO2,
-        SensorType.BIA,
-        SensorType.ECG,
-    )
-    private val monitoredSensors = continuousSensors + onDemandRotation
+    // Samsung allows only one on-demand listener at a time.
+    private val onDemandSensors = listOf(SensorType.SPO2, SensorType.BIA, SensorType.ECG)
+    private val monitoredSensors = continuousSensors + onDemandSensors
 
     fun allVitalsFlow(): Flow<SensorTrackerEvent> = callbackFlow {
         monitoredSensors.forEach {
@@ -202,11 +216,13 @@ class VitalsSensorCoordinator @Inject constructor(
             }
         }
 
+        /**
+         * Activates a single on-demand tracker. Clears all other on-demand listeners first
+         * (Samsung constraint: only one active at a time).
+         */
         fun switchOnDemand(sensor: SensorType) {
-            onDemandRotation.forEach { other ->
-                if (other != sensor) {
-                    runCatching { activeTrackers[other]?.unsetEventListener() }
-                }
+            onDemandSensors.forEach { other ->
+                if (other != sensor) runCatching { activeTrackers[other]?.unsetEventListener() }
             }
             val tracker = ensureTracker(sensor) ?: run {
                 if (platformStarted[sensor] != true) {
@@ -229,24 +245,14 @@ class VitalsSensorCoordinator @Inject constructor(
             }
         }
 
-        fun slotDuration(sensor: SensorType): Long = when (sensor) {
-            SensorType.SPO2 -> SLOT_SPO2_MS
-            SensorType.BIA -> SLOT_BIA_MS
-            SensorType.ECG -> SLOT_ECG_MS
-            else -> SLOT_SPO2_MS
-        }
-
+        // Manual BIA / ECG requests from UI.
         launch {
-            onDemandRequests.collect { sensor ->
+            manualOnDemandRequests.collect { sensor ->
                 if (activeTrackers.isEmpty()) {
                     Log.w(TAG, "On-demand request ignored — Samsung not connected yet: ${sensor.name}")
-                    trySend(
-                        SensorTrackerEvent(
-                            sensor,
-                            TrackerState.Error("Sensors not ready — tap Start first"),
-                        ),
-                    )
+                    trySend(SensorTrackerEvent(sensor, TrackerState.Error("Sensors not ready — tap Start first")))
                 } else {
+                    Log.i(TAG, "Manual on-demand: ${sensor.name}")
                     switchOnDemand(sensor)
                 }
             }
@@ -257,24 +263,47 @@ class VitalsSensorCoordinator @Inject constructor(
                 Log.i(TAG, "Samsung Health connected")
                 continuousSensors.forEach { startContinuous(it) }
 
+                // HR: flush every 2 s for real-time monitoring.
                 launch {
                     delay(2_000L)
                     while (isActive) {
-                        continuousSensors.forEach { sensor ->
-                            runCatching { activeTrackers[sensor]?.flush() }
-                        }
-                        delay(CONTINUOUS_FLUSH_MS)
+                        runCatching { activeTrackers[SensorType.HEART_RATE]?.flush() }
+                        delay(HR_FLUSH_MS)
                     }
                 }
 
+                // Skin temperature: registered continuous but flushed every 5 min.
+                // Temperature changes slowly — 2 s flush interval is pure battery waste.
+                launch {
+                    delay(10_000L)
+                    while (isActive) {
+                        runCatching { activeTrackers[SensorType.SKIN_TEMPERATURE]?.flush() }
+                        delay(SKIN_TEMP_FLUSH_MS)
+                    }
+                }
+
+                // EDA: registered continuous but flushed every 5 min.
+                // Stress arousal is a slow physiological response.
+                launch {
+                    delay(15_000L)
+                    while (isActive) {
+                        runCatching { activeTrackers[SensorType.EDA]?.flush() }
+                        delay(EDA_FLUSH_MS)
+                    }
+                }
+
+                // SpO₂: autonomous measurement every SPO2_INTERVAL_MS.
+                // Independent of BIA/ECG — no longer blocked by rotation.
                 launch {
                     delay(5_000L)
-                    var index = 0
                     while (isActive) {
-                        val sensor = onDemandRotation[index % onDemandRotation.size]
-                        switchOnDemand(sensor)
-                        delay(slotDuration(sensor))
-                        index++
+                        Log.i(TAG, "SpO₂ scheduled measurement starting")
+                        switchOnDemand(SensorType.SPO2)
+                        delay(SPO2_SLOT_MS)
+                        // Release SpO₂ listener so manual BIA/ECG can take the slot.
+                        runCatching { activeTrackers[SensorType.SPO2]?.unsetEventListener() }
+                        activeOnDemand = null
+                        delay(SPO2_INTERVAL_MS - SPO2_SLOT_MS)
                     }
                 }
             }
