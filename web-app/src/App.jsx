@@ -23,15 +23,18 @@ import AdminDoctors from './pages/admin/AdminDoctors.jsx'
 import AdminDoctorDetail from './pages/admin/AdminDoctorDetail.jsx'
 import AdminPatients from './pages/admin/AdminPatients.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminAuditLog from './pages/admin/AdminAuditLog.jsx'
 
 import DoctorDashboard from './pages/doctor/DoctorDashboard.jsx'
 import DoctorPatients from './pages/doctor/DoctorPatients.jsx'
 import DoctorPatientDetail from './pages/doctor/DoctorPatientDetail.jsx'
 import DoctorNotifications from './pages/doctor/DoctorNotifications.jsx'
+import DoctorConversations from './pages/doctor/DoctorConversations.jsx'
 
 import PatientDashboard from './pages/patient/PatientDashboard.jsx'
 import PatientWatch from './pages/patient/PatientWatch.jsx'
 import PatientNotifications from './pages/patient/PatientNotifications.jsx'
+import PatientConversations from './pages/patient/PatientConversations.jsx'
 
 const AuthContext = ({ children }) => children
 
@@ -116,6 +119,7 @@ export default function App() {
             <Route path="doctors/:doctorId" element={<AdminDoctorDetail />} />
             <Route path="patients" element={<AdminPatients />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="audit" element={<AdminAuditLog />} />
           </Route>
 
           {/* Doctor */}
@@ -131,6 +135,7 @@ export default function App() {
             <Route path="dashboard" element={<DoctorDashboard />} />
             <Route path="patients" element={<DoctorPatients />} />
             <Route path="patients/:patientUserId" element={<DoctorPatientDetail />} />
+            <Route path="chat" element={<DoctorConversations />} />
             <Route path="notifications" element={<DoctorNotifications />} />
           </Route>
 
@@ -146,6 +151,7 @@ export default function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<PatientDashboard />} />
             <Route path="watch" element={<PatientWatch />} />
+            <Route path="chat" element={<PatientConversations />} />
             <Route path="notifications" element={<PatientNotifications />} />
           </Route>
 

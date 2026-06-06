@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../utils/api'
+import { readProfile } from '../../utils/auth'
 import LiveVitals from '../../components/LiveVitals.jsx'
 
 export default function DoctorPatientDetail() {
   const { patientUserId } = useParams()
+  const navigate = useNavigate()
+  const profile = readProfile()
   const [patient, setPatient] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -44,7 +48,40 @@ export default function DoctorPatientDetail() {
               {patient.email} {patient.phone ? `· ${patient.phone}` : ''}
             </div>
           </div>
-          <span className="tag patient">Patient</span>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={chatLoading}
+              onClick={async () => {
+                setChatLoading(true)
+                try {
+                  const convs = await api.get('/api/chat/conversations')
+                  const existing = (convs ?? []).find((c) =>
+                    c.participants?.some((p) => p.userId === patientUserId) &&
+                    c.participants?.some((p) => p.userId === profile?.id)
+                  )
+                  if (existing) {
+                    navigate('/doctor/chat', { state: { openConvId: existing.id } })
+                  } else {
+                    await api.post('/api/chat/conversations', {
+                      type: 'DoctorPatient',
+                      name: `Chat with ${patient.fullName}`,
+                      participantIds: [profile?.id, patientUserId],
+                    })
+                    navigate('/doctor/chat')
+                  }
+                } catch {
+                  navigate('/doctor/chat')
+                } finally {
+                  setChatLoading(false)
+                }
+              }}
+            >
+              {chatLoading ? 'Opening…' : '💬 Chat'}
+            </button>
+            <span className="tag patient">Patient</span>
+          </div>
         </div>
 
         <div className="stat-grid">

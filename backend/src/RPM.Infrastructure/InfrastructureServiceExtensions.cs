@@ -36,6 +36,9 @@ public static class InfrastructureServiceExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
 
+        // Audit service
+        services.AddScoped<IAuditService, AuditService>();
+
         // MQTT Background Service
         services.AddHostedService<MqttBackgroundService>();
 

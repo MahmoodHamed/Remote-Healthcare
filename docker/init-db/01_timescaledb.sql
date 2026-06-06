@@ -11,9 +11,9 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = 'vital_records'
+        WHERE table_schema = 'public' AND table_name = 'VitalRecords'
     ) THEN
-        PERFORM create_hypertable('vital_records', 'recorded_at',
+        PERFORM create_hypertable('"VitalRecords"', '"RecordedAt"',
             if_not_exists => TRUE,
             migrate_data  => TRUE);
     END IF;

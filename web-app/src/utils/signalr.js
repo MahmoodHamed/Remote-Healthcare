@@ -27,6 +27,50 @@ export const buildVitalsHubConnection = (handlers = {}) => {
   return connection
 }
 
+export const buildChatHubConnection = (handlers = {}) => {
+  const hubUrl = new URL('/hubs/chat', getApiBase()).toString()
+
+  const connection = new HubConnectionBuilder()
+    .withUrl(hubUrl, {
+      accessTokenFactory: () => getAccessToken(),
+      withCredentials: true,
+    })
+    .withAutomaticReconnect()
+    .configureLogging(LogLevel.Warning)
+    .build()
+
+  if (handlers.onMessage) {
+    connection.on('ReceiveMessage', handlers.onMessage)
+  }
+  if (handlers.onMarkedRead) {
+    connection.on('MarkedRead', handlers.onMarkedRead)
+  }
+
+  return connection
+}
+
+export const startChatHub = async (connection, conversationId) => {
+  const apiBase = getApiBase()
+  const token = getAccessToken()
+  if (!token || isTokenExpired(token)) {
+    const ok = await ensureValidSession(apiBase)
+    if (!ok) throw new Error('Session expired. Please sign in again.')
+  }
+  await connection.start()
+  await connection.invoke('JoinConversation', String(conversationId))
+}
+
+export const stopChatHub = async (connection, conversationId) => {
+  try {
+    if (connection.state === 'Connected') {
+      await connection.invoke('LeaveConversation', String(conversationId))
+    }
+    await connection.stop()
+  } catch {
+    /* ignore stop races */
+  }
+}
+
 export const startVitalsHub = async (connection, patientId, { onUnauthorized } = {}) => {
   const apiBase = getApiBase()
   const token = getAccessToken()

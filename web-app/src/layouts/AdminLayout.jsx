@@ -6,6 +6,7 @@ const navItems = [
   { to: '/admin/doctors', label: 'Doctors', icon: '🩺' },
   { to: '/admin/patients', label: 'Patients', icon: '👤' },
   { to: '/admin/users', label: 'All users', icon: '⚙️' },
+  { to: '/admin/audit', label: 'Audit log', icon: '📋' },
 ]
 
 export default function AdminLayout({ profile, onLogout }) {

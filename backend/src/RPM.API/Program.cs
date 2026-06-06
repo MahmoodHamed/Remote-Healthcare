@@ -100,8 +100,22 @@ using (var scope = app.Services.CreateScope())
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     db.Database.Migrate();
 
-    const string adminEmail = "mahmoodjob8@gmail.com";
-    const string adminPassword = "M1@a2@h3&m4&";
+    await db.Database.ExecuteSqlRawAsync("""
+        CREATE TABLE IF NOT EXISTS "AuditLogs" (
+            "Id"          uuid                     PRIMARY KEY DEFAULT gen_random_uuid(),
+            "UserId"      uuid,
+            "UserEmail"   text,
+            "Action"      text                     NOT NULL,
+            "Resource"    text,
+            "Detail"      text,
+            "IpAddress"   text,
+            "OccurredAt"  timestamp with time zone NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS "IX_AuditLogs_OccurredAt" ON "AuditLogs" ("OccurredAt" DESC);
+    """);
+
+    var adminEmail = builder.Configuration["Admin:Email"] ?? "mahmoodjob8@gmail.com";
+    var adminPassword = builder.Configuration["Admin:Password"] ?? "M1@a2@h3&m4&";
 
     var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
     if (admin is null)

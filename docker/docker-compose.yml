@@ -11,6 +11,7 @@ volumes:
   mosquitto_data:
   mosquitto_logs:
   seq_data:
+  dataprotection_keys:
 
 services:
 
@@ -128,6 +129,10 @@ services:
       Storage__AccessKey: rpm_minio_access
       Storage__SecretKey: rpm_minio_secret
       Storage__BucketName: rpm-files
+      Admin__Email: "${RPM_ADMIN_EMAIL:-mahmoodjob8@gmail.com}"
+      Admin__Password: "${RPM_ADMIN_PASSWORD:-M1@a2@h3&m4&}"
+    volumes:
+      - dataprotection_keys:/app/.aspnet/DataProtection-Keys
     ports:
       - "8080:8080"
     depends_on:
