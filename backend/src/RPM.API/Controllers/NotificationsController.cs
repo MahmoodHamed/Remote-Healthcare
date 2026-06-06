@@ -17,15 +17,22 @@ public class NotificationsController(IUnitOfWork uow, ICurrentUser currentUser) 
         CancellationToken ct = default)
     {
         var items = await uow.Users.GetNotificationsAsync(currentUser.UserId, page, pageSize, ct);
-        return Ok(items.Select(n => new
+        var unreadCount = await uow.Users.GetUnreadNotificationCountAsync(currentUser.UserId, ct);
+        return Ok(new
         {
-            id = n.Id,
-            title = n.Title,
-            body = n.Body,
-            alertId = n.AlertId,
-            isRead = n.IsRead,
-            sentAt = n.SentAt,
-        }));
+            items = items.Select(n => new
+            {
+                id = n.Id,
+                title = n.Title,
+                body = n.Body,
+                alertId = n.AlertId,
+                isRead = n.IsRead,
+                sentAt = n.SentAt,
+            }),
+            unreadCount,
+            page,
+            pageSize,
+        });
     }
 
     [HttpGet("unread-count")]
