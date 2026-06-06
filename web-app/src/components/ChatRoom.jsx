@@ -3,6 +3,25 @@ import { api } from '../utils/api'
 import { buildChatHubConnection, startChatHub, stopChatHub } from '../utils/signalr'
 import { readProfile } from '../utils/auth'
 
+/** Add or replace — avoids duplicate when REST response and SignalR race. */
+const upsertMessage = (prev, incoming) => {
+  if (prev.some((m) => m.id === incoming.id)) return prev
+
+  const optimisticIdx = prev.findIndex(
+    (m) =>
+      m.optimistic &&
+      m.senderId === incoming.senderId &&
+      m.content === incoming.content,
+  )
+  if (optimisticIdx >= 0) {
+    const next = [...prev]
+    next[optimisticIdx] = incoming
+    return next
+  }
+
+  return [...prev, incoming]
+}
+
 const formatTime = (iso) => {
   const d = new Date(iso)
   const today = new Date()
@@ -66,10 +85,7 @@ export default function ChatRoom({ conversation, onBack }) {
     const conn = buildChatHubConnection({
       onMessage: (msg) => {
         if (!mountedRef.current) return
-        setMessages((prev) => {
-          if (prev.find((m) => m.id === msg.id)) return prev
-          return [...prev, msg]
-        })
+        setMessages((prev) => upsertMessage(prev, msg))
         scrollToBottom()
       },
     })
@@ -118,9 +134,7 @@ export default function ChatRoom({ conversation, onBack }) {
         content,
         type: 'Text',
       })
-      setMessages((prev) =>
-        prev.map((m) => (m.id === optimistic.id ? msg : m))
-      )
+      setMessages((prev) => upsertMessage(prev, msg))
     } catch (err) {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id))
       setError(err.message || 'Could not send message.')
