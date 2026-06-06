@@ -21,6 +21,8 @@ data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val userRole: String? = null,
     val userId: String? = null,
+    /** False until cached session is read / validated on cold start. */
+    val isSessionReady: Boolean = false,
 )
 
 @HiltViewModel
@@ -50,7 +52,24 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun refreshSession() {
-        if (tokenStore.getAccessToken() == null) return
+        val token = tokenStore.getAccessToken()
+        if (token == null) {
+            _uiState.value = AuthUiState(isSessionReady = true)
+            return
+        }
+
+        val cachedRole = tokenStore.userRole.firstOrNull()
+        val cachedUserId = tokenStore.userId.firstOrNull()
+        if (cachedRole != null && cachedUserId != null) {
+            sessionManager.reset()
+            _uiState.value = AuthUiState(
+                isLoggedIn = true,
+                userRole = cachedRole,
+                userId = cachedUserId,
+                isSessionReady = true,
+            )
+        }
+
         when (val result = authRepository.refreshProfile()) {
             is Resource.Success -> {
                 sessionManager.reset()
@@ -58,22 +77,28 @@ class AuthViewModel @Inject constructor(
                     isLoggedIn = true,
                     userRole = result.data.role,
                     userId = result.data.id,
+                    isSessionReady = true,
                 )
                 registerFcmToken()
             }
             is Resource.Error -> {
                 if (result.httpCode == 401) {
                     clearSessionAndNavigateToLogin()
+                    _uiState.value = AuthUiState(isSessionReady = true)
                     return
                 }
-                val role = tokenStore.userRole.firstOrNull()
-                val userId = tokenStore.userId.firstOrNull()
-                if (role != null && userId != null) {
+                if (cachedRole != null && cachedUserId != null) {
                     sessionManager.reset()
-                    _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
+                    _uiState.value = AuthUiState(
+                        isLoggedIn = true,
+                        userRole = cachedRole,
+                        userId = cachedUserId,
+                        isSessionReady = true,
+                    )
                     registerFcmToken()
                 } else {
                     clearSessionAndNavigateToLogin()
+                    _uiState.value = AuthUiState(isSessionReady = true)
                 }
             }
             Resource.Loading -> {}
@@ -90,10 +115,14 @@ class AuthViewModel @Inject constructor(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
                         userId = result.data.user.id,
+                        isSessionReady = true,
                     )
                     registerFcmToken()
                 }
-                is Resource.Error -> _uiState.value = AuthUiState(error = result.message)
+                is Resource.Error -> _uiState.value = AuthUiState(
+                    error = result.message,
+                    isSessionReady = true,
+                )
                 Resource.Loading -> {}
             }
         }
@@ -119,10 +148,14 @@ class AuthViewModel @Inject constructor(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
                         userId = result.data.user.id,
+                        isSessionReady = true,
                     )
                     registerFcmToken()
                 }
-                is Resource.Error -> _uiState.value = AuthUiState(error = result.message)
+                is Resource.Error -> _uiState.value = AuthUiState(
+                    error = result.message,
+                    isSessionReady = true,
+                )
                 Resource.Loading -> {}
             }
         }
@@ -131,13 +164,14 @@ class AuthViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             clearSessionAndNavigateToLogin()
+            _uiState.value = AuthUiState(isSessionReady = true)
         }
     }
 
     private suspend fun clearSessionAndNavigateToLogin() {
         authRepository.logout()
         sessionManager.reset()
-        _uiState.value = AuthUiState()
+        _uiState.value = AuthUiState(isSessionReady = true)
     }
 
     private fun registerFcmToken() {

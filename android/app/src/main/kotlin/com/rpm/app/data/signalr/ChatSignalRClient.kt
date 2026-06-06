@@ -6,12 +6,15 @@ import com.microsoft.signalr.HubConnectionBuilder
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.MessageDto
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 private const val TAG = "ChatSignalR"
 
@@ -26,35 +29,43 @@ class ChatSignalRClient @Inject constructor(
     private val _messages = MutableSharedFlow<MessageDto>(extraBufferCapacity = 64)
     val messages: SharedFlow<MessageDto> = _messages.asSharedFlow()
 
-    /** Connect on a background thread; never throws — failures are logged only. */
+    fun publishLocal(message: MessageDto) {
+        _messages.tryEmit(message)
+    }
+
+    /** Connect on a background thread; retries until connected or coroutine cancelled. */
     suspend fun connect(conversationId: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            if (joinedConversationId == conversationId && hub != null) return@withContext true
-            disconnectInternal()
-            val token = tokenStore.getAccessToken()
-            if (token.isNullOrBlank()) {
-                Log.w(TAG, "No access token — skipping chat hub connect")
-                return@withContext false
+        while (coroutineContext.isActive) {
+            try {
+                if (joinedConversationId == conversationId && hub != null) return@withContext true
+                disconnectInternal()
+                val token = tokenStore.getAccessToken()
+                if (token.isNullOrBlank()) {
+                    Log.w(TAG, "No access token — waiting before chat hub connect")
+                    delay(3_000)
+                    continue
+                }
+                val connection = HubConnectionBuilder
+                    .create("${baseUrl}hubs/chat?access_token=$token")
+                    .build()
+                connection.on(
+                    "ReceiveMessage",
+                    { message: MessageDto -> _messages.tryEmit(message) },
+                    MessageDto::class.java,
+                )
+                connection.start().blockingAwait()
+                connection.send("JoinConversation", conversationId)
+                hub = connection
+                joinedConversationId = conversationId
+                Log.i(TAG, "Joined conversation $conversationId")
+                return@withContext true
+            } catch (e: Exception) {
+                Log.e(TAG, "Chat hub connect failed: ${e.message}", e)
+                disconnectInternal()
+                delay(3_000)
             }
-            val connection = HubConnectionBuilder
-                .create("${baseUrl}hubs/chat?access_token=$token")
-                .build()
-            connection.on(
-                "ReceiveMessage",
-                { message: MessageDto -> _messages.tryEmit(message) },
-                MessageDto::class.java,
-            )
-            connection.start().blockingAwait()
-            connection.send("JoinConversation", conversationId)
-            hub = connection
-            joinedConversationId = conversationId
-            Log.i(TAG, "Joined conversation $conversationId")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Chat hub connect failed: ${e.message}", e)
-            disconnectInternal()
-            false
         }
+        false
     }
 
     fun disconnect() {

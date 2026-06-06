@@ -151,6 +151,13 @@ fun ChatRoomScreen(
                     }
                 }
             }
+            uiState.error?.let { error ->
+                Snackbar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(8.dp),
+                ) { Text(error) }
+            }
         }
     }
 }

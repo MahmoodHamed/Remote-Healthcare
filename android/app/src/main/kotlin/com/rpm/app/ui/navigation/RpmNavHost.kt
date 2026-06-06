@@ -1,6 +1,11 @@
 package com.rpm.app.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
@@ -46,7 +51,8 @@ fun RpmNavHost() {
     val authState by authViewModel.uiState.collectAsState()
     var wasLoggedIn by remember { mutableStateOf(false) }
 
-    LaunchedEffect(authState.isLoggedIn, authState.userRole, authState.userId) {
+    LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, authState.userRole, authState.userId) {
+        if (!authState.isSessionReady) return@LaunchedEffect
         if (authState.isLoggedIn) {
             wasLoggedIn = true
             val dest = homeRouteForRole(authState.userRole, authState.userId)
@@ -62,6 +68,13 @@ fun RpmNavHost() {
                 popUpTo(0) { inclusive = true }
             }
         }
+    }
+
+    if (!authState.isSessionReady) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     val navigateHome: () -> Unit = {

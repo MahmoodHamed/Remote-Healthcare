@@ -24,12 +24,20 @@ data class ConversationListUiState(
 @HiltViewModel
 class ConversationListViewModel @Inject constructor(
     private val repo: ChatRepository,
+    private val chatSignalR: ChatSignalRClient,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConversationListUiState(isLoading = true))
     val uiState: StateFlow<ConversationListUiState> = _uiState.asStateFlow()
 
-    init { loadConversations() }
+    init {
+        loadConversations()
+        viewModelScope.launch {
+            chatSignalR.messages.collect {
+                loadConversations()
+            }
+        }
+    }
 
     fun loadConversations() {
         viewModelScope.launch {
@@ -69,7 +77,7 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun loadMessages() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             _uiState.value = when (val result = repo.getMessages(conversationId)) {
                 is Resource.Success -> ChatRoomUiState(messages = result.data.items.reversed())
                 is Resource.Error -> ChatRoomUiState(error = result.message)
@@ -80,36 +88,42 @@ class ChatRoomViewModel @Inject constructor(
 
     private fun subscribeRealtime() {
         viewModelScope.launch {
-            chatSignalR.connect(conversationId)
+            launch {
+                chatSignalR.connect(conversationId)
+            }
             chatSignalR.messages.collect { message ->
-                if (!message.conversationId.equals(conversationId, ignoreCase = true)) return@collect
-                val current = _uiState.value.messages
-                if (current.any { it.id == message.id }) return@collect
-                _uiState.value = _uiState.value.copy(messages = current + message)
+                appendMessage(message)
             }
         }
     }
 
     fun sendMessage(content: String) {
         if (content.isBlank()) return
+        val trimmed = content.trim()
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSending = true)
-            val result = repo.sendMessage(conversationId, content)
-            if (result is Resource.Success) {
-                val msg = result.data
-                val current = _uiState.value.messages
-                if (current.none { it.id == msg.id }) {
-                    _uiState.value = _uiState.value.copy(
-                        messages = current + msg,
-                        isSending = false,
-                    )
-                } else {
+            _uiState.value = _uiState.value.copy(isSending = true, error = null)
+            when (val result = repo.sendMessage(conversationId, trimmed)) {
+                is Resource.Success -> {
+                    appendMessage(result.data)
+                    chatSignalR.publishLocal(result.data)
                     _uiState.value = _uiState.value.copy(isSending = false)
                 }
-            } else {
-                _uiState.value = _uiState.value.copy(isSending = false)
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isSending = false,
+                        error = result.message,
+                    )
+                }
+                Resource.Loading -> {}
             }
         }
+    }
+
+    private fun appendMessage(message: MessageDto) {
+        if (!message.conversationId.equals(conversationId, ignoreCase = true)) return
+        val current = _uiState.value.messages
+        if (current.any { it.id.equals(message.id, ignoreCase = true) }) return
+        _uiState.value = _uiState.value.copy(messages = current + message)
     }
 
     override fun onCleared() {

@@ -26,7 +26,7 @@ data class RegisterRequest(
 data class AuthTokensDto(
     val accessToken: String,
     val refreshToken: String,
-    val expiresAt: String
+    val expiresAt: String? = null,
 )
 
 @Serializable
