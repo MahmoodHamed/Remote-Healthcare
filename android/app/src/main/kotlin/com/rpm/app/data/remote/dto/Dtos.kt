@@ -62,6 +62,7 @@ data class UpdateFcmTokenRequest(val fcmToken: String)
 data class VitalRecordDto(
     val id: String,
     val patientId: String,
+    val deviceId: String? = null,
     val recordedAt: String,
     val heartRateBpm: Float? = null,
     val spO2Percent: Float? = null,

@@ -54,8 +54,8 @@ class PatientRepository @Inject constructor(
     suspend fun getPatientDetail(patientId: String): Resource<PatientDetailDto> =
         sessionManager.safeCall { api.getPatientDetail(patientId) }
 
-    suspend fun getLatestVitals(patientId: String): Resource<VitalRecordDto> =
-        sessionManager.safeCall { api.getLatestVitals(patientId) }
+    suspend fun getLatestVitals(patientId: String): Resource<VitalRecordDto?> =
+        sessionManager.safeCallNullable { api.getLatestVitals(patientId) }
 
     suspend fun getVitals(patientId: String, page: Int = 1): Resource<VitalsPagedDto> {
         val now = Instant.now().toString()
@@ -189,10 +189,24 @@ private suspend fun <T> SessionManager.safeCall(call: suspend () -> retrofit2.Re
     return try {
         val response = call()
         if (response.isSuccessful) {
-            Resource.Success(response.body()!!)
+            val body = response.body()
+            if (body != null) Resource.Success(body)
+            else Resource.Error("Empty response from server", response.code())
         } else {
             errorFromResponse(response)
         }
+    } catch (e: Exception) {
+        Resource.Error(e.message ?: "Network error")
+    }
+}
+
+private suspend fun <T> SessionManager.safeCallNullable(
+    call: suspend () -> retrofit2.Response<T>,
+): Resource<T?> {
+    return try {
+        val response = call()
+        if (response.isSuccessful) Resource.Success(response.body())
+        else errorFromResponse(response)
     } catch (e: Exception) {
         Resource.Error(e.message ?: "Network error")
     }

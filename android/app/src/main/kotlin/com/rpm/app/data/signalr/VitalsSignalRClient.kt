@@ -4,6 +4,7 @@ import android.util.Log
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.rpm.app.data.local.TokenDataStore
+import com.rpm.app.data.remote.dto.VitalRecordDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -78,18 +79,15 @@ class VitalsSignalRClient @Inject constructor(
                 val hubUrl = "${baseUrl}hubs/vitals?access_token=${java.net.URLEncoder.encode(token, "UTF-8")}"
                 val connection = HubConnectionBuilder.create(hubUrl).build()
 
+                // Primary: Gson deserializes hub JSON into VitalRecordDto (same as Chat hub).
                 connection.on(
                     "ReceiveVitals",
-                    { payload ->
-                        val vitals = VitalsPayloadParser.parse(payload)
-                        if (vitals != null) {
-                            Log.d(TAG, "ReceiveVitals HR=${vitals.heartRateBpm} SpO2=${vitals.spO2Percent}")
-                            _vitals.tryEmit(vitals)
-                        } else {
-                            Log.w(TAG, "ReceiveVitals payload could not be parsed: $payload")
-                        }
+                    { dto: VitalRecordDto ->
+                        val vitals = dto.toRealTime()
+                        Log.d(TAG, "ReceiveVitals HR=${vitals.heartRateBpm} SpO2=${vitals.spO2Percent}")
+                        _vitals.tryEmit(vitals)
                     },
-                    Object::class.java,
+                    VitalRecordDto::class.java,
                 )
                 connection.on(
                     "ReceiveAlert",

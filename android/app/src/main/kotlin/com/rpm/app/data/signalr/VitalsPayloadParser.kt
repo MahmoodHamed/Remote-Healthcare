@@ -18,8 +18,14 @@ object VitalsPayloadParser {
             is String -> json.decodeFromString<VitalRecordDto>(raw).toRealTime()
             is Map<*, *> -> parseMap(raw)
             else -> {
-                Log.w(TAG, "Unsupported vitals payload type: ${raw.javaClass.name}")
-                null
+                // Gson LinkedTreeMap from SignalR Object callback
+                val asString = raw.toString()
+                if (asString.startsWith("{")) {
+                    json.decodeFromString<VitalRecordDto>(asString).toRealTime()
+                } else {
+                    Log.w(TAG, "Unsupported vitals payload type: ${raw.javaClass.name}")
+                    null
+                }
             }
         }
     }.getOrElse {
@@ -28,9 +34,8 @@ object VitalsPayloadParser {
     }
 
     private fun parseMap(map: Map<*, *>): RealTimeVitals {
-        val patientId = pickString(map, "patientId", "PatientId") ?: ""
         val vitals = RealTimeVitals(
-            patientId            = patientId,
+            patientId            = pickString(map, "patientId", "PatientId") ?: "",
             heartRateBpm         = pickFloat(map, "heartRateBpm", "HeartRateBpm"),
             spO2Percent          = pickFloat(map, "spO2Percent", "SpO2Percent"),
             systolicBp           = pickFloat(map, "systolicBp", "SystolicBp"),
@@ -139,11 +144,8 @@ fun RealTimeVitals.mergeWith(previous: RealTimeVitals?): RealTimeVitals {
         stepsCount          = stepsCount          ?: previous.stepsCount,
         caloriesBurned      = caloriesBurned      ?: previous.caloriesBurned,
         fallDetected        = fallDetected || previous.fallDetected,
-        isWearing           = isWearing,
+        isWearing           = isWearing || previous.isWearing,
         recordedAt          = recordedAt.ifBlank { previous.recordedAt },
         patientId           = patientId.ifBlank { previous.patientId },
     ).withInferredWearing()
 }
-
-fun normalizePatientIdForHub(patientId: String): String =
-    patientId.trim().lowercase()

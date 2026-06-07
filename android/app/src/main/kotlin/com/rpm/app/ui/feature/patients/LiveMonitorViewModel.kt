@@ -60,8 +60,8 @@ class LiveMonitorViewModel @Inject constructor(
 
     init {
         loadPatientName()
-        loadLatestFromApi()
         startSignalR()
+        loadLatestFromApi()
         startRestPolling()
     }
 
@@ -77,22 +77,41 @@ class LiveMonitorViewModel @Inject constructor(
     private fun loadLatestFromApi() {
         viewModelScope.launch {
             when (val result = repo.getLatestVitals(patientId)) {
-                is Resource.Success -> applyVitals(result.data.toRealTime(), fromSignalR = false)
+                is Resource.Success -> {
+                    val latest = result.data
+                    if (latest != null) {
+                        applyVitals(latest.toRealTime(), fromSignalR = false)
+                    } else {
+                        loadMostRecentFromHistory()
+                    }
+                }
+                is Resource.Error -> loadMostRecentFromHistory()
                 else -> {}
             }
         }
     }
 
+    private suspend fun loadMostRecentFromHistory() {
+        when (val result = repo.getVitals(patientId, page = 1)) {
+            is Resource.Success -> {
+                result.data.items.firstOrNull()?.let {
+                    applyVitals(it.toRealTime(), fromSignalR = false)
+                }
+            }
+            else -> {}
+        }
+    }
+
     private fun startSignalR() {
+        viewModelScope.launch {
+            signalR.vitals.collect { incoming ->
+                applyVitals(incoming, fromSignalR = true)
+            }
+        }
         viewModelScope.launch {
             val connected = signalR.connect(patientId)
             _state.update {
                 it.copy(connectionStatus = if (connected) ConnectionStatus.Live else ConnectionStatus.Offline)
-            }
-        }
-        viewModelScope.launch {
-            signalR.vitals.collect { incoming ->
-                applyVitals(incoming, fromSignalR = true)
             }
         }
     }
@@ -102,7 +121,9 @@ class LiveMonitorViewModel @Inject constructor(
             while (isActive) {
                 delay(5_000)
                 when (val result = repo.getLatestVitals(patientId)) {
-                    is Resource.Success -> applyVitals(result.data.toRealTime(), fromSignalR = false)
+                    is Resource.Success -> result.data?.let {
+                        applyVitals(it.toRealTime(), fromSignalR = false)
+                    }
                     else -> {}
                 }
             }

@@ -61,7 +61,7 @@ class PatientDetailViewModel @Inject constructor(
             _uiState.value = PatientDetailUiState(
                 isLoading    = false,
                 patient      = patient,
-                latestVitals = (vitals as? Resource.Success)?.data,
+                latestVitals = (vitals as? Resource.Success)?.data ?: null,
                 error        = (detail as? Resource.Error)?.message
                     ?: (vitals as? Resource.Error)?.message.takeIf { patient == null },
             )
