@@ -1218,3 +1218,134 @@
   color: var(--muted, rgba(255,255,255,0.5));
   font-size: 0.78rem;
 }
+
+.patient-hub-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - 80px);
+}
+
+.patient-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-right: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.patient-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.patient-nav a {
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.patient-nav a.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.patient-sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.role-pill {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(14, 165, 164, 0.15);
+  color: #0e7c7b;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.patient-hub-main {
+  padding: 2rem;
+}
+
+.patient-hub-content {
+  max-width: 760px;
+}
+
+.watch-steps {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.watch-step-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.step-num {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pairing-form.card-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.pairing-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.mono-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.btn-sm {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .patient-hub-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}

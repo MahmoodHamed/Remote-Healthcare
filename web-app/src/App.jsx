@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
 import PatientMonitor from './pages/PatientMonitor'
+import PatientHub from './pages/PatientHub'
 import { clearAuthSession, loadAuthSession, saveAuthSession } from './utils/authSession'
 
 function Header({ authProfile, onLogout }) {
@@ -155,6 +156,45 @@ export default function App() {
                   authProfile={authProfile}
                   accessToken={accessToken}
                   onLogout={handleLogout}
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hub"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <PatientHub
+                  authProfile={authProfile}
+                  accessToken={accessToken}
+                  onLogout={handleLogout}
+                  section="vitals"
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hub/vitals"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <PatientHub
+                  authProfile={authProfile}
+                  accessToken={accessToken}
+                  onLogout={handleLogout}
+                  section="vitals"
+                />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hub/watch"
+            element={
+              <ProtectedRoute authProfile={authProfile}>
+                <PatientHub
+                  authProfile={authProfile}
+                  accessToken={accessToken}
+                  onLogout={handleLogout}
+                  section="watch"
                 />
               </ProtectedRoute>
             }

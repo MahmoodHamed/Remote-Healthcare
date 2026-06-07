@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
-import { normalizePatientId } from '../utils/patientId'
+import { resolveConnectPatientId } from '../utils/patientId'
 import { HISTORY_COLUMNS, SDK_SENSOR_INFO, SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
 import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
@@ -53,9 +53,12 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
   }
 
   const connect = async () => {
-    const patientId = normalizePatientId(patientIdInput)
+    const patientId = await resolveConnectPatientId(patientIdInput, authProfile, {
+      apiBase: DEFAULT_API_BASE,
+      accessToken,
+    })
     if (!patientId) {
-      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9), matching the watch (default ABC123).')
+      setConnectionError('Enter a 6-character watch code or patient GUID. Patients can leave blank to use their account.')
       return
     }
     patientGuidRef.current = patientId

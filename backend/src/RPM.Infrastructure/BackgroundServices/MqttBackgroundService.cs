@@ -7,11 +7,18 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
+using Microsoft.Extensions.DependencyInjection;
+using RPM.Application.Common;
 using RPM.Application.Features.Vitals.Commands;
+using RPM.Domain.Interfaces;
 
 namespace RPM.Infrastructure.BackgroundServices;
 
-public class MqttBackgroundService(IConfiguration config, IMediator mediator, ILogger<MqttBackgroundService> logger)
+public class MqttBackgroundService(
+    IConfiguration config,
+    IMediator mediator,
+    IServiceScopeFactory scopeFactory,
+    ILogger<MqttBackgroundService> logger)
     : BackgroundService
 {
     private IMqttClient? _client;
@@ -70,7 +77,7 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
 
             if (data is null) return;
 
-            var patientId = NormalizeGuid(data.PatientId);
+            var patientId = await ResolvePatientIdAsync(data.PatientId);
             var deviceId = NormalizeGuid(data.DeviceId);
 
             if (patientId is null)
@@ -104,31 +111,37 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
         }
     }
 
-    private static Guid? NormalizeGuid(string? value)
+    private async Task<Guid?> ResolvePatientIdAsync(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         if (Guid.TryParse(value, out var guid)) return guid;
 
-        if (!IsShortId(value)) return null;
+        if (!PatientShortCode.IsValidFormat(value)) return null;
 
-        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(value));
-        bytes[6] = (byte)((bytes[6] & 0x0f) | 0x30);
-        bytes[8] = (byte)((bytes[8] & 0x3f) | 0x80);
-        var guidString = FormatGuidString(bytes);
-        return Guid.Parse(guidString);
+        var code = PatientShortCode.Normalize(value);
+        using var scope = scopeFactory.CreateScope();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var profile = await uow.Patients.GetByShortPatientCodeAsync(code);
+        if (profile is not null) return profile.UserId;
+
+        // Legacy demo watches using MD5-derived GUID (e.g. ABC123 before short-code registry).
+        return ShortIdToLegacyGuid(code);
     }
 
-    private static bool IsShortId(string value)
+    private static Guid? NormalizeGuid(string? value)
     {
-        if (value.Length != 6) return false;
-        foreach (var ch in value)
-        {
-            var isDigit = ch >= '0' && ch <= '9';
-            var isUpper = ch >= 'A' && ch <= 'Z';
-            var isLower = ch >= 'a' && ch <= 'z';
-            if (!(isDigit || isUpper || isLower)) return false;
-        }
-        return true;
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (Guid.TryParse(value, out var guid)) return guid;
+        if (!PatientShortCode.IsValidFormat(value)) return null;
+        return ShortIdToLegacyGuid(PatientShortCode.Normalize(value));
+    }
+
+    private static Guid ShortIdToLegacyGuid(string shortId)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(shortId));
+        bytes[6] = (byte)((bytes[6] & 0x0f) | 0x30);
+        bytes[8] = (byte)((bytes[8] & 0x3f) | 0x80);
+        return Guid.Parse(FormatGuidString(bytes));
     }
 
     private static string FormatGuidString(byte[] bytes) =>

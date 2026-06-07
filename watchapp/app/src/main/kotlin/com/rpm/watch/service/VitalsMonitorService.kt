@@ -571,18 +571,16 @@ class VitalsMonitorService : Service() {
             .getOrDefault(SensorType.HEART_RATE)
     }
 
-    private fun normalizeGuid(value: String): String = try {
-        UUID.fromString(value).toString()
-    } catch (_: Exception) {
-        val bytes = MessageDigest.getInstance("MD5").digest(value.toByteArray(Charsets.UTF_8))
-        bytes[6] = ((bytes[6].toInt() and 0x0f) or 0x30).toByte()
-        bytes[8] = ((bytes[8].toInt() and 0x3f) or 0x80).toByte()
-        fun byteHex(b: Byte): String = "%02x".format(b.toInt() and 0xff)
-        buildString(36) {
-            for (i in bytes.indices) {
-                if (i == 4 || i == 6 || i == 8 || i == 10) append('-')
-                append(byteHex(bytes[i]))
-            }
+    /** Full GUID as-is, or 6-char code (e.g. ABC123) uppercased for MQTT. */
+    private fun normalizeGuid(value: String): String {
+        val trimmed = value.trim()
+        if (trimmed.length == 6 && trimmed.all { it.isLetterOrDigit() }) {
+            return trimmed.uppercase(java.util.Locale.US)
+        }
+        return try {
+            UUID.fromString(trimmed).toString()
+        } catch (_: Exception) {
+            trimmed
         }
     }
 

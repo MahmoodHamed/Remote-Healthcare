@@ -195,6 +195,13 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
         db.PatientProfiles.Include(p => p.DoctorAssignments).Include(p => p.RelativeLinks)
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
 
+    public Task<PatientProfile?> GetByShortPatientCodeAsync(string shortCode, CancellationToken ct = default) =>
+        db.PatientProfiles.FirstOrDefaultAsync(
+            p => p.ShortPatientCode == shortCode.ToUpperInvariant(), ct);
+
+    public Task<bool> ShortPatientCodeExistsAsync(string shortCode, CancellationToken ct = default) =>
+        db.PatientProfiles.AnyAsync(p => p.ShortPatientCode == shortCode.ToUpperInvariant(), ct);
+
     public Task<PatientProfile?> GetByPatientUserIdAsync(Guid userId, CancellationToken ct = default) =>
         db.PatientProfiles.Include(p => p.DoctorAssignments).ThenInclude(a => a.Doctor)
             .Include(p => p.RelativeLinks)

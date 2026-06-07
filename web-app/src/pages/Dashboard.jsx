@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
-import { normalizePatientId } from '../utils/patientId'
+import { resolveConnectPatientId } from '../utils/patientId'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -40,9 +40,12 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
   }
 
   const connectToVitals = async () => {
-    const patientId = normalizePatientId(patientIdInput)
+    const patientId = await resolveConnectPatientId(patientIdInput, authProfile, {
+      apiBase: DEFAULT_API_BASE,
+      accessToken,
+    })
     if (!patientId) {
-      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
+      setConnectionError('Enter a 6-character watch code or patient GUID.')
       return
     }
 
@@ -301,9 +304,12 @@ export function HeartRateMonitor({ authProfile, accessToken, onLogout }) {
   }
 
   const connectToVitals = async () => {
-    const patientId = normalizePatientId(patientIdInput)
+    const patientId = await resolveConnectPatientId(patientIdInput, authProfile, {
+      apiBase: DEFAULT_API_BASE,
+      accessToken,
+    })
     if (!patientId) {
-      setConnectionError('Patient ID must be 6 characters (A-Z, 0-9).')
+      setConnectionError('Enter a 6-character watch code or patient GUID.')
       return
     }
 

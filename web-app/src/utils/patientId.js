@@ -98,6 +98,7 @@ const bytesToUuid = (bytes) => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
+/** @deprecated Legacy MD5 mapping — do not use for SignalR; use resolveHubPatientId instead. */
 export const normalizePatientId = (value) => {
   const trimmed = value.trim()
   if (!trimmed) return ''
@@ -108,4 +109,38 @@ export const normalizePatientId = (value) => {
   bytes[6] = (bytes[6] & 0x0f) | 0x30
   bytes[8] = (bytes[8] & 0x3f) | 0x80
   return bytesToUuid(bytes)
+}
+
+export const isPatientGuid = (value) => guidPattern.test(String(value || '').trim())
+
+export const normalizeGuid = (value) => {
+  const trimmed = String(value || '').trim()
+  return guidPattern.test(trimmed) ? trimmed.toLowerCase() : ''
+}
+
+/**
+ * Resolves a patient identifier for SignalR subscription.
+ * Full GUIDs pass through; 6-char codes are resolved via the server.
+ */
+export const resolveConnectPatientId = async (input, authProfile, { apiBase, accessToken }) => {
+  const fallbackGuid = authProfile?.role === 'Patient' ? normalizeGuid(authProfile?.id) : ''
+  const value = String(input || '').trim() || fallbackGuid
+  let id = normalizeGuid(value)
+  if (!id && value) id = await resolveHubPatientId(value, { apiBase, accessToken })
+  return id
+}
+
+export const resolveHubPatientId = async (value, { apiBase, accessToken }) => {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+  if (guidPattern.test(trimmed)) return trimmed.toLowerCase()
+  if (!shortIdPattern.test(trimmed)) return ''
+
+  const url = new URL(`/api/patients/resolve-code/${encodeURIComponent(trimmed)}`, apiBase).toString()
+  const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+  const res = await fetch(url, { headers })
+  if (!res.ok) return ''
+  const data = await res.json()
+  const userId = data?.userId ?? data?.UserId
+  return userId ? String(userId).toLowerCase() : ''
 }

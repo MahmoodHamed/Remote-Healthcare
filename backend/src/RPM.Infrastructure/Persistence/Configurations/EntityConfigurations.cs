@@ -71,6 +71,8 @@ public class PatientProfileConfiguration : IEntityTypeConfiguration<PatientProfi
         b.Property(x => x.ChronicDiseases).HasColumnType("jsonb");
         b.Property(x => x.Allergies).HasColumnType("jsonb");
         b.Property(x => x.CurrentMedications).HasColumnType("jsonb");
+        b.Property(x => x.ShortPatientCode).HasMaxLength(6);
+        b.HasIndex(x => x.ShortPatientCode).IsUnique();
     }
 }
 

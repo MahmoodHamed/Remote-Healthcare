@@ -5,6 +5,8 @@ public class PatientProfile : BaseEntity
 {
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
+    /// <summary>6-char code for watch pairing (e.g. ABC123).</summary>
+    public string? ShortPatientCode { get; private set; }
     public DateOnly? DateOfBirth { get; private set; }
     public BloodType? BloodType { get; private set; }
     public float? WeightKg { get; private set; }
@@ -23,6 +25,12 @@ public class PatientProfile : BaseEntity
     protected PatientProfile() { }
 
     public static PatientProfile Create(Guid userId) => new() { UserId = userId };
+
+    public void AssignShortPatientCode(string code)
+    {
+        ShortPatientCode = code;
+        SetUpdatedAt();
+    }
 
     public void UpdateMedicalInfo(DateOnly? dob, BloodType? blood, float? weight, float? height,
         List<string>? diseases, List<string>? allergies, List<string>? meds, string? emergencyPhone)

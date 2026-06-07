@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RPM.Application.Common;
 using RPM.Application.DTOs.Patients;
 using RPM.Application.Common.Interfaces;
 using RPM.Application.Features.Devices;
@@ -43,14 +44,16 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
         var list = new List<PatientSummaryDto>();
         foreach (var p in patients)
         {
+            var shortCode = await PatientShortCodeService.EnsureAssignedAsync(p, uow, ct);
             var latest = await uow.Vitals.GetLatestByPatientIdAsync(p.UserId, ct);
             list.Add(new PatientSummaryDto(
                 p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
-                p.DateOfBirth, p.BloodType?.ToString(),
+                p.DateOfBirth, p.BloodType?.ToString(), shortCode,
                 latest is null ? null : new VitalRecordLatestDto(
                     latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
                     latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt)));
         }
+        await uow.SaveChangesAsync(ct);
         return list;
     }
 
@@ -60,12 +63,16 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
         var profile = await uow.Patients.GetByUserIdAsync(userId, ct);
         if (profile is null) return NotFound();
 
+        var shortCode = await PatientShortCodeService.EnsureAssignedAsync(profile, uow, ct);
+        await uow.SaveChangesAsync(ct);
+
         var latest = await uow.Vitals.GetLatestByPatientIdAsync(userId, ct);
         var dto = new PatientDetailDto(
             profile.UserId, profile.User.FullName, profile.User.Email, profile.User.Phone,
             profile.User.AvatarUrl, profile.DateOfBirth, profile.BloodType?.ToString(),
             profile.WeightKg, profile.HeightCm, profile.ChronicDiseases,
             profile.Allergies, profile.CurrentMedications, profile.EmergencyContactPhone,
+            shortCode,
             latest is null ? null : new VitalRecordLatestDto(
                 latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
                 latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt));
@@ -97,4 +104,18 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
     [HttpGet("{userId}/devices")]
     public async Task<IActionResult> GetPatientDevices(Guid userId, CancellationToken ct) =>
         Ok(await mediator.Send(new GetPatientDevicesQuery(userId), ct));
+
+    /// <summary>Maps a 6-character watch code to the patient's streaming user GUID.</summary>
+    [HttpGet("resolve-code/{code}")]
+    public async Task<IActionResult> ResolveShortCode(string code, CancellationToken ct)
+    {
+        if (!PatientShortCode.IsValidFormat(code))
+            return BadRequest(new { message = "Patient code must be 6 characters (A-Z, 0-9)." });
+
+        var profile = await uow.Patients.GetByShortPatientCodeAsync(PatientShortCode.Normalize(code), ct);
+        if (profile is null)
+            return NotFound(new { message = "No patient found for this code." });
+
+        return Ok(new { userId = profile.UserId, shortPatientCode = profile.ShortPatientCode });
+    }
 }

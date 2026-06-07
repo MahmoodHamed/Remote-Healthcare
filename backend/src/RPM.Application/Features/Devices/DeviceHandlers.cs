@@ -1,4 +1,5 @@
 using MediatR;
+using RPM.Application.Common;
 using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Devices;
 using RPM.Domain.Interfaces;
@@ -35,15 +36,22 @@ public class GetPatientDevicesHandler(IUnitOfWork uow)
     }
 }
 
-public class GetPairingInfoHandler(ICurrentUser currentUser, IMqttBrokerSettings mqtt)
+public class GetPairingInfoHandler(IUnitOfWork uow, ICurrentUser currentUser, IMqttBrokerSettings mqtt)
     : IRequestHandler<GetPairingInfoQuery, PairingInfoDto>
 {
-    public Task<PairingInfoDto> Handle(GetPairingInfoQuery _, CancellationToken ct)
+    public async Task<PairingInfoDto> Handle(GetPairingInfoQuery _, CancellationToken ct)
     {
-        // PatientId is the User's GUID — the watch sends this in the MQTT topic
-        // and MqttBackgroundService.NormalizeGuid handles full GUIDs directly.
-        var patientId = currentUser.UserId.ToString();
-        return Task.FromResult(new PairingInfoDto(patientId, mqtt.PublicHost, mqtt.Port));
+        var profile = await uow.Patients.GetByUserIdAsync(currentUser.UserId, ct)
+            ?? throw new InvalidOperationException("Patient profile not found.");
+
+        var shortCode = await PatientShortCodeService.EnsureAssignedAsync(profile, uow, ct);
+        await uow.SaveChangesAsync(ct);
+
+        return new PairingInfoDto(
+            shortCode,
+            profile.UserId.ToString("D"),
+            mqtt.PublicHost,
+            mqtt.Port);
     }
 }
 

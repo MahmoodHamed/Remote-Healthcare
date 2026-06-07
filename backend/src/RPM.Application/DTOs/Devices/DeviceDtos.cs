@@ -9,8 +9,11 @@ public record DeviceDto(
     DateTime? LastSeenAt,
     DateTime RegisteredAt);
 
+/// <param name="PatientId">6-character watch code (e.g. 7K7RSB) — enter on the watch.</param>
+/// <param name="StreamingPatientId">Internal user GUID used by SignalR and REST after the short code is resolved.</param>
 public record PairingInfoDto(
     string PatientId,
+    string StreamingPatientId,
     string MqttHost,
     int MqttPort);
 

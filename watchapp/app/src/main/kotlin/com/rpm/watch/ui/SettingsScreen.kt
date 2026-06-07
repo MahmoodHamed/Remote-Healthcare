@@ -53,7 +53,20 @@ fun SettingsScreen(
                 )
             }
             item {
-                SettingField(label = "Patient ID", value = patientId, onValueChange = { patientId = it; saved = false })
+                Text(
+                    "6-character Patient ID from the mobile app (e.g. ABC123)",
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                SettingField(
+                    label = "Patient ID",
+                    value = patientId,
+                    onValueChange = { v -> patientId = v.filter { it.isLetterOrDigit() }.take(6).uppercase(); saved = false },
+                    keyboardType = KeyboardType.Ascii,
+                )
             }
             item {
                 SettingField(label = "MQTT Host", value = mqttHost, onValueChange = { mqttHost = it; saved = false })

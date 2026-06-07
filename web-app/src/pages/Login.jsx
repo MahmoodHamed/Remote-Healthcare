@@ -64,7 +64,8 @@ export default function Login({ onLoginSuccess }) {
       if (onLoginSuccess) {
         onLoginSuccess(data)
       }
-      navigate('/monitor')
+      const role = data?.user?.role ?? data?.User?.role
+      navigate(role === 'Patient' ? '/hub' : '/monitor')
     } catch (err) {
       setError(err?.message || 'Login failed.')
     } finally {
