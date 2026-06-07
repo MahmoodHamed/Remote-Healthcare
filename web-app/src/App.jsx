@@ -9,6 +9,13 @@ import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
 import PatientMonitor from './pages/PatientMonitor'
 import PatientHub from './pages/PatientHub'
 import { clearAuthSession, loadAuthSession, saveAuthSession } from './utils/authSession'
+import { accountUserId } from './utils/patientId'
+
+const normalizeAuthUser = (user) => {
+  if (!user || typeof user !== 'object') return user
+  const id = accountUserId(user)
+  return id ? { ...user, id } : user
+}
 
 function Header({ authProfile, onLogout }) {
   return (
@@ -90,7 +97,7 @@ export default function App() {
   const handleLoginSuccess = (data) => {
     const accessToken = data?.tokens?.accessToken
     const refreshToken = data?.tokens?.refreshToken
-    const user = data?.user
+    const user = normalizeAuthUser(data?.user)
     if (accessToken && user) {
       setAccessToken(accessToken)
       setAuthProfile(user)
@@ -101,7 +108,7 @@ export default function App() {
   const handleRegisterSuccess = (data) => {
     const accessToken = data?.tokens?.accessToken
     const refreshToken = data?.tokens?.refreshToken
-    const user = data?.user
+    const user = normalizeAuthUser(data?.user)
     if (accessToken && user) {
       setAccessToken(accessToken)
       setAuthProfile(user)

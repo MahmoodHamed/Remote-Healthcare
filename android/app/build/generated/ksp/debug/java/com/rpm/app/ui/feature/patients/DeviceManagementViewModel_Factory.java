@@ -1,5 +1,6 @@
 package com.rpm.app.ui.feature.patients;
 
+import com.rpm.app.data.local.TokenDataStore;
 import com.rpm.app.data.repository.DeviceRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -25,20 +26,26 @@ import javax.inject.Provider;
 public final class DeviceManagementViewModel_Factory implements Factory<DeviceManagementViewModel> {
   private final Provider<DeviceRepository> repoProvider;
 
-  public DeviceManagementViewModel_Factory(Provider<DeviceRepository> repoProvider) {
+  private final Provider<TokenDataStore> tokenStoreProvider;
+
+  public DeviceManagementViewModel_Factory(Provider<DeviceRepository> repoProvider,
+      Provider<TokenDataStore> tokenStoreProvider) {
     this.repoProvider = repoProvider;
+    this.tokenStoreProvider = tokenStoreProvider;
   }
 
   @Override
   public DeviceManagementViewModel get() {
-    return newInstance(repoProvider.get());
+    return newInstance(repoProvider.get(), tokenStoreProvider.get());
   }
 
-  public static DeviceManagementViewModel_Factory create(Provider<DeviceRepository> repoProvider) {
-    return new DeviceManagementViewModel_Factory(repoProvider);
+  public static DeviceManagementViewModel_Factory create(Provider<DeviceRepository> repoProvider,
+      Provider<TokenDataStore> tokenStoreProvider) {
+    return new DeviceManagementViewModel_Factory(repoProvider, tokenStoreProvider);
   }
 
-  public static DeviceManagementViewModel newInstance(DeviceRepository repo) {
-    return new DeviceManagementViewModel(repo);
+  public static DeviceManagementViewModel newInstance(DeviceRepository repo,
+      TokenDataStore tokenStore) {
+    return new DeviceManagementViewModel(repo, tokenStore);
   }
 }

@@ -288,10 +288,10 @@ data class DeviceDto(
 /** @param patientId 6-character watch code assigned by the server. */
 @Serializable
 data class PairingInfoDto(
-    val patientId: String,
+    val patientId: String = "",
     val streamingPatientId: String = "",
-    val mqttHost: String,
-    val mqttPort: Int,
+    val mqttHost: String = "",
+    val mqttPort: Int = 0,
 )
 
 @Serializable

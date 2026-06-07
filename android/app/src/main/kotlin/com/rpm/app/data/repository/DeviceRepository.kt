@@ -16,6 +16,7 @@ import javax.inject.Singleton
 
 data class PairingInfoResult(
     val info: PairingInfoDto,
+    /** True when pairing was loaded/saved on this device (server API unavailable or offline). */
     val savedLocally: Boolean = false,
 )
 
@@ -37,13 +38,17 @@ class DeviceRepository @Inject constructor(
     suspend fun getDevicePairingInfo(): Resource<PairingInfoResult> {
         when (val result = sessionManager.safeCall { api.getDevicePairingInfo() }) {
             is Resource.Success -> {
-                val code = result.data.patientId.trim()
-                if (code.isNotEmpty()) tokenStore.saveWatchShortCode(code)
-                return Resource.Success(PairingInfoResult(result.data, savedLocally = false))
+                val normalized = normalizePairingInfo(result.data)
+                if (normalized.patientId.isNotEmpty()) {
+                    tokenStore.saveWatchShortCode(normalized.patientId)
+                }
+                return Resource.Success(
+                    PairingInfoResult(normalized, savedLocally = false),
+                )
             }
-            is Resource.Error -> return when (result.httpCode) {
-                404, 502, 503 -> buildLocalPairingInfo()
-                else -> Resource.Error(result.message, result.httpCode)
+            is Resource.Error -> {
+                if (result.httpCode == 401) return result
+                return buildLocalPairingInfo()
             }
             Resource.Loading -> return Resource.Loading
         }
@@ -54,11 +59,13 @@ class DeviceRepository @Inject constructor(
         when (val result = sessionManager.safeCall { api.saveDevicePairingInfo(SavePairingInfoRequest(code)) }) {
             is Resource.Success -> {
                 tokenStore.saveWatchShortCode(code)
-                return Resource.Success(PairingInfoResult(result.data, savedLocally = false))
+                return Resource.Success(
+                    PairingInfoResult(normalizePairingInfo(result.data), savedLocally = false),
+                )
             }
-            is Resource.Error -> return when (result.httpCode) {
-                404, 502, 503 -> saveLocalPairingInfo(code)
-                else -> Resource.Error(result.message, result.httpCode)
+            is Resource.Error -> {
+                if (result.httpCode == 401) return result
+                return saveLocalPairingInfo(code)
             }
             Resource.Loading -> return Resource.Loading
         }
@@ -76,21 +83,31 @@ class DeviceRepository @Inject constructor(
         }
     }
 
+    private suspend fun normalizePairingInfo(dto: PairingInfoDto): PairingInfoDto {
+        val userId = tokenStore.userId.firstOrNull()?.trim().orEmpty()
+        return PairingInfoDto(
+            patientId = dto.patientId.trim().ifBlank { defaultShortCode() },
+            streamingPatientId = dto.streamingPatientId.trim().ifBlank { userId },
+            mqttHost = dto.mqttHost.trim().ifBlank { BuildConfig.MQTT_HOST },
+            mqttPort = dto.mqttPort.takeIf { it > 0 } ?: BuildConfig.MQTT_PORT,
+        )
+    }
+
     private suspend fun buildLocalPairingInfo(): Resource<PairingInfoResult> {
         val userId = tokenStore.userId.firstOrNull()?.trim().orEmpty()
         if (userId.isBlank()) {
             return Resource.Error("Sign in again to load watch pairing info.")
         }
-        val code = tokenStore.getWatchShortCode()?.takeIf { it.isNotBlank() } ?: BuildConfig.DEFAULT_PATIENT_ID
+        val savedCode = tokenStore.getWatchShortCode()?.trim().orEmpty()
         return Resource.Success(
             PairingInfoResult(
                 info = PairingInfoDto(
-                    patientId = code,
+                    patientId = savedCode.ifBlank { defaultShortCode() },
                     streamingPatientId = userId,
                     mqttHost = BuildConfig.MQTT_HOST,
                     mqttPort = BuildConfig.MQTT_PORT,
                 ),
-                savedLocally = true,
+                savedLocally = savedCode.isNotBlank(),
             ),
         )
     }
@@ -113,6 +130,8 @@ class DeviceRepository @Inject constructor(
             ),
         )
     }
+
+    private fun defaultShortCode(): String = BuildConfig.DEFAULT_PATIENT_ID
 }
 
 private suspend fun <T> SessionManager.safeCall(

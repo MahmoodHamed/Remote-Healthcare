@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rpm.app.data.remote.dto.DeviceDto
-import com.rpm.app.data.remote.dto.PairingInfoDto
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -96,7 +95,9 @@ fun DeviceManagementScreen(
             item {
                 PairingSetupCard(
                     shortCode = state.shortCodeInput,
-                    pairingInfo = state.pairingInfo,
+                    streamingPatientId = state.streamingPatientId,
+                    mqttHost = state.mqttHost,
+                    mqttPort = state.mqttPort,
                     isSaving = state.isSaving,
                     savedLocally = state.savedLocally,
                     onShortCodeChange = vm::updateShortCode,
@@ -125,7 +126,9 @@ fun DeviceManagementScreen(
 @Composable
 private fun PairingSetupCard(
     shortCode: String,
-    pairingInfo: PairingInfoDto?,
+    streamingPatientId: String,
+    mqttHost: String,
+    mqttPort: Int,
     isSaving: Boolean,
     savedLocally: Boolean,
     onShortCodeChange: (String) -> Unit,
@@ -183,39 +186,39 @@ private fun PairingSetupCard(
                 ),
             )
 
-            if (!pairingInfo?.streamingPatientId.isNullOrBlank()) {
-                OutlinedTextField(
-                    value = pairingInfo!!.streamingPatientId,
-                    onValueChange = {},
-                    label = { Text("Streaming patient ID") },
-                    supportingText = { Text("Internal ID used by the server after your short code is saved.") },
-                    readOnly = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = MaterialTheme.typography.bodySmall.fontSize),
-                )
-            }
+            OutlinedTextField(
+                value = streamingPatientId.ifBlank { "—" },
+                onValueChange = {},
+                label = { Text("Streaming patient ID") },
+                supportingText = { Text("Your account GUID — same on web and mobile. The watch uses the short code only.") },
+                readOnly = true,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                ),
+            )
 
-            pairingInfo?.let { info ->
-                OutlinedTextField(
-                    value = info.mqttHost,
-                    onValueChange = {},
-                    label = { Text("MQTT host") },
-                    readOnly = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
-                )
-                OutlinedTextField(
-                    value = info.mqttPort.toString(),
-                    onValueChange = {},
-                    label = { Text("MQTT port") },
-                    readOnly = true,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
-                )
-            }
+            OutlinedTextField(
+                value = mqttHost.ifBlank { "—" },
+                onValueChange = {},
+                label = { Text("MQTT host") },
+                readOnly = true,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
+            )
+
+            OutlinedTextField(
+                value = if (mqttPort > 0) mqttPort.toString() else "—",
+                onValueChange = {},
+                label = { Text("MQTT port") },
+                readOnly = true,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
+            )
 
             Button(
                 onClick = onSave,

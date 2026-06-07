@@ -3,22 +3,25 @@ package com.rpm.app.ui.feature.patients
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.app.BuildConfig
+import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.DeviceDto
-import com.rpm.app.data.remote.dto.PairingInfoDto
 import com.rpm.app.data.repository.DeviceRepository
 import com.rpm.app.domain.model.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class DeviceManagementUiState(
     val devices: List<DeviceDto> = emptyList(),
-    val pairingInfo: PairingInfoDto? = null,
     val shortCodeInput: String = BuildConfig.DEFAULT_PATIENT_ID,
+    val streamingPatientId: String = "",
+    val mqttHost: String = BuildConfig.MQTT_HOST,
+    val mqttPort: Int = BuildConfig.MQTT_PORT,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val savedLocally: Boolean = false,
@@ -30,6 +33,7 @@ data class DeviceManagementUiState(
 @HiltViewModel
 class DeviceManagementViewModel @Inject constructor(
     private val repo: DeviceRepository,
+    private val tokenStore: TokenDataStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DeviceManagementUiState())
@@ -40,6 +44,7 @@ class DeviceManagementViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+            val fallbackUserId = tokenStore.userId.firstOrNull()?.trim().orEmpty()
             var err: String? = null
 
             val devices = when (val devResult = repo.getMyDevices()) {
@@ -51,13 +56,19 @@ class DeviceManagementViewModel @Inject constructor(
                 else -> emptyList()
             }
 
-            var pairingInfo: PairingInfoDto? = null
-            var shortCode = ""
+            var shortCode = BuildConfig.DEFAULT_PATIENT_ID
+            var streamingId = fallbackUserId
+            var mqttHost = BuildConfig.MQTT_HOST
+            var mqttPort = BuildConfig.MQTT_PORT
             var localOnly = false
+
             when (val pairResult = repo.getDevicePairingInfo()) {
                 is Resource.Success -> {
-                    pairingInfo = pairResult.data.info
-                    shortCode = pairResult.data.info.patientId
+                    val info = pairResult.data.info
+                    shortCode = info.patientId.ifBlank { BuildConfig.DEFAULT_PATIENT_ID }
+                    streamingId = info.streamingPatientId.ifBlank { fallbackUserId }
+                    mqttHost = info.mqttHost.ifBlank { BuildConfig.MQTT_HOST }
+                    mqttPort = info.mqttPort.takeIf { it > 0 } ?: BuildConfig.MQTT_PORT
                     localOnly = pairResult.data.savedLocally
                 }
                 is Resource.Error -> err = pairResult.message
@@ -67,11 +78,13 @@ class DeviceManagementViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     devices = devices,
-                    pairingInfo = pairingInfo,
-                    shortCodeInput = shortCode.ifBlank { BuildConfig.DEFAULT_PATIENT_ID },
+                    shortCodeInput = shortCode,
+                    streamingPatientId = streamingId,
+                    mqttHost = mqttHost,
+                    mqttPort = mqttPort,
                     savedLocally = localOnly,
                     isLoading = false,
-                    error = if (pairingInfo == null && err != null) err else null,
+                    error = err,
                 )
             }
         }
@@ -93,14 +106,22 @@ class DeviceManagementViewModel @Inject constructor(
             _state.update { it.copy(isSaving = true, error = null) }
             when (val result = repo.saveDevicePairingInfo(code)) {
                 is Resource.Success -> {
+                    val info = result.data.info
                     _state.update {
                         it.copy(
-                            pairingInfo = result.data.info,
-                            shortCodeInput = result.data.info.patientId,
+                            shortCodeInput = info.patientId.ifBlank { code },
+                            streamingPatientId = info.streamingPatientId.ifBlank { it.streamingPatientId },
+                            mqttHost = info.mqttHost.ifBlank { BuildConfig.MQTT_HOST },
+                            mqttPort = info.mqttPort.takeIf { p -> p > 0 } ?: BuildConfig.MQTT_PORT,
                             savedLocally = result.data.savedLocally,
                             isSaving = false,
                             saveSuccess = true,
                         )
+                    }
+                    // Refresh device list after saving pairing
+                    when (val devResult = repo.getMyDevices()) {
+                        is Resource.Success -> _state.update { s -> s.copy(devices = devResult.data) }
+                        else -> {}
                     }
                 }
                 is Resource.Error -> {

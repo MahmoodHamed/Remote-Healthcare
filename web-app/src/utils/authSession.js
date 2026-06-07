@@ -1,4 +1,12 @@
+import { accountUserId } from './patientId'
+
 const AUTH_SESSION_KEY = 'authSession'
+
+const normalizeProfile = (profile) => {
+  if (!profile || typeof profile !== 'object') return profile
+  const id = accountUserId(profile)
+  return id ? { ...profile, id } : profile
+}
 
 const readJson = (value) => {
   try {
@@ -20,7 +28,7 @@ export const loadAuthSession = () => {
   return {
     accessToken: session.accessToken ?? session.token ?? null,
     refreshToken: session.refreshToken ?? null,
-    profile: session.profile ?? null,
+    profile: normalizeProfile(session.profile ?? null),
   }
 }
 
@@ -29,7 +37,7 @@ export const saveAuthSession = ({ accessToken, refreshToken = null, profile }) =
 
   localStorage.setItem(
     AUTH_SESSION_KEY,
-    JSON.stringify({ accessToken, refreshToken, profile })
+    JSON.stringify({ accessToken, refreshToken, profile: normalizeProfile(profile) })
   )
   try { window.dispatchEvent(new CustomEvent('authSessionChanged', { detail: { accessToken, refreshToken, profile } })) } catch {}
 }

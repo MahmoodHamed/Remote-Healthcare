@@ -118,12 +118,19 @@ export const normalizeGuid = (value) => {
   return guidPattern.test(trimmed) ? trimmed.toLowerCase() : ''
 }
 
+/** Real account GUID from login profile — never MD5 of the watch code. */
+export const accountUserId = (profile) => {
+  if (!profile || typeof profile !== 'object') return ''
+  const raw = profile.id ?? profile.Id ?? profile.userId ?? profile.UserId
+  return normalizeGuid(raw)
+}
+
 /**
  * Resolves a patient identifier for SignalR subscription.
  * Full GUIDs pass through; 6-char codes are resolved via the server.
  */
 export const resolveConnectPatientId = async (input, authProfile, { apiBase, accessToken }) => {
-  const fallbackGuid = authProfile?.role === 'Patient' ? normalizeGuid(authProfile?.id) : ''
+  const fallbackGuid = authProfile?.role === 'Patient' ? accountUserId(authProfile) : ''
   const value = String(input || '').trim() || fallbackGuid
   let id = normalizeGuid(value)
   if (!id && value) id = await resolveHubPatientId(value, { apiBase, accessToken })

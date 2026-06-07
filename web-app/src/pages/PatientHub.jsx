@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { apiFetch } from '../api/client'
-import { normalizeGuid } from '../utils/patientId'
+import { accountUserId, normalizeGuid } from '../utils/patientId'
 import { SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
 import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
@@ -55,7 +55,7 @@ function PatientVitalsPanel({ authProfile, accessToken }) {
   const [connectionError, setConnectionError] = useState('')
   const [latestVitals, setLatestVitals] = useState(null)
   const connectionRef = useRef(null)
-  const streamingId = normalizeGuid(authProfile?.id)
+  const streamingId = accountUserId(authProfile)
 
   const connect = useCallback(async () => {
     if (!streamingId || !accessToken) return
@@ -158,8 +158,7 @@ function PatientWatchPanel({ authProfile, accessToken }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-
-  const streamingId = normalizeGuid(authProfile?.id)
+  const [streamingId, setStreamingId] = useState(() => accountUserId(authProfile))
 
   const loadPairing = useCallback(async () => {
     setLoading(true)
@@ -172,16 +171,22 @@ function PatientWatchPanel({ authProfile, accessToken }) {
       if (!pairRes.ok) throw new Error('Could not load pairing info from the server.')
       const pairData = await pairRes.json()
       const code = pairData?.patientId ?? pairData?.PatientId ?? ''
+      const fromApi = pairData?.streamingPatientId ?? pairData?.StreamingPatientId ?? ''
       setShortCodeInput(code || DEFAULT_WATCH_CODE)
+      setStreamingId(normalizeGuid(fromApi) || accountUserId(authProfile))
       setMqttHost(pairData?.mqttHost ?? pairData?.MqttHost ?? '')
       setMqttPort(String(pairData?.mqttPort ?? pairData?.MqttPort ?? ''))
       if (devRes.ok) setDevices(await devRes.json())
     } catch (err) {
+      setStreamingId(accountUserId(authProfile))
+      setMqttHost((prev) => prev || 'remote-care.tech')
+      setMqttPort((prev) => prev || '1883')
+      setShortCodeInput((prev) => prev || DEFAULT_WATCH_CODE)
       setError(err?.message || 'Failed to load watch pairing info.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authProfile])
 
   useEffect(() => {
     loadPairing()
@@ -205,7 +210,9 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         throw new Error(data?.message || data?.title || `Save failed (${res.status}).`)
       }
       const pairData = await res.json()
+      const fromApi = pairData?.streamingPatientId ?? pairData?.StreamingPatientId ?? ''
       setShortCodeInput(pairData?.patientId ?? pairData?.PatientId ?? code)
+      setStreamingId(normalizeGuid(fromApi) || accountUserId(authProfile))
       setMqttHost(pairData?.mqttHost ?? pairData?.MqttHost ?? mqttHost)
       setMqttPort(String(pairData?.mqttPort ?? pairData?.MqttPort ?? mqttPort))
       setSaved(true)
@@ -281,7 +288,7 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         <label>
           Streaming patient ID
           <input type="text" value={streamingId} readOnly className="mono-input" />
-          <span className="field-hint">Internal ID used by the server after your short code is normalized.</span>
+          <span className="field-hint">Your account GUID — same on web and mobile. The watch uses the short code only.</span>
         </label>
         <label>
           MQTT host

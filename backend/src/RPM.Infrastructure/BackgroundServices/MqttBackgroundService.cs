@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json;
-using System.Security.Cryptography;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -124,43 +123,17 @@ public class MqttBackgroundService(
         var profile = await uow.Patients.GetByShortPatientCodeAsync(code);
         if (profile is not null) return profile.UserId;
 
-        // Legacy demo watches using MD5-derived GUID (e.g. ABC123 before short-code registry).
-        return ShortIdToLegacyGuid(code);
+        logger.LogWarning(
+            "Watch code {Code} is not linked to any patient. Save pairing details in the mobile or web app first.",
+            code);
+        return null;
     }
 
     private static Guid? NormalizeGuid(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
-        if (Guid.TryParse(value, out var guid)) return guid;
-        if (!PatientShortCode.IsValidFormat(value)) return null;
-        return ShortIdToLegacyGuid(PatientShortCode.Normalize(value));
+        return Guid.TryParse(value, out var guid) ? guid : null;
     }
-
-    private static Guid ShortIdToLegacyGuid(string shortId)
-    {
-        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(shortId));
-        bytes[6] = (byte)((bytes[6] & 0x0f) | 0x30);
-        bytes[8] = (byte)((bytes[8] & 0x3f) | 0x80);
-        return Guid.Parse(FormatGuidString(bytes));
-    }
-
-    private static string FormatGuidString(byte[] bytes) =>
-        string.Create(36, bytes, (span, b) =>
-        {
-            var hex = "0123456789abcdef";
-            var map = new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-            int idx = 0;
-            for (var i = 0; i < map.Length; i += 1)
-            {
-                if (idx == 8 || idx == 13 || idx == 18 || idx == 23)
-                {
-                    span[idx++] = '-';
-                }
-                var value = b[map[i]];
-                span[idx++] = hex[value >> 4];
-                span[idx++] = hex[value & 0x0f];
-            }
-        });
 
     public override async Task StopAsync(CancellationToken ct)
     {

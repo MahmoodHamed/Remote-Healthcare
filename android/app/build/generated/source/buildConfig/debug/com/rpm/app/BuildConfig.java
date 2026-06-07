@@ -12,6 +12,8 @@ public final class BuildConfig {
   // Field from default config.
   public static final String BASE_URL = "https://remote-care.tech/";
   // Field from default config.
+  public static final String DEFAULT_PATIENT_ID = "ABC123";
+  // Field from default config.
   public static final String MQTT_HOST = "remote-care.tech";
   // Field from default config.
   public static final int MQTT_PORT = 1883;
