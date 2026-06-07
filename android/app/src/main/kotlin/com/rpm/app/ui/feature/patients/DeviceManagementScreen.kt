@@ -88,7 +88,7 @@ fun DeviceManagementScreen(
         ) {
             // Pairing info / QR section
             state.pairingInfo?.let { info ->
-                item { PairingInfoCard(info) }
+                item { PairingInfoCard(info, state.usingLocalPairing) }
             }
 
             // Linked devices
@@ -113,7 +113,7 @@ fun DeviceManagementScreen(
 }
 
 @Composable
-private fun PairingInfoCard(info: PairingInfoDto) {
+private fun PairingInfoCard(info: PairingInfoDto, fromLocalFallback: Boolean) {
     val clipboard = LocalClipboardManager.current
     val qrBitmap = rememberQrBitmap(buildQrContent(info))
 
@@ -148,6 +148,15 @@ private fun PairingInfoCard(info: PairingInfoDto) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,
             )
+
+            if (fromLocalFallback) {
+                Text(
+                    "Pairing loaded from your account. Device list will appear after the watch sends its first reading.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f),
+                    textAlign = TextAlign.Center,
+                )
+            }
 
             // QR code
             if (qrBitmap != null) {

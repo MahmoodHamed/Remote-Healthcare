@@ -122,6 +122,7 @@ services:
       Jwt__Issuer: "RPM-API"
       Jwt__Audience: "RPM-Mobile"
       Mqtt__Host: mosquitto
+      Mqtt__PublicHost: remote-care.tech
       Mqtt__Port: "1883"
       Seq__Url: "http://seq:80"
       Storage__ServiceUrl: "http://minio:9000"

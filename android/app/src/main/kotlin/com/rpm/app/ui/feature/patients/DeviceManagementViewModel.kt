@@ -19,6 +19,7 @@ data class DeviceManagementUiState(
     val pairingInfo: PairingInfoDto? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val usingLocalPairing: Boolean = false,
     val renameSuccess: Boolean = false,
 )
 
@@ -37,15 +38,35 @@ class DeviceManagementViewModel @Inject constructor(
             _state.update { it.copy(isLoading = true, error = null) }
             var err: String? = null
 
-            val devResult = repo.getMyDevices()
-            val devices = if (devResult is Resource.Success) devResult.data
-            else { err = (devResult as? Resource.Error)?.message; emptyList() }
+            val devices = when (val devResult = repo.getMyDevices()) {
+                is Resource.Success -> devResult.data
+                is Resource.Error -> {
+                    if (devResult.httpCode != 404) err = devResult.message
+                    emptyList()
+                }
+                else -> emptyList()
+            }
 
-            val pairResult = repo.getDevicePairingInfo()
-            val pairingInfo = if (pairResult is Resource.Success) pairResult.data
-            else { if (err == null) err = (pairResult as? Resource.Error)?.message; null }
+            var pairingInfo: PairingInfoDto? = null
+            var localPairing = false
+            when (val pairResult = repo.getDevicePairingInfo()) {
+                is Resource.Success -> {
+                    pairingInfo = pairResult.data.info
+                    localPairing = pairResult.data.fromLocalFallback
+                }
+                is Resource.Error -> err = pairResult.message
+                else -> {}
+            }
 
-            _state.update { it.copy(devices = devices, pairingInfo = pairingInfo, isLoading = false, error = err) }
+            _state.update {
+                it.copy(
+                    devices = devices,
+                    pairingInfo = pairingInfo,
+                    usingLocalPairing = localPairing,
+                    isLoading = false,
+                    error = if (pairingInfo == null) err else null,
+                )
+            }
         }
     }
 

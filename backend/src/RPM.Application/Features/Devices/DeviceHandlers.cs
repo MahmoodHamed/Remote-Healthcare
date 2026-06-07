@@ -43,7 +43,7 @@ public class GetPairingInfoHandler(ICurrentUser currentUser, IMqttBrokerSettings
         // PatientId is the User's GUID — the watch sends this in the MQTT topic
         // and MqttBackgroundService.NormalizeGuid handles full GUIDs directly.
         var patientId = currentUser.UserId.ToString();
-        return Task.FromResult(new PairingInfoDto(patientId, mqtt.Host, mqtt.Port));
+        return Task.FromResult(new PairingInfoDto(patientId, mqtt.PublicHost, mqtt.Port));
     }
 }
 

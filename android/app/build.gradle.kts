@@ -23,6 +23,8 @@ android {
 
         buildConfigField("String", "BASE_URL", "\"https://remote-care.tech/\"")
         buildConfigField("String", "SIGNALR_URL", "\"https://remote-care.tech/\"")
+        buildConfigField("String", "MQTT_HOST", "\"remote-care.tech\"")
+        buildConfigField("int", "MQTT_PORT", "1883")
     }
 
     buildTypes {
