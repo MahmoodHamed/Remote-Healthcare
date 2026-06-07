@@ -35,8 +35,11 @@ class AlertsViewModel @Inject constructor(
     fun loadAlerts() {
         viewModelScope.launch {
             _uiState.value = AlertsUiState(isLoading = true)
-            val result = if (patientId != null) repo.getAlerts(patientId)
-                         else repo.getUnresolvedAlerts()
+            if (patientId.isNullOrBlank()) {
+                _uiState.value = AlertsUiState(error = "Patient ID is required")
+                return@launch
+            }
+            val result = repo.getAlerts(patientId)
             _uiState.value = when (result) {
                 is Resource.Success -> AlertsUiState(alerts = result.data.items)
                 is Resource.Error   -> AlertsUiState(error = result.message)
@@ -46,15 +49,17 @@ class AlertsViewModel @Inject constructor(
     }
 
     fun resolve(alertId: String) {
+        val pid = patientId ?: return
         viewModelScope.launch {
-            repo.resolveAlert(alertId)
+            repo.resolveAlert(pid, alertId)
             loadAlerts()
         }
     }
 
     fun dismiss(alertId: String) {
+        val pid = patientId ?: return
         viewModelScope.launch {
-            repo.dismissAlert(alertId)
+            repo.dismissAlert(pid, alertId)
             loadAlerts()
         }
     }

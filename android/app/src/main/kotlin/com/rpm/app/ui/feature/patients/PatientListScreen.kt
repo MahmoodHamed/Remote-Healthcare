@@ -58,7 +58,7 @@ fun PatientListScreen(
                 )
                 else -> LazyColumn(contentPadding = PaddingValues(8.dp)) {
                     items(uiState.patients) { patient ->
-                        PatientCard(patient, onClick = { onPatientClick(patient.patientId) })
+                        PatientCard(patient, onClick = { onPatientClick(patient.userId) })
                     }
                 }
             }
@@ -83,20 +83,11 @@ private fun PatientCard(patient: PatientSummaryDto, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(patient.fullName, style = MaterialTheme.typography.titleMedium)
-                patient.latestVitals?.let { v ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        buildString {
-                            v.heartRateBpm?.let { append("HR: ${it.toInt()} bpm  ") }
-                            v.spO2Percent?.let { append("SpO2: ${it.toInt()}%") }
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            if (patient.unresolvedAlertCount > 0) {
-                Badge { Text(patient.unresolvedAlertCount.toString()) }
+                Text(
+                    patient.email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null)
         }

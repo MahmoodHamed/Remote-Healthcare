@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.rpm.app.data.signalr.RealTimeVitals
+import com.rpm.app.data.remote.dto.VitalRecordDto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,26 +21,35 @@ fun PatientDetailScreen(
     onBack: () -> Unit,
     onOpenChat: (patientId: String) -> Unit,
     onOpenAlerts: (patientId: String) -> Unit,
+    showBack: Boolean = true,
     viewModel: PatientDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val patient = uiState.patient
+    val displayVitals = uiState.realtimeVitals ?: uiState.latestVitals
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(patient?.fullName ?: "Patient Detail") },
+                title = { Text(patient?.fullName ?: "My vitals") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (showBack) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { patient?.let { onOpenAlerts(it.patientId) } }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Alerts")
+                    IconButton(onClick = { viewModel.refresh() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
-                    IconButton(onClick = { patient?.let { onOpenChat(it.userId) } }) {
-                        Icon(Icons.Default.Chat, contentDescription = "Chat")
+                    patient?.let {
+                        IconButton(onClick = { onOpenAlerts(it.userId) }) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts")
+                        }
+                        IconButton(onClick = { onOpenChat(it.userId) }) {
+                            Icon(Icons.Default.Chat, contentDescription = "Chat")
+                        }
                     }
                 }
             )
@@ -49,10 +58,10 @@ fun PatientDetailScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 uiState.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                uiState.error != null -> Text(
+                uiState.error != null && patient == null -> Text(
                     uiState.error!!,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 )
                 patient != null -> {
                     Column(
@@ -62,50 +71,40 @@ fun PatientDetailScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Patient info card
                         Card(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {
                                 Text("Patient Information", style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.height(8.dp))
                                 InfoRow("Name", patient.fullName)
                                 patient.bloodType?.let { InfoRow("Blood Type", it) }
-                                patient.doctor?.let {
-                                    InfoRow("Doctor", it.fullName)
-                                    it.specialization?.let { s -> InfoRow("Specialization", s) }
+                                patient.doctors.firstOrNull()?.let { doctor ->
+                                    InfoRow("Doctor", doctor.doctorName)
+                                    InfoRow("Specialization", doctor.specialization)
                                 }
                             }
                         }
 
-                        // Real-time vitals (if connected)
-                        uiState.realtimeVitals?.let { rv ->
-                            RealtimeVitalsCard(rv)
-                        } ?: uiState.latestVitals?.let { v ->
+                        if (displayVitals?.isWearing == false) {
                             Card(Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(16.dp)) {
-                                    Text("Latest Vitals", style = MaterialTheme.typography.titleMedium)
-                                    Spacer(Modifier.height(8.dp))
-                                    v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-                                    v.heartRateVariabilityMs?.let { VitalRow("HRV", String.format("%.1f ms", it)) }
-                                    v.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-                                    v.respirationRateBpm?.let { VitalRow("Respiration", "${it.toInt()} /min") }
-                                    v.temperatureC?.let { VitalRow("Body Temp", String.format("%.1f °C", it)) }
-                                    v.skinTemperatureC?.let { VitalRow("Skin Temp", String.format("%.1f °C", it)) }
-                                    if (v.systolicBp != null && v.diastolicBp != null)
-                                        VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg")
-                                    v.stressScore?.let { VitalRow("Stress", "${it.toInt()}/100") }
-                                    v.sleepScore?.let { VitalRow("Sleep score", "${it.toInt()}/100") }
-                                    v.stepsCount?.let { VitalRow("Steps", "$it") }
-                                    v.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
-                                    v.distanceMeters?.let { VitalRow("Distance", String.format("%.0f m", it)) }
-                                    v.ecgClassification?.let { VitalRow("ECG", it) }
-                                    v.bloodGlucoseMgDl?.let { VitalRow("Glucose", String.format("%.0f mg/dL", it)) }
-                                    v.bodyFatPercent?.let { VitalRow("Body Fat", String.format("%.1f %%", it)) }
-                                    v.batteryLevel?.let { VitalRow("Watch battery", "${it.toInt()}%") }
-                                    VitalRow("Wearing Watch", if (v.isWearing) "Yes" else "No")
-                                    if (v.fallDetected)
-                                        Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
-                                }
+                                Text(
+                                    "Watch is off-wrist — sensor readings are hidden until worn again.",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
+                        }
+
+                        displayVitals?.let { v ->
+                            VitalsCard(
+                                title = if (uiState.realtimeVitals != null) "Live Vitals" else "Latest Vitals",
+                                live = uiState.realtimeVitals != null,
+                                vitals = v,
+                            )
+                        } ?: Card(Modifier.fillMaxWidth()) {
+                            Text(
+                                "No vitals yet. Start monitoring on your watch.",
+                                modifier = Modifier.padding(16.dp),
+                            )
                         }
                     }
                 }
@@ -115,33 +114,46 @@ fun PatientDetailScreen(
 }
 
 @Composable
-private fun RealtimeVitalsCard(rv: RealTimeVitals) {
+private fun VitalsCard(title: String, live: Boolean, vitals: VitalRecordDto) {
     Card(
         Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = if (live) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        }
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Green, modifier = Modifier.size(12.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Live Vitals", style = MaterialTheme.typography.titleMedium)
+                if (live) {
+                    Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.Green, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(title, style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.height(8.dp))
-            rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
-            rv.heartRateVariabilityMs?.let { VitalRow("HRV", String.format("%.1f ms", it)) }
-            rv.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
-            rv.respirationRateBpm?.let { VitalRow("Respiration", "${it.toInt()} /min") }
-            rv.temperatureC?.let { VitalRow("Body Temp", String.format("%.1f °C", it)) }
-            rv.skinTemperatureC?.let { VitalRow("Skin Temp", String.format("%.1f °C", it)) }
-            if (rv.systolicBp != null && rv.diastolicBp != null)
-                VitalRow("Blood Pressure", "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg")
-            rv.stressScore?.let { VitalRow("Stress", "${it.toInt()}/100") }
-            rv.stepsCount?.let { VitalRow("Steps", "$it") }
-            rv.ecgClassification?.let { VitalRow("ECG", it) }
-            rv.bloodGlucoseMgDl?.let { VitalRow("Glucose", String.format("%.0f mg/dL", it)) }
-            rv.batteryLevel?.let { VitalRow("Watch battery", "${it.toInt()}%") }
-            if (rv.fallDetected)
+            vitals.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm") }
+            vitals.heartRateVariabilityMs?.let { VitalRow("HRV", String.format("%.1f ms", it)) }
+            vitals.spO2Percent?.let { VitalRow("SpO2", "${it.toInt()}%") }
+            vitals.respirationRateBpm?.let { VitalRow("Respiration", "${it.toInt()} /min") }
+            vitals.temperatureC?.let { VitalRow("Body Temp", String.format("%.1f °C", it)) }
+            vitals.skinTemperatureC?.let { VitalRow("Skin Temp", String.format("%.1f °C", it)) }
+            if (vitals.systolicBp != null && vitals.diastolicBp != null) {
+                VitalRow("Blood Pressure", "${vitals.systolicBp.toInt()}/${vitals.diastolicBp.toInt()} mmHg")
+            }
+            vitals.stressScore?.let { VitalRow("Stress", "${it.toInt()}/100") }
+            vitals.sleepScore?.let { VitalRow("Sleep score", "${it.toInt()}/100") }
+            vitals.stepsCount?.let { VitalRow("Steps", "$it") }
+            vitals.caloriesBurned?.let { VitalRow("Calories", String.format("%.0f kcal", it)) }
+            vitals.ecgAverageHeartRate?.let { VitalRow("ECG avg HR", "${it.toInt()} bpm") }
+            vitals.ecgClassification?.let { VitalRow("ECG", it) }
+            vitals.bloodGlucoseMgDl?.let { VitalRow("Glucose", String.format("%.0f mg/dL", it)) }
+            vitals.bodyFatPercent?.let { VitalRow("Body Fat", String.format("%.1f %%", it)) }
+            vitals.batteryLevel?.let { VitalRow("Watch battery", "${it.toInt()}%") }
+            VitalRow("Watch status", if (vitals.isWearing) "On-wrist" else "Off-wrist")
+            if (vitals.fallDetected) {
                 Text("⚠ Fall Detected!", color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }

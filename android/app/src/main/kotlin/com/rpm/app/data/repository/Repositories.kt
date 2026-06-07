@@ -12,8 +12,8 @@ class PatientRepository @Inject constructor(private val api: RpmApiService) {
     suspend fun getPatientDetail(patientId: String): Resource<PatientDetailDto> =
         safeCall { api.getPatientDetail(patientId) }
 
-    suspend fun getLatestVitals(patientId: String): Resource<VitalRecordDto> =
-        safeCall { api.getLatestVitals(patientId) }
+    suspend fun getLatestVitals(patientId: String): Resource<VitalRecordDto?> =
+        safeCallNullable { api.getLatestVitals(patientId) }
 
     suspend fun getVitals(patientId: String, page: Int = 1): Resource<VitalsPagedDto> =
         safeCall { api.getVitals(patientId, page) }
@@ -30,14 +30,14 @@ class AlertRepository @Inject constructor(private val api: RpmApiService) {
     suspend fun getAlerts(patientId: String, page: Int = 1): Resource<AlertPagedDto> =
         safeCall { api.getAlerts(patientId, page) }
 
-    suspend fun getUnresolvedAlerts(): Resource<AlertPagedDto> =
-        safeCall { api.getUnresolvedAlerts() }
+    suspend fun getUnresolvedAlerts(patientId: String): Resource<List<AlertDto>> =
+        safeCall { api.getUnresolvedAlerts(patientId) }
 
-    suspend fun resolveAlert(alertId: String): Resource<Unit> =
-        safeCall { api.resolveAlert(alertId) }
+    suspend fun resolveAlert(patientId: String, alertId: String): Resource<Unit> =
+        safeCallEmpty { api.resolveAlert(patientId, alertId) }
 
-    suspend fun dismissAlert(alertId: String): Resource<Unit> =
-        safeCall { api.dismissAlert(alertId) }
+    suspend fun dismissAlert(patientId: String, alertId: String): Resource<Unit> =
+        safeCallEmpty { api.dismissAlert(patientId, alertId) }
 }
 
 class ChatRepository @Inject constructor(private val api: RpmApiService) {
@@ -86,6 +86,29 @@ private suspend fun <T> safeCall(call: suspend () -> retrofit2.Response<T>): Res
         } else {
             Resource.Error("Error ${response.code()}: ${response.message()}")
         }
+    } catch (e: Exception) {
+        Resource.Error(e.message ?: "Network error")
+    }
+}
+
+private suspend fun <T> safeCallNullable(call: suspend () -> retrofit2.Response<T>): Resource<T?> {
+    return try {
+        val response = call()
+        when {
+            response.code() == 204 -> Resource.Success(null)
+            response.isSuccessful -> Resource.Success(response.body())
+            else -> Resource.Error("Error ${response.code()}: ${response.message()}")
+        }
+    } catch (e: Exception) {
+        Resource.Error(e.message ?: "Network error")
+    }
+}
+
+private suspend fun safeCallEmpty(call: suspend () -> retrofit2.Response<Unit>): Resource<Unit> {
+    return try {
+        val response = call()
+        if (response.isSuccessful) Resource.Success(Unit)
+        else Resource.Error("Error ${response.code()}: ${response.message()}")
     } catch (e: Exception) {
         Resource.Error(e.message ?: "Network error")
     }

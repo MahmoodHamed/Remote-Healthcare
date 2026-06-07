@@ -66,10 +66,20 @@ export const normalizeVitalsPayload = (payload) => {
   return normalized
 }
 
+/** Hide sensor readings when the watch is off-wrist. */
+export const applyWearState = (vitals) => {
+  if (!vitals || vitals.isWearing !== false) return vitals
+  const cleared = { ...vitals }
+  for (const key of VITAL_FIELDS) cleared[key] = null
+  cleared.fallDetected = false
+  cleared.ecgClassification = null
+  return cleared
+}
+
 export const mapVitalsPayload = (payload) => {
   const source = normalizeVitalsPayload(payload)
   if (!source) return null
-  return {
+  const mapped = {
     heartRateBpm: source.heartRateBpm ?? null,
     spO2Percent: source.spO2Percent ?? null,
     systolicBp: source.systolicBp ?? null,
@@ -101,12 +111,16 @@ export const mapVitalsPayload = (payload) => {
     isWearing: source.isWearing == null ? null : source.isWearing !== false,
     recordedAt: source.recordedAt ?? new Date().toISOString(),
   }
+  return applyWearState(mapped)
 }
 
 /** Keep last-known values when a partial live update omits fields (e.g. HRV vs SpO2). */
 export const mergeVitalsPayload = (previous, incoming) => {
   const next = mapVitalsPayload(incoming)
   if (!next) return previous ?? null
+
+  if (next.isWearing === false) return applyWearState(next)
+
   if (!previous) return next
 
   const merged = { ...next }
@@ -117,5 +131,5 @@ export const mergeVitalsPayload = (previous, incoming) => {
   merged.fallDetected = next.fallDetected ?? previous.fallDetected ?? false
   merged.isWearing = next.isWearing ?? previous.isWearing ?? true
   merged.recordedAt = next.recordedAt || previous.recordedAt || new Date().toISOString()
-  return merged
+  return applyWearState(merged)
 }

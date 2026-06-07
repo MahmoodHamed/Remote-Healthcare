@@ -18,6 +18,7 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLoggedIn: Boolean = false,
+    val userId: String? = null,
     val userRole: String? = null
 )
 
@@ -39,8 +40,9 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             val token = tokenStore.getAccessToken()
             val role  = tokenStore.userRole.firstOrNull()
+            val userId = tokenStore.userId.firstOrNull()
             if (token != null) {
-                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role)
+                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
                 launch { fcmRegistrar.registerCurrentToken() }
             }
         }
@@ -68,6 +70,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
+                        userId = result.data.user.id,
                     )
                     fcmRegistrar.registerCurrentToken()
                 }

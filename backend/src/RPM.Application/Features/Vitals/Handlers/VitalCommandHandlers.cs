@@ -248,8 +248,19 @@ internal static class VitalMapper
         r.BatteryLevel);
 
     /// <summary>Combine a partial reading with the previous snapshot so null fields keep their last known value.</summary>
-    public static VitalRecordDto Merge(VitalRecordDto? previous, VitalRecordDto current) =>
-        previous is null ? current : current with
+    public static VitalRecordDto Merge(VitalRecordDto? previous, VitalRecordDto current)
+    {
+        if (!current.IsWearing)
+        {
+            return ClearReadings(current with
+            {
+                BatteryLevel = current.BatteryLevel ?? previous?.BatteryLevel,
+            });
+        }
+
+        if (previous is null) return current;
+
+        return current with
         {
             HeartRateBpm = current.HeartRateBpm ?? previous.HeartRateBpm,
             SpO2Percent = current.SpO2Percent ?? previous.SpO2Percent,
@@ -279,4 +290,36 @@ internal static class VitalMapper
             BloodGlucoseMgDl = current.BloodGlucoseMgDl ?? previous.BloodGlucoseMgDl,
             BatteryLevel = current.BatteryLevel ?? previous.BatteryLevel,
         };
+    }
+
+    private static VitalRecordDto ClearReadings(VitalRecordDto dto) => dto with
+    {
+        HeartRateBpm = null,
+        SpO2Percent = null,
+        SystolicBp = null,
+        DiastolicBp = null,
+        TemperatureC = null,
+        StepsCount = null,
+        CaloriesBurned = null,
+        FallDetected = false,
+        SkinTemperatureC = null,
+        HeartRateVariabilityMs = null,
+        RestingHeartRateBpm = null,
+        MaxHeartRateBpm = null,
+        RespirationRateBpm = null,
+        DistanceMeters = null,
+        FloorsClimbed = null,
+        ActiveMinutes = null,
+        StressScore = null,
+        SleepScore = null,
+        SleepDurationMinutes = null,
+        BodyFatPercent = null,
+        MuscleMassKg = null,
+        BodyWaterPercent = null,
+        BasalMetabolicRate = null,
+        EcgAverageHeartRate = null,
+        EcgClassification = null,
+        EcgWaveformJson = null,
+        BloodGlucoseMgDl = null,
+    };
 }

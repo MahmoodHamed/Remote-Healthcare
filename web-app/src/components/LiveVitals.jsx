@@ -13,7 +13,7 @@ const statusLabel = {
 }
 
 const hasAnyReading = (vitals) => {
-  if (!vitals) return false
+  if (!vitals || vitals.isWearing === false) return false
   return [
     vitals.heartRateBpm,
     vitals.spO2Percent,
@@ -142,7 +142,12 @@ export default function LiveVitals({ patientId, patientName, watchSetupHref = '/
         </div>
       </div>
       {error && <div className="form-error">{error}</div>}
-      {showEmpty && (
+      {latest?.isWearing === false && (
+        <div className="form-hint" style={{ marginBottom: '0.75rem' }}>
+          Watch is off-wrist — sensor readings are hidden until you wear it again.
+        </div>
+      )}
+      {showEmpty && latest?.isWearing !== false && (
         <div className="vitals-empty">
           <h3>Waiting for your first reading</h3>
           <p>

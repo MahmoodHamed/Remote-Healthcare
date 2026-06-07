@@ -54,44 +54,52 @@ interface RpmApiService {
     ): Response<Unit>
 
     // ── Vitals ────────────────────────────────────────────────────────────
-    @GET("api/vitals/{patientId}")
+    @GET("api/patients/{patientId}/vitals")
     suspend fun getVitals(
         @Path("patientId") patientId: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 50
     ): Response<VitalsPagedDto>
 
-    @GET("api/vitals/{patientId}/latest")
+    @GET("api/patients/{patientId}/vitals/latest")
     suspend fun getLatestVitals(@Path("patientId") patientId: String): Response<VitalRecordDto>
 
-    @GET("api/vitals/{patientId}/thresholds")
+    @GET("api/patients/{patientId}/vitals/threshold")
     suspend fun getThresholds(@Path("patientId") patientId: String): Response<AlertThresholdDto>
 
-    @PUT("api/vitals/{patientId}/thresholds")
+    @PUT("api/patients/{patientId}/vitals/threshold")
     suspend fun updateThresholds(
         @Path("patientId") patientId: String,
         @Body thresholds: AlertThresholdDto
     ): Response<Unit>
 
     // ── Alerts ────────────────────────────────────────────────────────────
-    @GET("api/alerts/{patientId}")
+    @GET("api/patients/{patientId}/alerts")
     suspend fun getAlerts(
         @Path("patientId") patientId: String,
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 30
     ): Response<AlertPagedDto>
 
-    @GET("api/alerts/unresolved")
+    @GET("api/patients/{patientId}/alerts/unresolved")
     suspend fun getUnresolvedAlerts(
-        @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 20
-    ): Response<AlertPagedDto>
+        @Path("patientId") patientId: String
+    ): Response<List<AlertDto>>
 
-    @POST("api/alerts/{alertId}/resolve")
-    suspend fun resolveAlert(@Path("alertId") alertId: String): Response<Unit>
+    @POST("api/patients/{patientId}/alerts/{alertId}/resolve")
+    suspend fun resolveAlert(
+        @Path("patientId") patientId: String,
+        @Path("alertId") alertId: String,
+        @Body body: ResolveAlertRequest = ResolveAlertRequest()
+    ): Response<Unit>
 
-    @POST("api/alerts/{alertId}/dismiss")
-    suspend fun dismissAlert(@Path("alertId") alertId: String): Response<Unit>
+    @POST("api/patients/{patientId}/alerts/{alertId}/dismiss")
+    suspend fun dismissAlert(
+        @Path("patientId") patientId: String,
+        @Path("alertId") alertId: String
+    ): Response<Unit>
 
     // ── Chat ──────────────────────────────────────────────────────────────
     @GET("api/chat/conversations")

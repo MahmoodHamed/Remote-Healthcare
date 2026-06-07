@@ -55,6 +55,7 @@ data class UpdateFcmTokenRequest(val fcmToken: String)
 data class VitalRecordDto(
     val id: String,
     val patientId: String,
+    val deviceId: String? = null,
     val recordedAt: String,
 
     // Cardio
@@ -162,14 +163,12 @@ data class UnreadCountDto(val count: Int)
 data class AlertDto(
     val id: String,
     val patientId: String,
-    val patientName: String,
     val type: String,
     val severity: String,
     val status: String,
     val message: String,
     val triggeredAt: String,
     val resolvedAt: String? = null,
-    val resolvedByName: String? = null
 )
 
 @Serializable
@@ -234,36 +233,61 @@ data class SendMessageRequest(
 )
 
 
+@Serializable
+data class ResolveAlertRequest(val notes: String? = null)
+
 // ── Patients ──────────────────────────────────────────────────────────────
 
 @Serializable
 data class PatientSummaryDto(
-    val patientId: String,
     val userId: String,
+    val profileId: String,
     val fullName: String,
+    val email: String,
+    val phone: String? = null,
     val avatarUrl: String? = null,
-    val latestVitals: VitalRecordDto? = null,
-    val unresolvedAlertCount: Int = 0
+    val dateOfBirth: String? = null,
+    val bloodType: String? = null,
+    val isActive: Boolean = true,
+)
+
+@Serializable
+data class VitalRecordLatestDto(
+    val heartRateBpm: Float? = null,
+    val spO2Percent: Float? = null,
+    val systolicBp: Float? = null,
+    val diastolicBp: Float? = null,
+    val temperatureC: Float? = null,
+    val recordedAt: String,
+)
+
+@Serializable
+data class DoctorAssignmentDto(
+    val doctorUserId: String,
+    val doctorName: String,
+    val specialization: String,
+    val status: String,
+    val assignedAt: String,
 )
 
 @Serializable
 data class PatientDetailDto(
-    val patientId: String,
     val userId: String,
+    val profileId: String,
     val fullName: String,
+    val email: String,
+    val phone: String,
+    val avatarUrl: String? = null,
     val dateOfBirth: String? = null,
     val bloodType: String? = null,
-    val medicalHistory: String? = null,
-    val avatarUrl: String? = null,
-    val latestVitals: VitalRecordDto? = null,
-    val doctor: DoctorDto? = null
-)
-
-@Serializable
-data class DoctorDto(
-    val userId: String,
-    val fullName: String,
-    val specialization: String? = null
+    val weightKg: Float? = null,
+    val heightCm: Float? = null,
+    val chronicDiseases: List<String> = emptyList(),
+    val allergies: List<String> = emptyList(),
+    val currentMedications: List<String> = emptyList(),
+    val emergencyContactPhone: String? = null,
+    val latestVitals: VitalRecordLatestDto? = null,
+    val doctors: List<DoctorAssignmentDto> = emptyList(),
 )
 
 @Serializable
