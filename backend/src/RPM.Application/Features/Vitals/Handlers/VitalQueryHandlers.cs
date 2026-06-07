@@ -24,11 +24,15 @@ public class GetLatestVitalsHandler(IUnitOfWork uow, ICacheService cache)
         var cached = await cache.GetAsync<VitalRecordDto>(VitalMapper.LatestVitalsKey(q.PatientId), ct);
         if (cached is not null) return cached;
 
-        var record = await uow.Vitals.GetLatestByPatientIdAsync(q.PatientId, ct);
-        if (record is null) return null;
-        var dto = VitalMapper.ToDto(record);
-        await cache.SetAsync(VitalMapper.LatestVitalsKey(q.PatientId), dto, TimeSpan.FromHours(6), ct);
-        return dto;
+        var recent = await uow.Vitals.GetRecentByPatientIdAsync(q.PatientId, 30, ct);
+        VitalRecordDto? merged = null;
+        foreach (var record in recent.OrderBy(r => r.RecordedAt))
+            merged = VitalMapper.Merge(merged, VitalMapper.ToDto(record));
+
+        if (merged is null) return null;
+
+        await cache.SetAsync(VitalMapper.LatestVitalsKey(q.PatientId), merged, TimeSpan.FromHours(6), ct);
+        return merged;
     }
 }
 

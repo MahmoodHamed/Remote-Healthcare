@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RPM.Application.Common.Interfaces;
@@ -45,7 +47,12 @@ public static class InfrastructureServiceExtensions
 
         // SignalR Redis Backplane
         services.AddSignalR()
-            .AddStackExchangeRedis(config.GetConnectionString("Redis") ?? "localhost:6379");
+            .AddStackExchangeRedis(config.GetConnectionString("Redis") ?? "localhost:6379")
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+            });
 
         return services;
     }

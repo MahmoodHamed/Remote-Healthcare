@@ -43,6 +43,13 @@ public class VitalRepository(AppDbContext db) : IVitalRepository
     public Task<VitalRecord?> GetLatestByPatientIdAsync(Guid patientId, CancellationToken ct = default) =>
         db.VitalRecords.Where(v => v.PatientId == patientId).OrderByDescending(v => v.RecordedAt).FirstOrDefaultAsync(ct);
 
+    public async Task<IEnumerable<VitalRecord>> GetRecentByPatientIdAsync(Guid patientId, int limit, CancellationToken ct = default) =>
+        await db.VitalRecords
+            .Where(v => v.PatientId == patientId)
+            .OrderByDescending(v => v.RecordedAt)
+            .Take(limit)
+            .ToListAsync(ct);
+
     public Task<long> CountByPatientIdAsync(Guid patientId, DateTime from, DateTime to, CancellationToken ct = default) =>
         db.VitalRecords.LongCountAsync(v => v.PatientId == patientId && v.RecordedAt >= from && v.RecordedAt <= to, ct);
 

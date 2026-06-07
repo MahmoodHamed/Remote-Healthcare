@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,7 +44,10 @@ fun HeartRateScreen(viewModel: WatchViewModel, onOpenSettings: () -> Unit = {}) 
             if (state.isMonitoring) viewModel.stopMonitoring()
             else viewModel.startMonitoring()
         },
-        onOpenSettings = onOpenSettings
+        onOpenSettings = onOpenSettings,
+        onMeasureSpO2 = viewModel::measureSpO2,
+        onMeasureEcg = viewModel::measureEcg,
+        onMeasureBodyFat = viewModel::measureBodyFat,
     )
 }
 
@@ -49,130 +55,145 @@ fun HeartRateScreen(viewModel: WatchViewModel, onOpenSettings: () -> Unit = {}) 
 fun HeartRateContent(
     state: WatchUiState,
     onToggle: () -> Unit,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onMeasureSpO2: () -> Unit = {},
+    onMeasureEcg: () -> Unit = {},
+    onMeasureBodyFat: () -> Unit = {},
 ) {
+    val scroll = rememberScrollState()
     Scaffold(
         timeText  = { TimeText() },
         modifier  = Modifier.background(MaterialTheme.colors.background)
     ) {
         Column(
-            modifier            = Modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            verticalArrangement = Arrangement.Center,
+                .verticalScroll(scroll)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // ── Heart rate value ──────────────────────────────────────────────
-            if (state.serviceStatus == ServiceStatus.CONNECTING) {
+            if (state.serviceStatus == ServiceStatus.CONNECTING || state.isMeasuringOnDemand) {
                 CircularProgressIndicator(
-                    modifier         = Modifier.size(40.dp),
-                    indicatorColor   = MaterialTheme.colors.primary,
-                    strokeWidth      = 3.dp
+                    modifier = Modifier.size(28.dp),
+                    indicatorColor = MaterialTheme.colors.primary,
+                    strokeWidth = 2.dp
                 )
-            } else {
-                Row(
-                    verticalAlignment    = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text       = "❤",
-                        fontSize   = 22.sp,
-                        color      = heartColor(state.hrStatus),
-                        modifier   = Modifier.padding(end = 4.dp)
-                    )
-                    Text(
-                        text       = if (state.heartRate > 0) "${state.heartRate}" else "--",
-                        fontSize   = 42.sp,
-                        fontWeight = FontWeight.Bold,
-                        color      = heartColor(state.hrStatus),
-                        textAlign  = TextAlign.Center
-                    )
-                    Text(
-                        text     = " bpm",
-                        fontSize = 14.sp,
-                        color    = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
-                        modifier = Modifier.align(Alignment.Bottom).padding(bottom = 6.dp)
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
             }
 
-            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "❤", fontSize = 18.sp, color = heartColor(state.hrStatus))
+                Text(
+                    text = if (state.heartRate > 0) "${state.heartRate}" else "--",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = heartColor(state.hrStatus),
+                )
+                Text(text = " bpm", fontSize = 12.sp, color = Color(0xFFBDBDBD))
+            }
 
-            // ── Status line ───────────────────────────────────────────────────
             Text(
-                text     = buildStatusText(state),
-                fontSize = 11.sp,
-                color    = statusColor(state),
+                text = buildStatusText(state),
+                fontSize = 10.sp,
+                color = statusColor(state),
                 textAlign = TextAlign.Center
             )
 
             if (state.patientId.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "ID: ${state.patientId}",
-                    fontSize = 9.sp,
-                    color = Color(0xFF757575),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // ── Toggle button ─────────────────────────────────────────────────
-            Button(
-                onClick = onToggle,
-                colors  = ButtonDefaults.buttonColors(
-                    backgroundColor = if (state.isMonitoring)
-                        MaterialTheme.colors.error
-                    else
-                        MaterialTheme.colors.primary
-                ),
-                modifier = Modifier.size(width = 90.dp, height = 36.dp)
-            ) {
-                Text(
-                    text     = if (state.isMonitoring) "Stop" else "Start",
-                    fontSize = 13.sp
-                )
+                Text(text = "ID: ${state.patientId}", fontSize = 9.sp, color = Color(0xFF757575))
             }
 
             Spacer(Modifier.height(6.dp))
+            SensorRow("Heart rate", fmt(state.sensors.heartRateBpm))
+            SensorRow("HRV", fmt(state.sensors.heartRateVariabilityMs, " ms"))
+            SensorRow("SpO₂", fmt(state.sensors.spO2Percent, " %"))
+            SensorRow("Skin temp.", fmt(state.sensors.skinTemperatureC, " °C"))
+            SensorRow("Ambient temp.", fmt(state.sensors.ambientTemperatureC, " °C"))
+            SensorRow("Stress", fmt(state.sensors.stressScore))
+            SensorRow("Steps", state.sensors.stepsCount?.toString() ?: "--")
+            SensorRow("ECG avg HR", fmt(state.sensors.ecgAverageHeartRate))
+            SensorRow("Body fat", fmt(state.sensors.bodyFatPercent, " %"))
+            SensorRow("Watch status", if (state.isMonitoring) "On" else "Off")
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+            ) {
+                Button(
+                    onClick = onMeasureBodyFat,
+                    enabled = state.isMonitoring && !state.isMeasuringOnDemand,
+                    modifier = Modifier.size(width = 72.dp, height = 32.dp),
+                ) { Text("Body Fat", fontSize = 9.sp) }
+                Button(
+                    onClick = onMeasureEcg,
+                    enabled = state.isMonitoring && !state.isMeasuringOnDemand,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary),
+                    modifier = Modifier.size(width = 72.dp, height = 32.dp),
+                ) { Text("ECG", fontSize = 9.sp) }
+            }
+
+            Spacer(Modifier.height(4.dp))
 
             Button(
-                onClick = onOpenSettings,
-                modifier = Modifier.size(width = 90.dp, height = 30.dp)
+                onClick = onToggle,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = if (state.isMonitoring) MaterialTheme.colors.error else MaterialTheme.colors.primary
+                ),
+                modifier = Modifier.size(width = 100.dp, height = 34.dp)
             ) {
-                Text(text = "Setup", fontSize = 11.sp)
+                Text(if (state.isMonitoring) "Stop" else "Start", fontSize = 12.sp)
+            }
+
+            if (state.measureMessage.isNotBlank()) {
+                Text(
+                    text = state.measureMessage,
+                    fontSize = 9.sp,
+                    color = Color(0xFF81C784),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Button(onClick = onOpenSettings, modifier = Modifier.size(width = 80.dp, height = 28.dp)) {
+                Text("Setup", fontSize = 10.sp)
             }
         }
     }
 }
 
+@Composable
+private fun SensorRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontSize = 10.sp, color = Color(0xFF9E9E9E))
+        Text(text = value, fontSize = 10.sp, color = Color.White)
+    }
+}
+
+private fun fmt(value: Float?, suffix: String = ""): String =
+    if (value == null) "--" else "${if (value % 1f == 0f) value.toInt() else "%.1f".format(value)}$suffix"
+
 private fun buildStatusText(state: WatchUiState): String {
     if (state.serviceStatus == ServiceStatus.ERROR && state.errorMessage.isNotBlank()) {
         return state.errorMessage
     }
-
-    val sensorStr = when (state.hrStatus) {
-        HrStatus.GOOD         -> "Good"
-        HrStatus.MOVING       -> "Moving"
-        HrStatus.DEVICE_MOVING -> "Still"
-        HrStatus.LOW_PASS     -> "Low"
-        HrStatus.INITIAL      -> "Place watch firmly"
-    }
     val serverStr = when (state.mqttConnectionState) {
-        MqttConnectionState.CONNECTED    -> " · Server OK"
-        MqttConnectionState.CONNECTING   -> " · Server…"
-        MqttConnectionState.ERROR        -> " · Server error"
-        MqttConnectionState.DISCONNECTED -> " · No server"
+        MqttConnectionState.CONNECTED    -> "Shared with server"
+        MqttConnectionState.CONNECTING   -> "Connecting to server…"
+        MqttConnectionState.ERROR        -> "Server error"
+        MqttConnectionState.DISCONNECTED -> "No server"
     }
-    return if (state.isMonitoring) sensorStr + serverStr else "Tap Start to monitor"
+    return if (state.isMonitoring) serverStr else "Tap Start to monitor"
 }
 
 private fun heartColor(status: HrStatus): Color = when (status) {
-    HrStatus.GOOD         -> Color(0xFFE53935)   // red
-    HrStatus.MOVING       -> Color(0xFFFF8F00)   // amber
-    else                  -> Color(0xFF9E9E9E)   // grey
+    HrStatus.GOOD         -> Color(0xFFE53935)
+    HrStatus.MOVING       -> Color(0xFFFF8F00)
+    else                  -> Color(0xFF9E9E9E)
 }
 
 private fun statusColor(state: WatchUiState): Color =

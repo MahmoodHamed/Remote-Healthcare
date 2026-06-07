@@ -61,6 +61,8 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub, I
         await uow.SaveChangesAsync(ct);
 
         var dto = VitalMapper.ToDto(record);
+        var previous = await cache.GetAsync<VitalRecordDto>(VitalMapper.LatestVitalsKey(cmd.PatientId), ct);
+        dto = VitalMapper.Merge(previous, dto);
         await cache.SetAsync(VitalMapper.LatestVitalsKey(cmd.PatientId), dto, TimeSpan.FromHours(6), ct);
         await hub.BroadcastVitalsAsync(cmd.PatientId, dto, ct);
 
@@ -167,11 +169,16 @@ public class IngestVitalsBatchCommandHandler(IUnitOfWork uow, IVitalsHubService 
         await uow.Vitals.AddRangeAsync(records, ct);
         await uow.SaveChangesAsync(ct);
 
-        foreach (var record in records)
+        foreach (var group in records.GroupBy(r => r.PatientId))
         {
-            var dto = VitalMapper.ToDto(record);
-            await cache.SetAsync(VitalMapper.LatestVitalsKey(record.PatientId), dto, TimeSpan.FromHours(6), ct);
-            await hub.BroadcastVitalsAsync(record.PatientId, dto, ct);
+            VitalRecordDto? merged = await cache.GetAsync<VitalRecordDto>(VitalMapper.LatestVitalsKey(group.Key), ct);
+            foreach (var record in group.OrderBy(r => r.RecordedAt))
+                merged = VitalMapper.Merge(merged, VitalMapper.ToDto(record));
+
+            if (merged is null) continue;
+
+            await cache.SetAsync(VitalMapper.LatestVitalsKey(group.Key), merged, TimeSpan.FromHours(6), ct);
+            await hub.BroadcastVitalsAsync(group.Key, merged, ct);
         }
 
         return records.Count;
@@ -239,4 +246,37 @@ internal static class VitalMapper
         r.EcgWaveformJson,
         r.BloodGlucoseMgDl,
         r.BatteryLevel);
+
+    /// <summary>Combine a partial reading with the previous snapshot so null fields keep their last known value.</summary>
+    public static VitalRecordDto Merge(VitalRecordDto? previous, VitalRecordDto current) =>
+        previous is null ? current : current with
+        {
+            HeartRateBpm = current.HeartRateBpm ?? previous.HeartRateBpm,
+            SpO2Percent = current.SpO2Percent ?? previous.SpO2Percent,
+            SystolicBp = current.SystolicBp ?? previous.SystolicBp,
+            DiastolicBp = current.DiastolicBp ?? previous.DiastolicBp,
+            TemperatureC = current.TemperatureC ?? previous.TemperatureC,
+            StepsCount = current.StepsCount ?? previous.StepsCount,
+            CaloriesBurned = current.CaloriesBurned ?? previous.CaloriesBurned,
+            SkinTemperatureC = current.SkinTemperatureC ?? previous.SkinTemperatureC,
+            HeartRateVariabilityMs = current.HeartRateVariabilityMs ?? previous.HeartRateVariabilityMs,
+            RestingHeartRateBpm = current.RestingHeartRateBpm ?? previous.RestingHeartRateBpm,
+            MaxHeartRateBpm = current.MaxHeartRateBpm ?? previous.MaxHeartRateBpm,
+            RespirationRateBpm = current.RespirationRateBpm ?? previous.RespirationRateBpm,
+            DistanceMeters = current.DistanceMeters ?? previous.DistanceMeters,
+            FloorsClimbed = current.FloorsClimbed ?? previous.FloorsClimbed,
+            ActiveMinutes = current.ActiveMinutes ?? previous.ActiveMinutes,
+            StressScore = current.StressScore ?? previous.StressScore,
+            SleepScore = current.SleepScore ?? previous.SleepScore,
+            SleepDurationMinutes = current.SleepDurationMinutes ?? previous.SleepDurationMinutes,
+            BodyFatPercent = current.BodyFatPercent ?? previous.BodyFatPercent,
+            MuscleMassKg = current.MuscleMassKg ?? previous.MuscleMassKg,
+            BodyWaterPercent = current.BodyWaterPercent ?? previous.BodyWaterPercent,
+            BasalMetabolicRate = current.BasalMetabolicRate ?? previous.BasalMetabolicRate,
+            EcgAverageHeartRate = current.EcgAverageHeartRate ?? previous.EcgAverageHeartRate,
+            EcgClassification = current.EcgClassification ?? previous.EcgClassification,
+            EcgWaveformJson = current.EcgWaveformJson ?? previous.EcgWaveformJson,
+            BloodGlucoseMgDl = current.BloodGlucoseMgDl ?? previous.BloodGlucoseMgDl,
+            BatteryLevel = current.BatteryLevel ?? previous.BatteryLevel,
+        };
 }

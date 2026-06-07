@@ -229,11 +229,16 @@ class HeartRateMonitorService : Service() {
             heartRateBpm = hr,
             heartRateVariabilityMs = sensors.heartRateVariabilityMs,
             maxHeartRateBpm = maxHeartRate,
+            spO2Percent = sensors.spO2Percent,
             skinTemperatureC = sensors.skinTemperatureC,
             temperatureC = sensors.ambientTemperatureC,
             stepsCount = sensors.stepsCount,
             caloriesBurned = sensors.caloriesBurned,
             distanceMeters = sensors.distanceMeters,
+            stressScore = sensors.stressScore,
+            bodyFatPercent = sensors.bodyFatPercent,
+            ecgAverageHeartRate = sensors.ecgAverageHeartRate,
+            ecgClassification = sensors.ecgClassification,
             batteryLevel = sensors.batteryLevel,
             fallDetected = sensors.fallDetected,
             isWearing = isWearingNow,
@@ -242,8 +247,38 @@ class HeartRateMonitorService : Service() {
         val json = Json.encodeToString(payload)
         mqttManager.publish(topic, json)
         val seq = publishSequence.incrementAndGet()
-        Log.d(TAG, "Published vitals #$seq to $topic (hr=$hr)")
+        Log.d(TAG, "Published vitals #$seq to $topic (hr=$hr hrv=${sensors.heartRateVariabilityMs})")
     }
+
+    fun measureSpO2(onComplete: (Float?) -> Unit = {}) {
+        serviceScope.launch(Dispatchers.IO) {
+            sensorsManager.measureSpO2 { value ->
+                if (value != null) publishLatestVitals()
+                onComplete(value)
+            }
+        }
+    }
+
+    fun measureEcg(onComplete: (Float?, String?) -> Unit = { _, _ -> }) {
+        serviceScope.launch(Dispatchers.IO) {
+            sensorsManager.measureEcg { hr, cls ->
+                if (hr != null) publishLatestVitals()
+                onComplete(hr, cls)
+            }
+        }
+    }
+
+    fun measureBodyFat(onComplete: (Float?) -> Unit = {}) {
+        serviceScope.launch(Dispatchers.IO) {
+            sensorsManager.measureBodyFat { value ->
+                if (value != null) publishLatestVitals()
+                onComplete(value)
+            }
+        }
+    }
+
+    /** Live sensor snapshot for the watch UI. */
+    fun sensorSnapshot() = sensorsManager.snapshot()
 
     private fun acquireWakeLock() {
         val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return

@@ -40,6 +40,11 @@ data class AdvancedReading(
     var fallDetected: Boolean = false,
     var batteryLevel: Float? = null,
     var isWearing: Boolean = true,
+    var stressScore: Float? = null,
+    var spO2Percent: Float? = null,
+    var bodyFatPercent: Float? = null,
+    var ecgAverageHeartRate: Float? = null,
+    var ecgClassification: String? = null,
 )
 
 /**
@@ -112,7 +117,10 @@ class WatchSensorsManager @Inject constructor(
                         val intervals = raw?.mapNotNull { (it as? Number)?.toFloat() } ?: emptyList()
                         if (intervals.size > 1) {
                             val hrv = rrIntervalSdnn(intervals)
-                            synchronized(state) { state.heartRateVariabilityMs = hrv }
+                            synchronized(state) {
+                                state.heartRateVariabilityMs = hrv
+                                state.stressScore = estimateStressFromHrv(hrv)
+                            }
                         }
                     } catch (e: Throwable) {
                         Log.w(TAG, "HRV parse failed: ${e.message}")
@@ -275,5 +283,141 @@ class WatchSensorsManager @Inject constructor(
         val mean = intervals.average()
         val variance = intervals.map { (it - mean).pow(2.0) }.average()
         return sqrt(variance).toFloat()
+    }
+
+    /** Rough stress index from HRV (0–100). Lower HRV → higher stress. */
+    private fun estimateStressFromHrv(hrvMs: Float): Float =
+        ((100f - (hrvMs / 4f)).coerceIn(0f, 100f))
+
+    fun cacheOnDemandReading(
+        spO2: Float? = null,
+        bodyFat: Float? = null,
+        ecgAvgHr: Float? = null,
+        ecgClass: String? = null,
+    ) {
+        synchronized(state) {
+            spO2?.let { state.spO2Percent = it }
+            bodyFat?.let { state.bodyFatPercent = it }
+            ecgAvgHr?.let { state.ecgAverageHeartRate = it }
+            ecgClass?.let { state.ecgClassification = it }
+        }
+    }
+
+    /**
+     * One-shot SpO₂ capture. Only one on-demand tracker may run at a time on Samsung watches.
+     */
+    fun measureSpO2(onComplete: (Float?) -> Unit) {
+        val result = runOnDemand(HealthTrackerType.SPO2_ON_DEMAND, "SpO2") { dp ->
+            (dp.getValue(ValueKey.Spo2Set.SPO2) as? Number)?.toFloat()
+        }
+        result?.let { cacheOnDemandReading(spO2 = it) }
+        onComplete(result)
+    }
+
+    fun measureEcg(onComplete: (Float?, String?) -> Unit) {
+        val service = healthTrackingService
+        if (service == null) {
+            onComplete(null, null)
+            return
+        }
+        try {
+            val tracker = service.getHealthTracker(HealthTrackerType.ECG_ON_DEMAND) ?: run {
+                onComplete(null, null)
+                return
+            }
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var avgHr: Float? = null
+            var classification: String? = null
+            tracker.setEventListener(object : HealthTracker.TrackerEventListener {
+                override fun onDataReceived(dataPoints: List<DataPoint>) {
+                    try {
+                        for (dp in dataPoints) {
+                            avgHr = (dp.getValue(ValueKey.EcgSet.HEART_RATE) as? Number)?.toFloat()
+                            classification = dp.getValue(ValueKey.EcgSet.CLASSIFICATION) as? String
+                            if (avgHr != null) break
+                        }
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "ECG parse failed: ${e.message}")
+                    } finally {
+                        try { tracker.unsetEventListener() } catch (_: Throwable) {}
+                        latch.countDown()
+                    }
+                }
+
+                override fun onError(error: HealthTracker.TrackerError) {
+                    Log.w(TAG, "ECG tracker error: $error")
+                    try { tracker.unsetEventListener() } catch (_: Throwable) {}
+                    latch.countDown()
+                }
+
+                override fun onFlushCompleted() = Unit
+            })
+            latch.await(60, java.util.concurrent.TimeUnit.SECONDS)
+            avgHr?.let { cacheOnDemandReading(ecgAvgHr = it, ecgClass = classification) }
+            onComplete(avgHr, classification)
+        } catch (e: Throwable) {
+            Log.w(TAG, "ECG measurement failed: ${e.message}")
+            onComplete(null, null)
+        }
+    }
+
+    fun measureBodyFat(onComplete: (Float?) -> Unit) {
+        val result = runOnDemand(HealthTrackerType.BIA_ON_DEMAND, "BIA") { dp ->
+            (dp.getValue(ValueKey.BiaSet.BODY_FAT) as? Number)?.toFloat()
+        }
+        result?.let { cacheOnDemandReading(bodyFat = it) }
+        onComplete(result)
+    }
+
+    private fun <T> runOnDemand(
+        type: HealthTrackerType,
+        label: String,
+        parse: (DataPoint) -> T?,
+    ): T? {
+        val service = healthTrackingService
+        if (service == null) {
+            Log.w(TAG, "$label: Samsung service not connected")
+            return null
+        }
+        return try {
+            val tracker = service.getHealthTracker(type)
+            if (tracker == null) {
+                Log.w(TAG, "$label tracker unavailable on this watch")
+                return null
+            }
+            var result: T? = null
+            val latch = java.util.concurrent.CountDownLatch(1)
+            tracker.setEventListener(object : HealthTracker.TrackerEventListener {
+                override fun onDataReceived(dataPoints: List<DataPoint>) {
+                    try {
+                        for (dp in dataPoints) {
+                            val parsed = parse(dp)
+                            if (parsed != null) {
+                                result = parsed
+                                break
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "$label parse failed: ${e.message}")
+                    } finally {
+                        try { tracker.unsetEventListener() } catch (_: Throwable) {}
+                        latch.countDown()
+                    }
+                }
+
+                override fun onError(error: HealthTracker.TrackerError) {
+                    Log.w(TAG, "$label tracker error: $error")
+                    try { tracker.unsetEventListener() } catch (_: Throwable) {}
+                    latch.countDown()
+                }
+
+                override fun onFlushCompleted() = Unit
+            })
+            latch.await(45, java.util.concurrent.TimeUnit.SECONDS)
+            result
+        } catch (e: Throwable) {
+            Log.w(TAG, "$label measurement failed: ${e.message}")
+            null
+        }
     }
 }
