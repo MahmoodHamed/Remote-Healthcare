@@ -1,7 +1,6 @@
 package com.rpm.app.data.repository;
 
 import com.rpm.app.data.auth.SessionManager;
-import com.rpm.app.data.local.TokenDataStore;
 import com.rpm.app.data.remote.api.RpmApiService;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -29,29 +28,23 @@ public final class DeviceRepository_Factory implements Factory<DeviceRepository>
 
   private final Provider<SessionManager> sessionManagerProvider;
 
-  private final Provider<TokenDataStore> tokenStoreProvider;
-
   public DeviceRepository_Factory(Provider<RpmApiService> apiProvider,
-      Provider<SessionManager> sessionManagerProvider,
-      Provider<TokenDataStore> tokenStoreProvider) {
+      Provider<SessionManager> sessionManagerProvider) {
     this.apiProvider = apiProvider;
     this.sessionManagerProvider = sessionManagerProvider;
-    this.tokenStoreProvider = tokenStoreProvider;
   }
 
   @Override
   public DeviceRepository get() {
-    return newInstance(apiProvider.get(), sessionManagerProvider.get(), tokenStoreProvider.get());
+    return newInstance(apiProvider.get(), sessionManagerProvider.get());
   }
 
   public static DeviceRepository_Factory create(Provider<RpmApiService> apiProvider,
-      Provider<SessionManager> sessionManagerProvider,
-      Provider<TokenDataStore> tokenStoreProvider) {
-    return new DeviceRepository_Factory(apiProvider, sessionManagerProvider, tokenStoreProvider);
+      Provider<SessionManager> sessionManagerProvider) {
+    return new DeviceRepository_Factory(apiProvider, sessionManagerProvider);
   }
 
-  public static DeviceRepository newInstance(RpmApiService api, SessionManager sessionManager,
-      TokenDataStore tokenStore) {
-    return new DeviceRepository(api, sessionManager, tokenStore);
+  public static DeviceRepository newInstance(RpmApiService api, SessionManager sessionManager) {
+    return new DeviceRepository(api, sessionManager);
   }
 }
