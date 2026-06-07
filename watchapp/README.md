@@ -1,12 +1,13 @@
 # Galaxy Watch 8 – Vitals App
 
-Wear OS app for **Samsung Galaxy Watch 8** (Samsung Health Sensor SDK). Streams heart rate, skin temperature, and SpO₂ to the RPM MQTT broker.
+Wear OS app for **Samsung Galaxy Watch 8** (Samsung Health Sensor SDK). Streams supported vitals only: heart rate, HRV, SpO₂, skin/ambient temperature, stress (EDA), steps, calories, fall detection, wear status, and on-demand body fat & ECG.
 
 ## Sensor modules (`app/src/main/kotlin/com/rpm/watch/sensor/`)
 
 | Path | Role |
 |------|------|
-| `SensorType.kt` | Active sensor: `HEART_RATE`, `SKIN_TEMPERATURE`, `SPO2` |
+| `SensorType.kt` | Samsung sensors: `HEART_RATE`, `SKIN_TEMPERATURE`, `SPO2`, `EDA`, `BIA`, `ECG` |
+| `ui/SupportedWatchVitals.kt` | UI list of shareable metrics (matches phone/web) |
 | `VitalsModels.kt` | Shared readings & tracker state |
 | `VitalsSensorCoordinator.kt` | Samsung SDK session + routes to parsers |
 | `heart/HeartRateSamsungParser.kt` | Samsung HR `DataPoint` parsing |
@@ -32,4 +33,4 @@ Wear OS app for **Samsung Galaxy Watch 8** (Samsung Health Sensor SDK). Streams 
 
 ## MQTT topic
 
-`vitals/{patientId}/data` — JSON: `heartRateBpm`, `temperatureC`, `spO2Percent`, `stepsCount`, `fallDetected`, etc.
+`vitals/{patientId}/data` — JSON: `heartRateBpm`, `hrvMs`, `spO2Percent`, `skinTemperatureC`, `ambientTemperatureC`, `stressScore`, `stepsCount`, `caloriesBurned`, `fallDetected`, `isWearing`, `bodyFatPercent`, `ecgAvgHeartRateBpm`.

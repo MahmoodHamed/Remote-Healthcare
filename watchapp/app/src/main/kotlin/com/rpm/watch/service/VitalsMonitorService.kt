@@ -104,21 +104,39 @@ class VitalsMonitorService : Service() {
     private var lastMqttPublishMs: Long = 0L
 
     private val _heartRate = MutableStateFlow(0)
-    private val _temperatureC = MutableStateFlow<Float?>(null)
+    private val _skinTemperatureC = MutableStateFlow<Float?>(null)
+    private val _ambientTemperatureC = MutableStateFlow<Float?>(null)
     private val _spO2Percent = MutableStateFlow<Float?>(null)
+    private val _hrvMs = MutableStateFlow<Float?>(null)
+    private val _stressScore = MutableStateFlow<Float?>(null)
+    private val _stepsCount = MutableStateFlow<Int?>(null)
+    private val _caloriesBurned = MutableStateFlow<Float?>(null)
+    private val _fallDetected = MutableStateFlow(false)
+    private val _isWearing = MutableStateFlow(true)
+    private val _bodyFatPercent = MutableStateFlow<Float?>(null)
     private val _heartRateStatus = MutableStateFlow(HeartRateStatus.INITIAL)
     private val _svcStatus = MutableStateFlow(VitalsServiceStatus.IDLE)
     private val _lastError = MutableStateFlow("")
     private val _ecgMeasuring = MutableStateFlow(false)
+    private val _biaMeasuring = MutableStateFlow(false)
     private val _ecgAvgHeartRateBpm = MutableStateFlow<Float?>(null)
 
     val heartRate: StateFlow<Int> = _heartRate
-    val temperatureC: StateFlow<Float?> = _temperatureC
+    val skinTemperatureC: StateFlow<Float?> = _skinTemperatureC
+    val ambientTemperatureC: StateFlow<Float?> = _ambientTemperatureC
     val spO2Percent: StateFlow<Float?> = _spO2Percent
+    val hrvMs: StateFlow<Float?> = _hrvMs
+    val stressScore: StateFlow<Float?> = _stressScore
+    val stepsCount: StateFlow<Int?> = _stepsCount
+    val caloriesBurned: StateFlow<Float?> = _caloriesBurned
+    val fallDetected: StateFlow<Boolean> = _fallDetected
+    val isWearing: StateFlow<Boolean> = _isWearing
+    val bodyFatPercent: StateFlow<Float?> = _bodyFatPercent
     val heartRateStatus: StateFlow<HeartRateStatus> = _heartRateStatus
     val svcStatus: StateFlow<VitalsServiceStatus> = _svcStatus
     val lastError: StateFlow<String> = _lastError
     val ecgMeasuring: StateFlow<Boolean> = _ecgMeasuring
+    val biaMeasuring: StateFlow<Boolean> = _biaMeasuring
     val ecgAvgHeartRateBpm: StateFlow<Float?> = _ecgAvgHeartRateBpm
     val mqttState: StateFlow<MqttConnectionState>
         get() = mqttManager.connectionState
@@ -133,6 +151,17 @@ class VitalsMonitorService : Service() {
         vitalsCoordinator.requestOnDemandMeasurement(SensorType.ECG)
         updateNotification("ECG — rest arm, follow watch prompt")
         Log.i(TAG, "ECG measurement requested")
+    }
+
+    fun requestBodyFatMeasurement() {
+        if (monitorJob?.isActive != true) {
+            _lastError.value = "Tap Start before body fat"
+            return
+        }
+        _biaMeasuring.value = true
+        vitalsCoordinator.requestOnDemandMeasurement(SensorType.BIA)
+        updateNotification("BIA — follow watch body composition prompt")
+        Log.i(TAG, "BIA measurement requested")
     }
 
     override fun onCreate() {
@@ -236,6 +265,7 @@ class VitalsMonitorService : Service() {
                         }
                         is TrackerState.Error -> {
                             if (sensorType == SensorType.ECG) _ecgMeasuring.value = false
+                            if (sensorType == SensorType.BIA) _biaMeasuring.value = false
                             _svcStatus.value = VitalsServiceStatus.ERROR
                             _lastError.value = state.message
                             updateNotification("Error: ${state.message}")
@@ -278,6 +308,18 @@ class VitalsMonitorService : Service() {
                     maybePublishVitals(force = true)
                 }
             }
+
+            // Platform motion metrics for watch UI.
+            launch {
+                while (isActive) {
+                    val motion = motionHub.snapshot()
+                    _stepsCount.value = motion.stepsCount
+                    _caloriesBurned.value = motion.caloriesBurned
+                    _fallDetected.value = motion.fallDetected
+                    refreshWearingState()
+                    delay(3_000)
+                }
+            }
         }
     }
 
@@ -296,9 +338,18 @@ class VitalsMonitorService : Service() {
         latestBodyFatPercent = null
         latestEcgAvgHeartRateBpm = null
         _heartRate.value = 0
-        _temperatureC.value = null
+        _skinTemperatureC.value = null
+        _ambientTemperatureC.value = null
         _spO2Percent.value = null
+        _hrvMs.value = null
+        _stressScore.value = null
+        _stepsCount.value = null
+        _caloriesBurned.value = null
+        _fallDetected.value = false
+        _isWearing.value = true
+        _bodyFatPercent.value = null
         _heartRateStatus.value = HeartRateStatus.INITIAL
+        _biaMeasuring.value = false
     }
 
     private fun acquireMeasurementWakeLock() {
@@ -350,7 +401,7 @@ class VitalsMonitorService : Service() {
             deviceId = deviceId,
             heartRateBpm = hrForMqtt,
             spO2Percent = latestSpO2Percent,
-            temperatureC = latestTemperatureC,
+            temperatureC = latestSkinTemperatureC ?: latestTemperatureC,
             skinTemperatureC = latestSkinTemperatureC,
             ambientTemperatureC = latestAmbientTemperatureC,
             hrvMs = latestHrvMs?.takeIf { wearing },
@@ -380,7 +431,10 @@ class VitalsMonitorService : Service() {
                     maybePublishVitals()
                     return
                 }
-                reading.hrvMs?.let { latestHrvMs = it }
+                reading.hrvMs?.let {
+                    latestHrvMs = it
+                    _hrvMs.value = it
+                }
                 val bpm = reading.heartRateBpm
                 if (bpm != null && reading.status.isSuccessful && effectiveIsWearing()) {
                     latestHeartRate = bpm
@@ -393,12 +447,15 @@ class VitalsMonitorService : Service() {
                 reading.stressScore?.let {
                     latestStressScore = it
                     latestStressAtMs = now
+                    _stressScore.value = it
                     maybePublishVitals()
                 }
             }
             SensorType.BIA -> {
                 reading.bodyFatPercent?.let {
                     latestBodyFatPercent = it
+                    _bodyFatPercent.value = it
+                    _biaMeasuring.value = false
                     maybePublishVitals()
                 }
             }
@@ -428,12 +485,13 @@ class VitalsMonitorService : Service() {
                 reading.skinTemperatureC?.let {
                     latestSkinTemperatureC = it
                     latestSkinTempAtMs = now
+                    _skinTemperatureC.value = it
                 }
-                reading.ambientTemperatureC?.let { latestAmbientTemperatureC = it }
-                reading.temperatureC?.let {
-                    latestTemperatureC = it
-                    _temperatureC.value = it
+                reading.ambientTemperatureC?.let {
+                    latestAmbientTemperatureC = it
+                    _ambientTemperatureC.value = it
                 }
+                reading.temperatureC?.let { latestTemperatureC = it }
                 maybePublishVitals()
             }
         }
@@ -444,6 +502,7 @@ class VitalsMonitorService : Service() {
         latestHeartRateAtMs = 0L
         latestHrvMs = null
         _heartRate.value = 0
+        _hrvMs.value = null
         maybePublishVitals(force = true)
     }
 
@@ -479,6 +538,7 @@ class VitalsMonitorService : Service() {
 
     private fun refreshWearingState() {
         val wearing = effectiveIsWearing()
+        _isWearing.value = wearing
         if (isWearingNow != wearing) {
             isWearingNow = wearing
             motionHub.setWatchOnWrist(wearing)
@@ -495,9 +555,9 @@ class VitalsMonitorService : Service() {
             else -> "Measuring HR…"
         }
         SensorType.SPO2 -> reading.spO2Percent?.let { "SpO₂: ${it.toInt()}%" } ?: "Measuring SpO₂…"
-        SensorType.SKIN_TEMPERATURE -> reading.temperatureC?.let {
-            "Temp: ${String.format(java.util.Locale.US, "%.1f", it)} °C"
-        } ?: "Measuring temp…"
+        SensorType.SKIN_TEMPERATURE -> reading.skinTemperatureC?.let {
+            "Skin: ${String.format(java.util.Locale.US, "%.1f", it)} °C"
+        } ?: "Measuring skin…"
         SensorType.EDA -> reading.stressScore?.let { "Stress: ${it.toInt()}/100" } ?: "EDA…"
         SensorType.BIA -> reading.bodyFatPercent?.let {
             "Body fat: ${String.format(java.util.Locale.US, "%.1f", it)}%"

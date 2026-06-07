@@ -2,6 +2,7 @@ package com.rpm.watch.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,9 +34,7 @@ import com.rpm.watch.WatchUiState
 import com.rpm.watch.WatchViewModel
 import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.sensor.HeartRateStatus
-import com.rpm.watch.sensor.SensorType
 import com.rpm.watch.service.VitalsServiceStatus
-import java.util.Locale
 
 @Composable
 fun VitalsMonitorScreen(
@@ -47,11 +46,12 @@ fun VitalsMonitorScreen(
         state = state,
         onToggle = {
             if (state.isMonitoring) viewModel.stopMonitoring()
-            else viewModel.startMonitoring(state.selectedSensor)
+            else viewModel.startMonitoring()
         },
-        onSensorSelected = viewModel::selectSensor,
+        onMetricSelected = viewModel::selectMetric,
         onOpenSettings = onOpenSettings,
         onMeasureEcg = viewModel::startEcgMeasurement,
+        onMeasureBodyFat = viewModel::startBodyFatMeasurement,
         onOpenSamsungHealth = viewModel::openSamsungHealthMonitor,
     )
 }
@@ -60,11 +60,14 @@ fun VitalsMonitorScreen(
 fun VitalsMonitorContent(
     state: WatchUiState,
     onToggle: () -> Unit,
-    onSensorSelected: (SensorType) -> Unit,
+    onMetricSelected: (WatchViewMetric) -> Unit,
     onOpenSettings: () -> Unit,
     onMeasureEcg: () -> Unit,
+    onMeasureBodyFat: () -> Unit,
     onOpenSamsungHealth: () -> Unit,
 ) {
+    val metric = state.selectedMetric
+
     Scaffold(
         timeText = { TimeText() },
         modifier = Modifier.background(MaterialTheme.colors.background),
@@ -97,9 +100,7 @@ fun VitalsMonitorContent(
                 Button(
                     onClick = onOpenSettings,
                     modifier = Modifier.fillMaxWidth().height(22.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = MaterialTheme.colors.surface,
-                    ),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface),
                 ) {
                     Text("Settings", fontSize = 8.sp)
                 }
@@ -107,7 +108,7 @@ fun VitalsMonitorContent(
             if (state.isMonitoring) {
                 item {
                     Text(
-                        text = "HR · Temp · SpO₂ active",
+                        text = "Sharing: HR · Skin · SpO₂ · Stress · Steps",
                         fontSize = 8.sp,
                         color = MaterialTheme.colors.primary,
                         textAlign = TextAlign.Center,
@@ -124,15 +125,14 @@ fun VitalsMonitorContent(
                 )
             }
             item {
-                SensorSelector(
-                    selected = state.selectedSensor,
-                    enabled = true,
-                    onSelected = onSensorSelected,
+                MetricSelector(
+                    selected = metric,
+                    onSelected = onMetricSelected,
                 )
             }
             item {
                 if (state.isMonitoring &&
-                    state.selectedSensor == SensorType.HEART_RATE &&
+                    metric == WatchViewMetric.HEART_RATE &&
                     state.heartRate <= 0 &&
                     state.serviceStatus == VitalsServiceStatus.CONNECTING
                 ) {
@@ -147,29 +147,31 @@ fun VitalsMonitorContent(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         Text(
-                            text = sensorIcon(state.selectedSensor),
+                            text = metricIcon(metric),
                             fontSize = 14.sp,
-                            color = sensorColor(state),
+                            color = metricColor(metric, state),
                             modifier = Modifier.padding(end = 2.dp),
                         )
                         Text(
-                            text = displayValue(state),
+                            text = SupportedWatchVitals.formatValue(metric, state),
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = sensorColor(state),
+                            color = metricColor(metric, state),
                         )
-                        Text(
-                            text = sensorUnit(state.selectedSensor),
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(start = 2.dp, top = 6.dp),
-                        )
+                        if (metric.unit.isNotEmpty()) {
+                            Text(
+                                text = metric.unit,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(start = 2.dp, top = 6.dp),
+                            )
+                        }
                     }
                 }
             }
             item {
                 Text(
-                    text = buildStatusText(state),
+                    text = SupportedWatchVitals.statusText(metric, state),
                     fontSize = 8.sp,
                     color = statusColor(state),
                     textAlign = TextAlign.Center,
@@ -181,17 +183,50 @@ fun VitalsMonitorContent(
             }
             if (state.isMonitoring) {
                 item {
-                    Button(
-                        onClick = onMeasureEcg,
-                        enabled = !state.ecgMeasuring,
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFF5E35B1),
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(26.dp),
+                    Text(
+                        "Shared with server",
+                        fontSize = 8.sp,
+                        color = MaterialTheme.colors.onBackground.copy(alpha = 0.55f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    )
+                }
+                SupportedWatchVitals.sharingSummary(state).forEach { (label, value) ->
+                    item(key = label) {
+                        SharedMetricRow(label, value)
+                    }
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        Button(
+                            onClick = onMeasureBodyFat,
+                            enabled = !state.biaMeasuring,
+                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF455A64)),
+                            modifier = Modifier.weight(1f).height(26.dp),
+                        ) {
+                            Text(if (state.biaMeasuring) "BIA…" else "Body Fat", fontSize = 8.sp)
+                        }
+                        Button(
+                            onClick = onMeasureEcg,
+                            enabled = !state.ecgMeasuring,
+                            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF5E35B1)),
+                            modifier = Modifier.weight(1f).height(26.dp),
+                        ) {
+                            Text(if (state.ecgMeasuring) "ECG…" else "ECG", fontSize = 8.sp)
+                        }
+                    }
+                }
+                if (state.bodyFatPercent != null) {
+                    item {
                         Text(
-                            if (state.ecgMeasuring) "ECG…" else "Measure ECG",
-                            fontSize = 9.sp,
+                            text = "Body fat: ${SupportedWatchVitals.formatValue(WatchViewMetric.BODY_FAT, state)}% → sent",
+                            fontSize = 8.sp,
+                            color = Color(0xFF43A047),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -210,9 +245,7 @@ fun VitalsMonitorContent(
                     item {
                         Button(
                             onClick = onOpenSamsungHealth,
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = MaterialTheme.colors.surface,
-                            ),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface),
                             modifier = Modifier.fillMaxWidth().height(22.dp),
                         ) {
                             Text("Samsung Health", fontSize = 8.sp)
@@ -240,117 +273,85 @@ fun VitalsMonitorContent(
 }
 
 @Composable
-private fun SensorSelector(
-    selected: SensorType,
-    enabled: Boolean,
-    onSelected: (SensorType) -> Unit,
-) {
+private fun SharedMetricRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 1.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        SensorChip("HR", selected == SensorType.HEART_RATE, enabled) {
-            onSelected(SensorType.HEART_RATE)
-        }
-        SensorChip("Temp", selected == SensorType.SKIN_TEMPERATURE, enabled) {
-            onSelected(SensorType.SKIN_TEMPERATURE)
-        }
-        SensorChip("SpO₂", selected == SensorType.SPO2, enabled) {
-            onSelected(SensorType.SPO2)
+        Text(label, fontSize = 7.sp, color = MaterialTheme.colors.onBackground.copy(alpha = 0.65f))
+        Text(value, fontSize = 7.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun MetricSelector(
+    selected: WatchViewMetric,
+    onSelected: (WatchViewMetric) -> Unit,
+) {
+    val rows = SupportedWatchVitals.viewableMetrics.chunked(4)
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+            ) {
+                row.forEach { metric ->
+                    MetricChip(
+                        label = metric.chipLabel,
+                        active = selected == metric,
+                        onClick = { onSelected(metric) },
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SensorChip(
+private fun MetricChip(
     label: String,
     active: Boolean,
-    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
-        enabled = enabled,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = if (active) {
-                MaterialTheme.colors.primary
-            } else {
-                MaterialTheme.colors.surface
-            },
+            backgroundColor = if (active) MaterialTheme.colors.primary else MaterialTheme.colors.surface,
         ),
-        modifier = Modifier.width(52.dp).height(24.dp),
+        modifier = Modifier.width(40.dp).height(22.dp),
     ) {
         Text(
             text = label,
-            fontSize = 9.sp,
+            fontSize = 7.sp,
             maxLines = 1,
             color = if (active) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onSurface,
         )
     }
 }
 
-private fun displayValue(state: WatchUiState): String = when (state.selectedSensor) {
-    SensorType.HEART_RATE -> if (state.heartRate > 0) state.heartRate.toString() else "--"
-    SensorType.SKIN_TEMPERATURE ->
-        state.temperatureC?.let { String.format(Locale.US, "%.1f", it) } ?: "--"
-    SensorType.SPO2 ->
-        state.spO2Percent?.let { String.format(Locale.US, "%.0f", it) } ?: "--"
-    SensorType.EDA, SensorType.BIA, SensorType.ECG -> "--"
+private fun metricIcon(metric: WatchViewMetric): String = when (metric) {
+    WatchViewMetric.HEART_RATE -> "♥"
+    WatchViewMetric.HRV -> "∿"
+    WatchViewMetric.SPO2 -> "O₂"
+    WatchViewMetric.SKIN_TEMP, WatchViewMetric.AMBIENT_TEMP -> "T"
+    WatchViewMetric.STRESS -> "S"
+    WatchViewMetric.STEPS -> "👣"
+    WatchViewMetric.CALORIES -> "C"
+    WatchViewMetric.FALL -> "!"
+    WatchViewMetric.WEAR -> "⌚"
+    WatchViewMetric.BODY_FAT -> "B"
+    WatchViewMetric.ECG -> "E"
 }
 
-private fun sensorUnit(sensor: SensorType): String = when (sensor) {
-    SensorType.HEART_RATE -> "bpm"
-    SensorType.SKIN_TEMPERATURE -> "°C"
-    SensorType.SPO2 -> "%"
-    SensorType.EDA, SensorType.BIA, SensorType.ECG -> ""
-}
-
-private fun sensorIcon(sensor: SensorType): String = when (sensor) {
-    SensorType.HEART_RATE -> "♥"
-    SensorType.SKIN_TEMPERATURE -> "T"
-    SensorType.SPO2 -> "O₂"
-    SensorType.EDA -> "S"
-    SensorType.BIA -> "B"
-    SensorType.ECG -> "E"
-}
-
-private fun sensorColor(state: WatchUiState): Color = when (state.selectedSensor) {
-    SensorType.HEART_RATE -> heartColor(state.heartRateStatus)
-    SensorType.SKIN_TEMPERATURE -> Color(0xFF1E88E5)
-    SensorType.SPO2 -> Color(0xFF43A047)
-    SensorType.EDA, SensorType.BIA, SensorType.ECG -> Color(0xFF757575)
-}
-
-private fun buildStatusText(state: WatchUiState): String {
-    if (state.serviceStatus == VitalsServiceStatus.ERROR && state.errorMessage.isNotBlank()) {
-        return state.errorMessage
-    }
-    val sensorStr = when (state.selectedSensor) {
-        SensorType.HEART_RATE -> when {
-            !state.isMonitoring -> "Tap Start"
-            state.heartRate > 0 -> "Measuring ${state.heartRate} bpm"
-            state.heartRateStatus == HeartRateStatus.DETACHED -> "Put watch on wrist"
-            state.heartRateStatus == HeartRateStatus.MOVEMENT -> "Fasten watch snugly"
-            state.heartRateStatus == HeartRateStatus.WEAK_SIGNAL -> "Hold still, screen on"
-            state.heartRateStatus == HeartRateStatus.INITIAL -> "Starting heart rate…"
-            state.heartRateStatus == HeartRateStatus.SENSOR_BUSY -> "Another sensor active"
-            else -> "Measuring…"
-        }
-        SensorType.SKIN_TEMPERATURE -> if (state.temperatureC == null) {
-            "Measuring temperature…"
-        } else {
-            "Skin temperature active"
-        }
-        SensorType.SPO2 -> if (state.spO2Percent == null) {
-            "Measuring SpO₂…"
-        } else {
-            "SpO₂ active"
-        }
-        SensorType.EDA -> "Stress (EDA) in background"
-        SensorType.BIA -> "Body fat — follow watch BIA prompt"
-        SensorType.ECG -> "ECG — follow watch ECG prompt"
-    }
-    return sensorStr
+private fun metricColor(metric: WatchViewMetric, state: WatchUiState): Color = when (metric) {
+    WatchViewMetric.HEART_RATE -> heartColor(state.heartRateStatus)
+    WatchViewMetric.SPO2 -> Color(0xFF43A047)
+    WatchViewMetric.SKIN_TEMP -> Color(0xFF1E88E5)
+    WatchViewMetric.AMBIENT_TEMP -> Color(0xFF546E7A)
+    WatchViewMetric.STRESS, WatchViewMetric.HRV -> Color(0xFF8E24AA)
+    WatchViewMetric.FALL -> if (state.fallDetected) Color(0xFFE53935) else Color(0xFF757575)
+    WatchViewMetric.WEAR -> if (state.isWearing) Color(0xFF43A047) else Color(0xFF757575)
+    else -> Color(0xFF757575)
 }
 
 private fun heartColor(status: HeartRateStatus): Color = when (status) {

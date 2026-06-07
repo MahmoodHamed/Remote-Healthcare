@@ -83,6 +83,45 @@ fun SettingsScreen(
                     Text("Back")
                 }
             }
+            item {
+                Text(
+                    "Shared vitals (Samsung SDK)",
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+            }
+            SupportedWatchVitals.sdkContinuous.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            item {
+                Text(
+                    "On-demand",
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+            SupportedWatchVitals.sdkOnDemand.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            item {
+                Text(
+                    "Platform",
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+            SupportedWatchVitals.platformSensors.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
             if (state.wasMonitoring) {
                 item {
                     Text(

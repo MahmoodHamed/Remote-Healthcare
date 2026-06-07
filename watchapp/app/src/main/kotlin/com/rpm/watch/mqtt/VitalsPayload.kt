@@ -9,8 +9,7 @@ data class VitalsPayload(
     @SerialName("deviceId") val deviceId: String,
     @SerialName("heartRateBpm") val heartRateBpm: Float? = null,
     @SerialName("spO2Percent") val spO2Percent: Float? = null,
-    @SerialName("systolicBp") val systolicBp: Float? = null,
-    @SerialName("diastolicBp") val diastolicBp: Float? = null,
+    /** Legacy alias — same as skin temperature when present. */
     @SerialName("temperatureC") val temperatureC: Float? = null,
     @SerialName("skinTemperatureC") val skinTemperatureC: Float? = null,
     @SerialName("ambientTemperatureC") val ambientTemperatureC: Float? = null,

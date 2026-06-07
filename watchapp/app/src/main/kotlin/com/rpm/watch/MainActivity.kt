@@ -134,6 +134,10 @@ class MainActivity : ComponentActivity() {
             monitorService?.requestEcgMeasurement()
         }
 
+        viewModel.onRequestBia = {
+            monitorService?.requestBodyFatMeasurement()
+        }
+
 
 
         setContent {

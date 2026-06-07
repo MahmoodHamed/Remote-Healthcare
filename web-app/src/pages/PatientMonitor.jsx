@@ -2,104 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { normalizePatientId } from '../utils/patientId'
+import { HISTORY_COLUMNS, SDK_SENSOR_INFO, SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
+import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-
-function pick(payload, camel, pascal) {
-  if (payload[camel] !== undefined && payload[camel] !== null) return payload[camel]
-  if (payload[pascal] !== undefined && payload[pascal] !== null) return payload[pascal]
-  return null
-}
-
-function inferWearing(vitals) {
-  const explicit = vitals.isWearing
-  if (explicit === true) return true
-  // Off-body sensor is often wrong while Samsung vitals are live.
-  const hr = vitals.heartRateBpm
-  if (hr != null && hr >= 30) return true
-  if (vitals.spO2Percent != null) return true
-  if (vitals.temperatureC != null || vitals.skinTemperatureC != null) return true
-  if (vitals.stressScore != null) return true
-  return explicit !== false
-}
-
-function normalizePayload(payload) {
-  if (!payload || typeof payload !== 'object') return null
-  const vitals = {
-    heartRateBpm: pick(payload, 'heartRateBpm', 'HeartRateBpm'),
-    spO2Percent: pick(payload, 'spO2Percent', 'SpO2Percent'),
-    systolicBp: pick(payload, 'systolicBp', 'SystolicBp'),
-    diastolicBp: pick(payload, 'diastolicBp', 'DiastolicBp'),
-    temperatureC: pick(payload, 'temperatureC', 'TemperatureC'),
-    skinTemperatureC: pick(payload, 'skinTemperatureC', 'SkinTemperatureC'),
-    ambientTemperatureC: pick(payload, 'ambientTemperatureC', 'AmbientTemperatureC'),
-    hrvMs: pick(payload, 'hrvMs', 'HrvMs'),
-    stressScore: pick(payload, 'stressScore', 'StressScore'),
-    bodyFatPercent: pick(payload, 'bodyFatPercent', 'BodyFatPercent'),
-    ecgAvgHeartRateBpm: pick(payload, 'ecgAvgHeartRateBpm', 'EcgAvgHeartRateBpm'),
-    stepsCount: pick(payload, 'stepsCount', 'StepsCount'),
-    caloriesBurned: pick(payload, 'caloriesBurned', 'CaloriesBurned'),
-    fallDetected: Boolean(pick(payload, 'fallDetected', 'FallDetected')),
-    isWearing: pick(payload, 'isWearing', 'IsWearing'),
-    recordedAt: pick(payload, 'recordedAt', 'RecordedAt') ?? new Date().toISOString(),
-  }
-  vitals.isWearing = inferWearing(vitals)
-  return vitals
-}
-
-const MERGE_KEYS = [
-  'heartRateBpm', 'spO2Percent', 'systolicBp', 'diastolicBp', 'temperatureC',
-  'skinTemperatureC', 'ambientTemperatureC', 'hrvMs', 'stressScore', 'bodyFatPercent',
-  'ecgAvgHeartRateBpm', 'stepsCount', 'caloriesBurned',
-]
-
-function mergeVitals(previous, incoming) {
-  if (!previous) return incoming
-  const merged = { ...incoming }
-  for (const key of MERGE_KEYS) {
-    if (merged[key] == null && previous[key] != null) merged[key] = previous[key]
-  }
-  merged.isWearing = inferWearing(merged)
-  merged.fallDetected = incoming.fallDetected || previous.fallDetected
-  return merged
-}
 
 function fmt(value, digits = 0) {
   if (value === null || value === undefined || Number.isNaN(value)) return '--'
   return digits > 0 ? Number(value).toFixed(digits) : String(value)
 }
 
-const METRIC_DEFS = [
-  { key: 'heartRateBpm', label: 'Heart rate', unit: 'bpm', tone: 'accent', digits: 0 },
-  { key: 'spO2Percent', label: 'SpO₂', unit: '%', tone: 'teal', digits: 1 },
-  { key: 'bp', label: 'Blood pressure', unit: 'mmHg', tone: 'warm', computed: true, unsupported: true },
-  { key: 'temperatureC', label: 'Body temp.', unit: '°C', tone: 'amber', digits: 1 },
-  { key: 'skinTemperatureC', label: 'Skin temp.', unit: '°C', tone: 'blue', digits: 1 },
-  { key: 'hrvMs', label: 'HRV', unit: 'ms', tone: 'violet', digits: 0 },
-  { key: 'respiration', label: 'Respiration', unit: '/min', tone: 'ink', unsupported: true },
-  { key: 'stressScore', label: 'Stress', unit: '/100', tone: 'violet', digits: 0 },
-  { key: 'sleep', label: 'Sleep score', unit: '/100', tone: 'ink', unsupported: true },
-  { key: 'stepsCount', label: 'Steps', unit: 'today', tone: 'ink', digits: 0 },
-  { key: 'caloriesBurned', label: 'Calories', unit: 'kcal', tone: 'ink', digits: 0 },
-  { key: 'ecgAvgHeartRateBpm', label: 'ECG', unit: 'avg HR', tone: 'ink', digits: 0, onDemand: true },
-  { key: 'bodyFatPercent', label: 'Body fat', unit: '%', tone: 'ink', digits: 1, onDemand: true },
-  { key: 'glucose', label: 'Blood glucose', unit: 'mg/dL', tone: 'ink', unsupported: true },
-  { key: 'fallDetected', label: 'Fall detection', unit: '', tone: 'danger', boolean: true },
-  { key: 'isWearing', label: 'Watch status', unit: '', tone: 'teal', wearing: true },
-]
-
 function metricValue(vitals, def) {
   if (!vitals) return '--'
-  if (def.unsupported) return '--'
-  if (def.computed) {
-    if (vitals.systolicBp == null && vitals.diastolicBp == null) return '--'
-    return `${fmt(vitals.systolicBp)}/${fmt(vitals.diastolicBp)}`
-  }
   if (def.boolean) {
     return vitals.fallDetected ? 'Alert' : 'Safe'
   }
   if (def.wearing) {
-    return vitals.isWearing ? 'On wrist' : 'Off-wrist'
+    return inferWearing(vitals) ? 'On wrist' : 'Off-wrist'
   }
   return fmt(vitals[def.key], def.digits ?? 0)
 }
@@ -107,7 +26,7 @@ function metricValue(vitals, def) {
 function metricTone(vitals, def) {
   if (!vitals) return def.tone
   if (def.boolean) return vitals.fallDetected ? 'danger' : 'teal'
-  if (def.wearing) return vitals.isWearing ? 'teal' : 'danger'
+  if (def.wearing) return inferWearing(vitals) ? 'teal' : 'danger'
   return def.tone
 }
 
@@ -228,8 +147,25 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
             <p className="eyebrow">Live sensor feed</p>
             <h2>All vitals from the watch</h2>
             <p>
-              Metrics marked with SDK are streamed from the watch. Others need Samsung Health Platform or are not available on-device.
+              Only vitals the Galaxy Watch can measure and share are shown — Samsung Health Sensor SDK (continuous &amp; on-demand) plus steps, calories, and fall detection.
             </p>
+            <div className="sdk-sensor-list">
+              <p className="eyebrow" style={{ marginTop: '1rem' }}>Samsung SDK sensors</p>
+              <ul className="sdk-list">
+                {SDK_SENSOR_INFO.continuous.map((s) => (
+                  <li key={s.tracker}><strong>{s.name}</strong> — continuous · {s.note}</li>
+                ))}
+                {SDK_SENSOR_INFO.onDemand.map((s) => (
+                  <li key={s.tracker}><strong>{s.name}</strong> — on-demand · {s.note}</li>
+                ))}
+              </ul>
+              <p className="eyebrow" style={{ marginTop: '0.75rem' }}>Platform sensors</p>
+              <ul className="sdk-list">
+                {SDK_SENSOR_INFO.platform.map((s) => (
+                  <li key={s.name}><strong>{s.name}</strong> — {s.note}</li>
+                ))}
+              </ul>
+            </div>
             <div className={`live-status status-${connectionStatus}`}>
               <span className={`status-dot ${connectionStatus}`} aria-hidden="true" />
               <div>
@@ -280,10 +216,10 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
                 {connectionStatus === 'connected' ? 'Reconnect' : 'Connect'}
               </button>
               <div className="sensor-grid sensor-grid-dense">
-                {METRIC_DEFS.map((def) => (
+                {SUPPORTED_METRIC_DEFS.map((def) => (
                   <div
                     key={def.label}
-                    className={`sensor-card tone-${metricTone(latestVitals, def)}${def.unsupported ? ' sensor-card-muted' : ''}`}
+                    className={`sensor-card tone-${metricTone(latestVitals, def)}`}
                   >
                     <span className="sensor-label">{def.label}</span>
                     <strong className="sensor-value">
@@ -294,8 +230,7 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
                         <small>{def.unit}</small>
                       ) : null}
                     </strong>
-                    {def.unsupported ? <span className="sensor-hint">Not on SDK</span> : null}
-                    {def.onDemand && !def.unsupported ? (
+                    {def.onDemand ? (
                       <span className="sensor-hint">On-demand on watch</span>
                     ) : null}
                   </div>
@@ -317,12 +252,9 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
               <thead>
                 <tr>
                   <th>Time</th>
-                  <th>HR</th>
-                  <th>SpO₂</th>
-                  <th>Body °C</th>
-                  <th>Skin °C</th>
-                  <th>HRV</th>
-                  <th>Steps</th>
+                  {HISTORY_COLUMNS.map((col) => (
+                    <th key={col.key}>{col.label}</th>
+                  ))}
                   <th>Fall</th>
                   <th>Wear</th>
                 </tr>
@@ -331,14 +263,11 @@ export default function PatientMonitor({ authProfile, accessToken, onLogout }) {
                 {timeline.map((row, index) => (
                   <tr key={`${row.stamp}-${index}`}>
                     <td>{row.stamp}</td>
-                    <td>{fmt(row.heartRateBpm)}</td>
-                    <td>{fmt(row.spO2Percent, 1)}</td>
-                    <td>{fmt(row.temperatureC, 1)}</td>
-                    <td>{fmt(row.skinTemperatureC, 1)}</td>
-                    <td>{fmt(row.hrvMs)}</td>
-                    <td>{fmt(row.stepsCount)}</td>
+                    {HISTORY_COLUMNS.map((col) => (
+                      <td key={col.key}>{fmt(row[col.key], col.digits ?? 0)}</td>
+                    ))}
                     <td>{row.fallDetected ? 'Yes' : 'No'}</td>
-                    <td>{row.isWearing ? 'On' : 'Off'}</td>
+                    <td>{inferWearing(row) ? 'On' : 'Off'}</td>
                   </tr>
                 ))}
               </tbody>

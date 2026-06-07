@@ -25,7 +25,7 @@ export default function Landing() {
           <div className="hero-features">
             <div className="feature-card">
               <h3>Real-time vitals</h3>
-              <p>Stream heart rate, SpO2, blood pressure, and more from wearables instantly.</p>
+              <p>Stream heart rate, SpO₂, skin temperature, stress, steps, and more from Galaxy Watch instantly.</p>
             </div>
             <div className="feature-card">
               <h3>Multiple roles</h3>

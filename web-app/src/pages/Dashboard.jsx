@@ -67,9 +67,11 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
       const normalized = {
         heartRateBpm: payload.heartRateBpm ?? null,
         spO2Percent: payload.spO2Percent ?? null,
-        systolicBp: payload.systolicBp ?? null,
-        diastolicBp: payload.diastolicBp ?? null,
+        skinTemperatureC: payload.skinTemperatureC ?? payload.temperatureC ?? null,
         temperatureC: payload.temperatureC ?? null,
+        hrvMs: payload.hrvMs ?? null,
+        stressScore: payload.stressScore ?? null,
+        stepsCount: payload.stepsCount ?? null,
         recordedAt: payload.recordedAt ?? null,
       }
 
@@ -181,14 +183,16 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                     <span className="vital-value">{vitals.spO2Percent ?? '--'}%</span>
                   </div>
                   <div className="vital-item">
-                    <span className="vital-label">Temp</span>
-                    <span className="vital-value">{vitals.temperatureC ?? '--'}°C</span>
+                    <span className="vital-label">Skin temp.</span>
+                    <span className="vital-value">{vitals.skinTemperatureC ?? vitals.temperatureC ?? '--'}°C</span>
                   </div>
                   <div className="vital-item">
-                    <span className="vital-label">BP</span>
-                    <span className="vital-value">
-                      {vitals.systolicBp ?? '--'}/{vitals.diastolicBp ?? '--'} mmHg
-                    </span>
+                    <span className="vital-label">HRV</span>
+                    <span className="vital-value">{vitals.hrvMs ?? '--'} ms</span>
+                  </div>
+                  <div className="vital-item">
+                    <span className="vital-label">Stress</span>
+                    <span className="vital-value">{vitals.stressScore ?? '--'} / 100</span>
                   </div>
                 </div>
               )}
@@ -208,9 +212,10 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                 <tr>
                   <th>Time</th>
                   <th>Heart Rate</th>
-                  <th>SpO2</th>
-                  <th>Temperature</th>
-                  <th>BP</th>
+                  <th>SpO₂</th>
+                  <th>Skin °C</th>
+                  <th>HRV</th>
+                  <th>Steps</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,10 +224,9 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                     <td>{record.time}</td>
                     <td>{record.heartRateBpm ?? '--'} bpm</td>
                     <td>{record.spO2Percent ?? '--'}%</td>
-                    <td>{record.temperatureC ?? '--'}°C</td>
-                    <td>
-                      {record.systolicBp ?? '--'}/{record.diastolicBp ?? '--'} mmHg
-                    </td>
+                    <td>{record.skinTemperatureC ?? record.temperatureC ?? '--'}°C</td>
+                    <td>{record.hrvMs ?? '--'} ms</td>
+                    <td>{record.stepsCount ?? '--'}</td>
                   </tr>
                 ))}
               </tbody>

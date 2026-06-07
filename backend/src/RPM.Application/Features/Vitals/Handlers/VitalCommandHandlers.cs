@@ -2,6 +2,7 @@
 using RPM.Application.Common.Exceptions;
 using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Vitals;
+using RPM.Application.Features.Vitals;
 using RPM.Application.Features.Vitals.Commands;
 using RPM.Domain.Entities;
 using RPM.Domain.Enums;
@@ -54,11 +55,17 @@ public class IngestVitalCommandHandler(IUnitOfWork uow, IVitalsHubService hub)
             await uow.SaveChangesAsync(ct);
         }
 
+        var isWearing = VitalWearingInference.Infer(
+            cmd.IsWearing, cmd.HeartRateBpm, cmd.SpO2Percent,
+            cmd.TemperatureC, cmd.SkinTemperatureC, cmd.AmbientTemperatureC,
+            cmd.HrvMs, cmd.StressScore, cmd.BodyFatPercent, cmd.EcgAvgHeartRateBpm,
+            cmd.Steps, cmd.Calories);
+
         var record = VitalRecord.Create(cmd.PatientId, cmd.DeviceId,
             cmd.HeartRateBpm, cmd.SpO2Percent, cmd.SystolicBp, cmd.DiastolicBp,
             cmd.TemperatureC, cmd.SkinTemperatureC, cmd.AmbientTemperatureC, cmd.HrvMs,
             cmd.StressScore, cmd.BodyFatPercent, cmd.EcgAvgHeartRateBpm,
-            cmd.Steps, cmd.Calories, cmd.FallDetected, cmd.IsWearing);
+            cmd.Steps, cmd.Calories, cmd.FallDetected, isWearing);
 
         await uow.Vitals.AddAsync(record, ct);
 

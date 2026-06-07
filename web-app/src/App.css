@@ -639,6 +639,22 @@
     opacity: 0.72;
   }
 
+  .sdk-sensor-list {
+    margin-top: 0.5rem;
+    font-size: 0.88rem;
+    color: var(--ink-muted);
+  }
+
+  .sdk-list {
+    margin: 0.35rem 0 0;
+    padding-left: 1.1rem;
+    line-height: 1.5;
+  }
+
+  .sdk-list li + li {
+    margin-top: 0.2rem;
+  }
+
   .sensor-hint {
     font-size: 0.68rem;
     color: var(--ink-muted);
