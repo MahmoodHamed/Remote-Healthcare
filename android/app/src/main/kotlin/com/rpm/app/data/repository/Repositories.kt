@@ -23,6 +23,9 @@ class PatientRepository @Inject constructor(private val api: RpmApiService) {
 
     suspend fun updateThresholds(patientId: String, thresholds: AlertThresholdDto): Resource<Unit> =
         safeCall { api.updateThresholds(patientId, thresholds) }
+
+    suspend fun setWatchShortId(patientId: String, shortId: String?): Resource<WatchShortIdResponse?> =
+        safeCallNullable { api.setWatchShortId(patientId, SetWatchShortIdRequest(shortId)) }
 }
 
 class AlertRepository @Inject constructor(private val api: RpmApiService) {

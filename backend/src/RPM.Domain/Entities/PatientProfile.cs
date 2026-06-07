@@ -13,6 +13,11 @@ public class PatientProfile : BaseEntity
     public List<string> Allergies { get; private set; } = [];
     public List<string> CurrentMedications { get; private set; } = [];
     public string? EmergencyContactPhone { get; private set; }
+    /// <summary>
+    /// 6-character watch short ID (A-Z, 0-9) entered by the patient.
+    /// Both web and mobile derive the streaming UUID from this via MD5 normalisation.
+    /// </summary>
+    public string? WatchShortId { get; private set; }
 
     public AlertThreshold? AlertThreshold { get; private set; }
     public ICollection<Device> Devices { get; private set; } = [];
@@ -35,6 +40,12 @@ public class PatientProfile : BaseEntity
         Allergies = allergies ?? [];
         CurrentMedications = meds ?? [];
         EmergencyContactPhone = emergencyPhone;
+        SetUpdatedAt();
+    }
+
+    public void SetWatchShortId(string? shortId)
+    {
+        WatchShortId = string.IsNullOrWhiteSpace(shortId) ? null : shortId.Trim().ToUpperInvariant();
         SetUpdatedAt();
     }
 }

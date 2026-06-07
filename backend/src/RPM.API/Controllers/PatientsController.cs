@@ -68,8 +68,29 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
             latest is null ? null : new VitalRecordLatestDto(
                 latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
                 latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt),
-            doctorDtos);
+            doctorDtos,
+            profile.WatchShortId);
         return Ok(dto);
+    }
+
+    /// <summary>Patient saves their watch short ID (6 chars). Both web and mobile use this to derive the streaming UUID.</summary>
+    [HttpPut("{userId:guid}/watch-setup")]
+    public async Task<IActionResult> SetWatchShortId(Guid userId, [FromBody] SetWatchShortIdRequest req, CancellationToken ct)
+    {
+        if (currentUser.UserId != userId && !User.IsInRole("Doctor") && !User.IsInRole("Admin"))
+            return Forbid();
+
+        var shortId = req.ShortId?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrEmpty(shortId) && (shortId.Length != 6 || !shortId.All(c => char.IsLetterOrDigit(c))))
+            return BadRequest(new { error = "Watch short ID must be exactly 6 alphanumeric characters." });
+
+        var profile = await uow.Patients.GetByUserIdAsync(userId, ct);
+        if (profile is null) return NotFound();
+
+        profile.SetWatchShortId(shortId);
+        uow.Patients.Update(profile);
+        await uow.SaveChangesAsync(ct);
+        return Ok(new { watchShortId = profile.WatchShortId });
     }
 
     [HttpPost("{patientUserId:guid}/assign-doctor/{doctorUserId:guid}")]

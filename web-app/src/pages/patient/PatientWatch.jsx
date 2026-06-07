@@ -5,10 +5,11 @@ import { normalizePatientId } from '../../utils/patientId'
 import {
   WATCH_HOST_KEY,
   WATCH_PORT_KEY,
-  WATCH_SHORT_ID_KEY,
   getWatchShortId,
   isValidWatchShortId,
+  saveWatchShortId,
 } from '../../utils/watchPairing'
+import { api } from '../../utils/api'
 
 export default function PatientWatch() {
   const profile = readProfile()
@@ -17,18 +18,30 @@ export default function PatientWatch() {
   const [port, setPort] = useState('')
   const [feedback, setFeedback] = useState('')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    // Start with localStorage, then sync from backend profile if available
     setShortId(getWatchShortId())
     setHost(localStorage.getItem(WATCH_HOST_KEY) ?? getMqttHost())
     setPort(localStorage.getItem(WATCH_PORT_KEY) ?? getMqttPort())
+
+    if (profile?.id) {
+      api.get(`/api/patients/${profile.id}`)
+        .then((data) => {
+          if (data?.watchShortId && isValidWatchShortId(data.watchShortId)) {
+            setShortId(data.watchShortId)
+          }
+        })
+        .catch(() => {})
+    }
   }, [])
 
   const streamingId = shortId && isValidWatchShortId(shortId)
     ? normalizePatientId(shortId)
     : profile?.id ?? ''
 
-  const save = (event) => {
+  const save = async (event) => {
     event.preventDefault()
     const trimmed = shortId.trim().toUpperCase()
     if (!isValidWatchShortId(trimmed)) {
@@ -36,11 +49,19 @@ export default function PatientWatch() {
       setFeedback('')
       return
     }
-    localStorage.setItem(WATCH_SHORT_ID_KEY, trimmed)
-    localStorage.setItem(WATCH_HOST_KEY, host.trim())
-    localStorage.setItem(WATCH_PORT_KEY, port.trim())
-    setError('')
-    setFeedback(`Saved. Enter ${trimmed} on your watch Setup screen, then press Start.`)
+    setSaving(true)
+    try {
+      await saveWatchShortId(profile?.id, trimmed)
+      localStorage.setItem(WATCH_HOST_KEY, host.trim())
+      localStorage.setItem(WATCH_PORT_KEY, port.trim())
+      setError('')
+      setFeedback(`Saved. Enter ${trimmed} on your watch Setup screen, then press Start. Mobile app will sync automatically.`)
+    } catch {
+      setError('Could not save to server — saved locally only.')
+      setFeedback('')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -114,7 +135,9 @@ export default function PatientWatch() {
           </div>
           {error && <div className="form-error">{error}</div>}
           {feedback && <div className="form-success">{feedback}</div>}
-          <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>Save pairing details</button>
+          <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} disabled={saving}>
+            {saving ? 'Saving…' : 'Save pairing details'}
+          </button>
         </form>
       </section>
     </>

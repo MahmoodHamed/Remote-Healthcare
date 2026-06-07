@@ -27,7 +27,10 @@ public record PatientDetailDto(
     List<string> CurrentMedications,
     string? EmergencyContactPhone,
     VitalRecordLatestDto? LatestVitals,
-    IReadOnlyList<DoctorAssignmentDto> Doctors);
+    IReadOnlyList<DoctorAssignmentDto> Doctors,
+    string? WatchShortId = null);
+
+public record SetWatchShortIdRequest(string? ShortId);
 
 public record VitalRecordLatestDto(
     float? HeartRateBpm,

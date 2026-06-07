@@ -53,6 +53,12 @@ interface RpmApiService {
         @Body request: LinkRelativeRequest
     ): Response<Unit>
 
+    @PUT("api/patients/{patientId}/watch-setup")
+    suspend fun setWatchShortId(
+        @Path("patientId") patientId: String,
+        @Body request: SetWatchShortIdRequest
+    ): Response<WatchShortIdResponse>
+
     // ── Vitals ────────────────────────────────────────────────────────────
     @GET("api/patients/{patientId}/vitals")
     suspend fun getVitals(

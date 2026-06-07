@@ -288,6 +288,8 @@ data class PatientDetailDto(
     val emergencyContactPhone: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
     val doctors: List<DoctorAssignmentDto> = emptyList(),
+    /** 6-char short ID for the paired watch; used to derive the streaming patient UUID. */
+    val watchShortId: String? = null,
 )
 
 @Serializable
@@ -298,3 +300,9 @@ data class LinkRelativeRequest(
     val relativeUserId: String,
     val relationship: String
 )
+
+@Serializable
+data class SetWatchShortIdRequest(val shortId: String?)
+
+@Serializable
+data class WatchShortIdResponse(val watchShortId: String?)

@@ -1,10 +1,24 @@
+import { useEffect, useState } from 'react'
 import { readProfile } from '../../utils/auth'
-import { getVitalsPatientId } from '../../utils/watchPairing'
+import { loadAndSyncWatchShortId } from '../../utils/watchPairing'
+import { api } from '../../utils/api'
 import LiveVitals from '../../components/LiveVitals.jsx'
 
 export default function PatientDashboard() {
   const profile = readProfile()
-  const vitalsPatientId = getVitalsPatientId(profile?.id)
+  const [vitalsPatientId, setVitalsPatientId] = useState(() => loadAndSyncWatchShortId(null, profile?.id))
+
+  useEffect(() => {
+    if (!profile?.id) return
+    // Fetch profile from backend to get the stored watchShortId and use it
+    api.get(`/api/patients/${profile.id}`)
+      .then((data) => {
+        const resolved = loadAndSyncWatchShortId(data?.watchShortId, profile.id)
+        setVitalsPatientId(resolved)
+      })
+      .catch(() => {})
+  }, [profile?.id])
+
   return (
     <>
       <section className="card">

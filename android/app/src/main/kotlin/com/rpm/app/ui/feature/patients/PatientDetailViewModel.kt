@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.PatientDetailDto
+import com.rpm.app.data.remote.dto.SetWatchShortIdRequest
 import com.rpm.app.data.remote.dto.VitalRecordDto
 import com.rpm.app.data.remote.dto.forDisplay
 import com.rpm.app.data.repository.PatientRepository
@@ -15,7 +16,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,10 +46,38 @@ class PatientDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val shortId = tokenStore.getWatchShortId() ?: ""
-            val streamingId = resolveStreamingId(shortId)
-            _uiState.value = _uiState.value.copy(watchShortId = shortId, streamingPatientId = streamingId)
-            loadPatient(streamingId)
+            // 1. Use locally stored short ID first for immediate streaming
+            val localShortId = tokenStore.getWatchShortId() ?: ""
+            val initialStreamingId = resolveStreamingId(localShortId)
+            _uiState.value = _uiState.value.copy(
+                watchShortId = localShortId,
+                streamingPatientId = initialStreamingId
+            )
+
+            // 2. Fetch patient profile — it may contain a watchShortId stored server-side
+            val detailResult = repo.getPatientDetail(navPatientId)
+            val profileShortId = (detailResult as? Resource.Success)?.data?.watchShortId ?: ""
+
+            // 3. Server-side short ID wins if it's valid; sync it locally
+            val resolvedShortId = when {
+                ShortIdNormalizer.isValidShortId(profileShortId) -> {
+                    tokenStore.saveWatchShortId(profileShortId)
+                    profileShortId
+                }
+                ShortIdNormalizer.isValidShortId(localShortId) -> localShortId
+                else -> ""
+            }
+            val streamingId = resolveStreamingId(resolvedShortId)
+
+            _uiState.value = _uiState.value.copy(
+                patient = (detailResult as? Resource.Success)?.data,
+                watchShortId = resolvedShortId,
+                streamingPatientId = streamingId,
+                error = (detailResult as? Resource.Error)?.message
+            )
+
+            // 4. Load vitals using the resolved streaming ID
+            loadVitals(streamingId)
             subscribeRealtime(streamingId)
         }
     }
@@ -66,21 +94,12 @@ class PatientDetailViewModel @Inject constructor(
         return navPatientId
     }
 
-    private fun loadPatient(streamingId: String) {
+    private fun loadVitals(streamingId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            val detail = repo.getPatientDetail(navPatientId)
             val vitals = repo.getLatestVitals(streamingId)
-
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                patient = (detail as? Resource.Success)?.data,
-                latestVitals = (vitals as? Resource.Success)?.data?.forDisplay(),
-                error = when {
-                    detail is Resource.Error -> detail.message
-                    else -> null
-                }
+                latestVitals = (vitals as? Resource.Success)?.data?.forDisplay()
             )
         }
     }
@@ -105,17 +124,19 @@ class PatientDetailViewModel @Inject constructor(
         if (!ShortIdNormalizer.isValidShortId(trimmed) && trimmed.isNotEmpty()) return
         viewModelScope.launch {
             tokenStore.saveWatchShortId(trimmed)
+            // Persist to backend so web and other devices sync automatically
+            repo.setWatchShortId(navPatientId, trimmed.ifEmpty { null })
             val streamingId = resolveStreamingId(trimmed)
             _uiState.value = _uiState.value.copy(watchShortId = trimmed, streamingPatientId = streamingId)
-            signalR.disconnect(navPatientId)
-            loadPatient(streamingId)
+            signalR.disconnect(_uiState.value.streamingPatientId)
+            loadVitals(streamingId)
             subscribeRealtime(streamingId)
         }
     }
 
     fun refresh() {
         val streamingId = _uiState.value.streamingPatientId.ifBlank { navPatientId }
-        loadPatient(streamingId)
+        loadVitals(streamingId)
     }
 
     override fun onCleared() {
