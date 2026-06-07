@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using RPM.Application.Common;
 using RPM.Application.Common.Exceptions;
 using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Auth;
@@ -25,6 +26,8 @@ public class RegisterCommandHandler(IUnitOfWork uow, IPasswordHasher hasher, IJw
         if (role == UserRole.Patient)
         {
             var profile = PatientProfile.Create(user.Id);
+            if (!await uow.Patients.ShortPatientCodeExistsAsync(PatientShortCode.Default, ct))
+                profile.AssignShortPatientCode(PatientShortCode.Default);
             await uow.Patients.AddPatientProfileAsync(profile, ct);
             var threshold = AlertThreshold.CreateDefault(profile.Id);
             await uow.Alerts.AddThresholdAsync(threshold, ct);

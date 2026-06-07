@@ -46,7 +46,7 @@ public class GetPairingInfoHandler(IUnitOfWork uow, ICurrentUser currentUser, IM
             ?? throw new InvalidOperationException("Patient profile not found.");
 
         return new PairingInfoDto(
-            profile.ShortPatientCode ?? string.Empty,
+            profile.ShortPatientCode ?? PatientShortCode.Default,
             profile.UserId.ToString("D"),
             mqtt.PublicHost,
             mqtt.Port);

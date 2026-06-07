@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.watch.BuildConfig
 import com.rpm.watch.data.WatchDataStore
 import com.rpm.watch.mqtt.MqttConnectionState
 import com.rpm.watch.mqtt.MqttManager
@@ -156,7 +157,9 @@ class WatchViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            dataStore.patientId.collect { id -> _patientId.value = id ?: "" }
+            dataStore.patientId.collect { id ->
+                _patientId.value = id?.takeIf { it.isNotBlank() } ?: BuildConfig.DEFAULT_PATIENT_ID
+            }
         }
         viewModelScope.launch {
             mqttManager.connectionState.collect { _mqttState.value = it }
@@ -166,7 +169,7 @@ class WatchViewModel @Inject constructor(
                 Triple(pid, host, port)
             }.collect { (pid, host, port) ->
                 _settingsState.value = _settingsState.value.copy(
-                    patientId = pid ?: "",
+                    patientId = pid?.takeIf { it.isNotBlank() } ?: BuildConfig.DEFAULT_PATIENT_ID,
                     mqttHost = host,
                     mqttPort = port.toString(),
                 )

@@ -7,6 +7,7 @@ import { SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
 import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const DEFAULT_WATCH_CODE = 'ABC123'
 const SHORT_ID_PATTERN = /^[A-Za-z0-9]{6}$/
 
 function fmt(value, digits = 0) {
@@ -149,7 +150,7 @@ function PatientVitalsPanel({ authProfile, accessToken }) {
 }
 
 function PatientWatchPanel({ authProfile, accessToken }) {
-  const [shortCodeInput, setShortCodeInput] = useState('')
+  const [shortCodeInput, setShortCodeInput] = useState(DEFAULT_WATCH_CODE)
   const [mqttHost, setMqttHost] = useState('')
   const [mqttPort, setMqttPort] = useState('')
   const [devices, setDevices] = useState([])
@@ -171,7 +172,7 @@ function PatientWatchPanel({ authProfile, accessToken }) {
       if (!pairRes.ok) throw new Error('Could not load pairing info from the server.')
       const pairData = await pairRes.json()
       const code = pairData?.patientId ?? pairData?.PatientId ?? ''
-      setShortCodeInput(code)
+      setShortCodeInput(code || DEFAULT_WATCH_CODE)
       setMqttHost(pairData?.mqttHost ?? pairData?.MqttHost ?? '')
       setMqttPort(String(pairData?.mqttPort ?? pairData?.MqttPort ?? ''))
       if (devRes.ok) setDevices(await devRes.json())

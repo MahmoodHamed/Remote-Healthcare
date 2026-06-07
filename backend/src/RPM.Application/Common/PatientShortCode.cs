@@ -6,6 +6,7 @@ namespace RPM.Application.Common;
 /// <summary>6-character patient code (A-Z, 0-9) for watch pairing — e.g. ABC123.</summary>
 public static class PatientShortCode
 {
+    public const string Default = "ABC123";
     private const string Chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     public static bool IsValidFormat(string? value)

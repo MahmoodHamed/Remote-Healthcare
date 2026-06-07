@@ -52,8 +52,7 @@ class WatchDataStore @Inject constructor(
     suspend fun getPatientId(): String? {
         val stored = context.dataStore.data.first()[PATIENT_ID]
         if (!stored.isNullOrBlank()) return stored
-        // Provide a debug fallback when running a debug build to allow fast testing
-        return if (com.rpm.watch.BuildConfig.DEBUG) com.rpm.watch.BuildConfig.DEFAULT_PATIENT_ID else null
+        return com.rpm.watch.BuildConfig.DEFAULT_PATIENT_ID
     }
 
     /** Returns current deviceId synchronously; auto-creates on first call. */

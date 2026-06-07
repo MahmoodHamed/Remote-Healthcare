@@ -25,6 +25,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
+import com.rpm.watch.BuildConfig
 import com.rpm.watch.WatchViewModel
 
 @Composable
@@ -33,7 +34,9 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val state by viewModel.settingsState.collectAsStateWithLifecycle()
-    var patientId by remember(state.patientId) { mutableStateOf(state.patientId) }
+    var patientId by remember(state.patientId) {
+        mutableStateOf(state.patientId.ifBlank { BuildConfig.DEFAULT_PATIENT_ID })
+    }
     var mqttHost by remember(state.mqttHost) { mutableStateOf(state.mqttHost) }
     var mqttPort by remember(state.mqttPort) { mutableStateOf(state.mqttPort) }
     var saved by remember { mutableStateOf(false) }

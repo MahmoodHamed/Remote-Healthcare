@@ -2,6 +2,7 @@ package com.rpm.app.ui.feature.patients
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.app.BuildConfig
 import com.rpm.app.data.remote.dto.DeviceDto
 import com.rpm.app.data.remote.dto.PairingInfoDto
 import com.rpm.app.data.repository.DeviceRepository
@@ -17,9 +18,10 @@ import javax.inject.Inject
 data class DeviceManagementUiState(
     val devices: List<DeviceDto> = emptyList(),
     val pairingInfo: PairingInfoDto? = null,
-    val shortCodeInput: String = "",
+    val shortCodeInput: String = BuildConfig.DEFAULT_PATIENT_ID,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val savedLocally: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
     val renameSuccess: Boolean = false,
@@ -51,10 +53,12 @@ class DeviceManagementViewModel @Inject constructor(
 
             var pairingInfo: PairingInfoDto? = null
             var shortCode = ""
+            var localOnly = false
             when (val pairResult = repo.getDevicePairingInfo()) {
                 is Resource.Success -> {
-                    pairingInfo = pairResult.data
-                    shortCode = pairResult.data.patientId
+                    pairingInfo = pairResult.data.info
+                    shortCode = pairResult.data.info.patientId
+                    localOnly = pairResult.data.savedLocally
                 }
                 is Resource.Error -> err = pairResult.message
                 else -> {}
@@ -64,7 +68,8 @@ class DeviceManagementViewModel @Inject constructor(
                 it.copy(
                     devices = devices,
                     pairingInfo = pairingInfo,
-                    shortCodeInput = shortCode,
+                    shortCodeInput = shortCode.ifBlank { BuildConfig.DEFAULT_PATIENT_ID },
+                    savedLocally = localOnly,
                     isLoading = false,
                     error = if (pairingInfo == null && err != null) err else null,
                 )
@@ -90,8 +95,9 @@ class DeviceManagementViewModel @Inject constructor(
                 is Resource.Success -> {
                     _state.update {
                         it.copy(
-                            pairingInfo = result.data,
-                            shortCodeInput = result.data.patientId,
+                            pairingInfo = result.data.info,
+                            shortCodeInput = result.data.info.patientId,
+                            savedLocally = result.data.savedLocally,
                             isSaving = false,
                             saveSuccess = true,
                         )

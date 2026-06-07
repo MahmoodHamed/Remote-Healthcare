@@ -51,9 +51,14 @@ fun DeviceManagementScreen(
             vm.clearRenameSuccess()
         }
     }
-    LaunchedEffect(state.saveSuccess) {
+    LaunchedEffect(state.saveSuccess, state.savedLocally) {
         if (state.saveSuccess) {
-            snackbarHost.showSnackbar("Pairing details saved")
+            val msg = if (state.savedLocally) {
+                "Saved on this phone. Enter the same code on your watch."
+            } else {
+                "Pairing details saved"
+            }
+            snackbarHost.showSnackbar(msg)
             vm.clearSaveSuccess()
         }
     }
@@ -93,6 +98,7 @@ fun DeviceManagementScreen(
                     shortCode = state.shortCodeInput,
                     pairingInfo = state.pairingInfo,
                     isSaving = state.isSaving,
+                    savedLocally = state.savedLocally,
                     onShortCodeChange = vm::updateShortCode,
                     onSave = vm::savePairing,
                 )
@@ -121,6 +127,7 @@ private fun PairingSetupCard(
     shortCode: String,
     pairingInfo: PairingInfoDto?,
     isSaving: Boolean,
+    savedLocally: Boolean,
     onShortCodeChange: (String) -> Unit,
     onSave: () -> Unit,
 ) {
@@ -220,6 +227,14 @@ private fun PairingSetupCard(
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(if (isSaving) "Saving…" else "Save pairing details")
+            }
+
+            if (savedLocally) {
+                Text(
+                    "Saved on this device. Enter the same code on your watch. Device list updates after the server is updated and the watch sends its first reading.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                )
             }
         }
     }
