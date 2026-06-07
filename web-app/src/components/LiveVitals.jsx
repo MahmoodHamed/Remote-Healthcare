@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { buildVitalsHubConnection, startVitalsHub } from '../utils/signalr'
-import { fetchLatestVitals, mapVitalsPayload } from '../utils/vitals'
+import { fetchLatestVitals, mergeVitalsPayload } from '../utils/vitals'
 import VitalsGrid from './VitalsGrid.jsx'
 
 const statusLabel = {
@@ -59,12 +59,13 @@ export default function LiveVitals({ patientId, patientName, watchSetupHref = '/
       const connection = buildVitalsHubConnection({
         onVitals: (payload) => {
           if (!mountedRef.current) return
-          const mapped = mapVitalsPayload(payload)
-          if (mapped) {
-            setLatest(mapped)
+          setLatest((prev) => {
+            const merged = mergeVitalsPayload(prev, payload)
+            if (!merged) return prev
             setUpdatedAt(new Date())
             setStatus('connected')
-          }
+            return merged
+          })
         },
       })
       connectionRef.current = connection

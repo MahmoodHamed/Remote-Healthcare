@@ -1,7 +1,7 @@
 import { api, ApiError } from './api'
 import { mapVitalsPayload } from './vitalsPayload'
 
-export { mapVitalsPayload } from './vitalsPayload'
+export { mapVitalsPayload, mergeVitalsPayload } from './vitalsPayload'
 
 export const fetchLatestVitals = async (patientId) => {
   try {
