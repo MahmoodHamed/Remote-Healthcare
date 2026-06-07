@@ -425,50 +425,50 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
-
       static String com_rpm_app_ui_feature_patients_LiveMonitorViewModel = "com.rpm.app.ui.feature.patients.LiveMonitorViewModel";
 
-      static String com_rpm_app_ui_feature_notifications_NotificationsViewModel = "com.rpm.app.ui.feature.notifications.NotificationsViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
-
       static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
 
       static String com_rpm_app_ui_feature_patients_DeviceManagementViewModel = "com.rpm.app.ui.feature.patients.DeviceManagementViewModel";
 
       static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
 
-      @KeepFieldType
-      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
+      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
+
+      static String com_rpm_app_ui_feature_notifications_NotificationsViewModel = "com.rpm.app.ui.feature.notifications.NotificationsViewModel";
+
+      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
+
+      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
+
+      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
 
       @KeepFieldType
       LiveMonitorViewModel com_rpm_app_ui_feature_patients_LiveMonitorViewModel2;
 
       @KeepFieldType
-      NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
-
-      @KeepFieldType
-      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
-
-      @KeepFieldType
-      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
-
-      @KeepFieldType
       AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
-
-      @KeepFieldType
-      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
 
       @KeepFieldType
       DeviceManagementViewModel com_rpm_app_ui_feature_patients_DeviceManagementViewModel2;
 
       @KeepFieldType
       ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
+
+      @KeepFieldType
+      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
+
+      @KeepFieldType
+      NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
+
+      @KeepFieldType
+      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
+
+      @KeepFieldType
+      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
+
+      @KeepFieldType
+      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
     }
   }
 
@@ -521,10 +521,6 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
       return new ChatRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
 
-    private DeviceRepository deviceRepository() {
-      return new DeviceRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get());
-    }
-
     private PatientRepository patientRepository() {
       return new PatientRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.tokenDataStoreProvider.get(), singletonCImpl.sessionManagerProvider.get());
     }
@@ -559,23 +555,41 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
+      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
+
+      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
+
+      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
+
+      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
+
+      static String com_rpm_app_ui_feature_patients_LiveMonitorViewModel = "com.rpm.app.ui.feature.patients.LiveMonitorViewModel";
+
+      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
+
       static String com_rpm_app_ui_feature_chat_ChatRoomViewModel = "com.rpm.app.ui.feature.chat.ChatRoomViewModel";
 
       static String com_rpm_app_ui_feature_patients_DeviceManagementViewModel = "com.rpm.app.ui.feature.patients.DeviceManagementViewModel";
 
-      static String com_rpm_app_ui_feature_alerts_AlertsViewModel = "com.rpm.app.ui.feature.alerts.AlertsViewModel";
-
-      static String com_rpm_app_ui_feature_auth_AuthViewModel = "com.rpm.app.ui.feature.auth.AuthViewModel";
-
-      static String com_rpm_app_ui_feature_patients_PatientDetailViewModel = "com.rpm.app.ui.feature.patients.PatientDetailViewModel";
-
-      static String com_rpm_app_ui_feature_chat_ConversationListViewModel = "com.rpm.app.ui.feature.chat.ConversationListViewModel";
-
       static String com_rpm_app_ui_feature_notifications_NotificationsViewModel = "com.rpm.app.ui.feature.notifications.NotificationsViewModel";
 
-      static String com_rpm_app_ui_feature_patients_PatientListViewModel = "com.rpm.app.ui.feature.patients.PatientListViewModel";
+      @KeepFieldType
+      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
 
-      static String com_rpm_app_ui_feature_patients_LiveMonitorViewModel = "com.rpm.app.ui.feature.patients.LiveMonitorViewModel";
+      @KeepFieldType
+      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
+
+      @KeepFieldType
+      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
+
+      @KeepFieldType
+      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
+
+      @KeepFieldType
+      LiveMonitorViewModel com_rpm_app_ui_feature_patients_LiveMonitorViewModel2;
+
+      @KeepFieldType
+      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
 
       @KeepFieldType
       ChatRoomViewModel com_rpm_app_ui_feature_chat_ChatRoomViewModel2;
@@ -584,25 +598,7 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
       DeviceManagementViewModel com_rpm_app_ui_feature_patients_DeviceManagementViewModel2;
 
       @KeepFieldType
-      AlertsViewModel com_rpm_app_ui_feature_alerts_AlertsViewModel2;
-
-      @KeepFieldType
-      AuthViewModel com_rpm_app_ui_feature_auth_AuthViewModel2;
-
-      @KeepFieldType
-      PatientDetailViewModel com_rpm_app_ui_feature_patients_PatientDetailViewModel2;
-
-      @KeepFieldType
-      ConversationListViewModel com_rpm_app_ui_feature_chat_ConversationListViewModel2;
-
-      @KeepFieldType
       NotificationsViewModel com_rpm_app_ui_feature_notifications_NotificationsViewModel2;
-
-      @KeepFieldType
-      PatientListViewModel com_rpm_app_ui_feature_patients_PatientListViewModel2;
-
-      @KeepFieldType
-      LiveMonitorViewModel com_rpm_app_ui_feature_patients_LiveMonitorViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -639,7 +635,7 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
           return (T) new ConversationListViewModel(viewModelCImpl.chatRepository(), singletonCImpl.chatSignalRClientProvider.get());
 
           case 4: // com.rpm.app.ui.feature.patients.DeviceManagementViewModel 
-          return (T) new DeviceManagementViewModel(viewModelCImpl.deviceRepository());
+          return (T) new DeviceManagementViewModel(singletonCImpl.deviceRepositoryProvider.get());
 
           case 5: // com.rpm.app.ui.feature.patients.LiveMonitorViewModel 
           return (T) new LiveMonitorViewModel(viewModelCImpl.patientRepository(), singletonCImpl.vitalsSignalRClientProvider.get(), viewModelCImpl.savedStateHandle);
@@ -753,6 +749,8 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
 
     private Provider<ChatSignalRClient> chatSignalRClientProvider;
 
+    private Provider<DeviceRepository> deviceRepositoryProvider;
+
     private Provider<VitalsSignalRClient> vitalsSignalRClientProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
@@ -773,7 +771,8 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
       this.provideApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<RpmApiService>(singletonCImpl, 1));
       this.fcmTokenRegistrarProvider = DoubleCheck.provider(new SwitchingProvider<FcmTokenRegistrar>(singletonCImpl, 0));
       this.chatSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<ChatSignalRClient>(singletonCImpl, 9));
-      this.vitalsSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<VitalsSignalRClient>(singletonCImpl, 10));
+      this.deviceRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<DeviceRepository>(singletonCImpl, 10));
+      this.vitalsSignalRClientProvider = DoubleCheck.provider(new SwitchingProvider<VitalsSignalRClient>(singletonCImpl, 11));
     }
 
     @Override
@@ -844,7 +843,10 @@ public final class DaggerRpmApplication_HiltComponents_SingletonC {
           case 9: // com.rpm.app.data.signalr.ChatSignalRClient 
           return (T) new ChatSignalRClient(singletonCImpl.tokenDataStoreProvider.get());
 
-          case 10: // com.rpm.app.data.signalr.VitalsSignalRClient 
+          case 10: // com.rpm.app.data.repository.DeviceRepository 
+          return (T) new DeviceRepository(singletonCImpl.provideApiServiceProvider.get(), singletonCImpl.sessionManagerProvider.get(), singletonCImpl.tokenDataStoreProvider.get());
+
+          case 11: // com.rpm.app.data.signalr.VitalsSignalRClient 
           return (T) new VitalsSignalRClient(singletonCImpl.tokenDataStoreProvider.get());
 
           default: throw new AssertionError(id);

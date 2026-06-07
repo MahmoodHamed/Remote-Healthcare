@@ -207,6 +207,7 @@ data class PatientSummaryDto(
     val avatarUrl: String? = null,
     val dateOfBirth: String? = null,
     val bloodType: String? = null,
+    val shortPatientCode: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
 )
 
@@ -225,6 +226,7 @@ data class PatientDetailDto(
     val allergies: List<String> = emptyList(),
     val currentMedications: List<String> = emptyList(),
     val emergencyContactPhone: String? = null,
+    val shortPatientCode: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
     val doctor: DoctorDto? = null,
 )
@@ -283,9 +285,11 @@ data class DeviceDto(
     val registeredAt: String,
 )
 
+/** @param patientId 6-character watch code assigned by the server. */
 @Serializable
 data class PairingInfoDto(
     val patientId: String,
+    val streamingPatientId: String = "",
     val mqttHost: String,
     val mqttPort: Int,
 )

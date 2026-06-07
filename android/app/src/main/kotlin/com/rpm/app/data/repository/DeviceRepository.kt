@@ -3,6 +3,7 @@ package com.rpm.app.data.repository
 import com.rpm.app.BuildConfig
 import com.rpm.app.data.auth.SessionManager
 import com.rpm.app.data.local.TokenDataStore
+import com.rpm.app.data.signalr.PatientShortCode
 import com.rpm.app.data.remote.api.RpmApiService
 import com.rpm.app.data.remote.dto.DeviceDto
 import com.rpm.app.data.remote.dto.PairingInfoDto
@@ -67,7 +68,8 @@ class DeviceRepository @Inject constructor(
         return Resource.Success(
             PairingInfoResult(
                 info = PairingInfoDto(
-                    patientId = userId,
+                    patientId = PatientShortCode.fromUserId(userId),
+                    streamingPatientId = userId,
                     mqttHost = BuildConfig.MQTT_HOST,
                     mqttPort = BuildConfig.MQTT_PORT,
                 ),
