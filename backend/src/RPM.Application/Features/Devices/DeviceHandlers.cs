@@ -1,5 +1,6 @@
 using MediatR;
 using RPM.Application.Common;
+using RPM.Application.Common.Exceptions;
 using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Devices;
 using RPM.Domain.Interfaces;
@@ -44,11 +45,36 @@ public class GetPairingInfoHandler(IUnitOfWork uow, ICurrentUser currentUser, IM
         var profile = await uow.Patients.GetByUserIdAsync(currentUser.UserId, ct)
             ?? throw new InvalidOperationException("Patient profile not found.");
 
-        var shortCode = await PatientShortCodeService.EnsureAssignedAsync(profile, uow, ct);
+        return new PairingInfoDto(
+            profile.ShortPatientCode ?? string.Empty,
+            profile.UserId.ToString("D"),
+            mqtt.PublicHost,
+            mqtt.Port);
+    }
+}
+
+public class SavePairingInfoHandler(IUnitOfWork uow, ICurrentUser currentUser, IMqttBrokerSettings mqtt)
+    : IRequestHandler<SavePairingInfoCommand, PairingInfoDto>
+{
+    public async Task<PairingInfoDto> Handle(SavePairingInfoCommand cmd, CancellationToken ct)
+    {
+        if (!PatientShortCode.IsValidFormat(cmd.PatientId))
+            throw new ConflictException("Patient ID must be exactly 6 letters or digits (e.g. ABC123).");
+
+        var code = PatientShortCode.Normalize(cmd.PatientId);
+        var profile = await uow.Patients.GetByUserIdAsync(currentUser.UserId, ct)
+            ?? throw new ForbiddenException("Patient profile not found.");
+
+        var existing = await uow.Patients.GetByShortPatientCodeAsync(code, ct);
+        if (existing is not null && existing.UserId != profile.UserId)
+            throw new ConflictException($"Patient ID '{code}' is already used by another account.");
+
+        profile.AssignShortPatientCode(code);
+        uow.Patients.Update(profile);
         await uow.SaveChangesAsync(ct);
 
         return new PairingInfoDto(
-            shortCode,
+            code,
             profile.UserId.ToString("D"),
             mqtt.PublicHost,
             mqtt.Port);

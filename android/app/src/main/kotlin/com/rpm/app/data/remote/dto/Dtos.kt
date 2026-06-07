@@ -295,4 +295,7 @@ data class PairingInfoDto(
 )
 
 @Serializable
+data class SavePairingInfoRequest(val patientId: String)
+
+@Serializable
 data class RenameDeviceRequest(val newName: String)

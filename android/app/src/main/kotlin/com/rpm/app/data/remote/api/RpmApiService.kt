@@ -142,6 +142,9 @@ interface RpmApiService {
     @GET("api/devices/pairing-info")
     suspend fun getDevicePairingInfo(): Response<PairingInfoDto>
 
+    @PUT("api/devices/pairing-info")
+    suspend fun saveDevicePairingInfo(@Body request: SavePairingInfoRequest): Response<PairingInfoDto>
+
     @PATCH("api/devices/{id}/name")
     suspend fun renameDevice(
         @Path("id") id: String,

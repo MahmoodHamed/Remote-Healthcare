@@ -17,9 +17,11 @@ import javax.inject.Inject
 data class DeviceManagementUiState(
     val devices: List<DeviceDto> = emptyList(),
     val pairingInfo: PairingInfoDto? = null,
+    val shortCodeInput: String = "",
     val isLoading: Boolean = true,
+    val isSaving: Boolean = false,
     val error: String? = null,
-    val usingLocalPairing: Boolean = false,
+    val saveSuccess: Boolean = false,
     val renameSuccess: Boolean = false,
 )
 
@@ -48,11 +50,11 @@ class DeviceManagementViewModel @Inject constructor(
             }
 
             var pairingInfo: PairingInfoDto? = null
-            var localPairing = false
+            var shortCode = ""
             when (val pairResult = repo.getDevicePairingInfo()) {
                 is Resource.Success -> {
-                    pairingInfo = pairResult.data.info
-                    localPairing = pairResult.data.fromLocalFallback
+                    pairingInfo = pairResult.data
+                    shortCode = pairResult.data.patientId
                 }
                 is Resource.Error -> err = pairResult.message
                 else -> {}
@@ -62,10 +64,43 @@ class DeviceManagementViewModel @Inject constructor(
                 it.copy(
                     devices = devices,
                     pairingInfo = pairingInfo,
-                    usingLocalPairing = localPairing,
+                    shortCodeInput = shortCode,
                     isLoading = false,
-                    error = if (pairingInfo == null) err else null,
+                    error = if (pairingInfo == null && err != null) err else null,
                 )
+            }
+        }
+    }
+
+    fun updateShortCode(value: String) {
+        val filtered = value.filter { it.isLetterOrDigit() }.take(6).uppercase()
+        _state.update { it.copy(shortCodeInput = filtered, saveSuccess = false) }
+    }
+
+    fun savePairing() {
+        val code = _state.value.shortCodeInput.trim()
+        if (code.length != 6) {
+            _state.update { it.copy(error = "Patient short ID must be exactly 6 letters or digits (e.g. ABC123).") }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isSaving = true, error = null) }
+            when (val result = repo.saveDevicePairingInfo(code)) {
+                is Resource.Success -> {
+                    _state.update {
+                        it.copy(
+                            pairingInfo = result.data,
+                            shortCodeInput = result.data.patientId,
+                            isSaving = false,
+                            saveSuccess = true,
+                        )
+                    }
+                }
+                is Resource.Error -> {
+                    _state.update { it.copy(isSaving = false, error = result.message) }
+                }
+                Resource.Loading -> {}
             }
         }
     }
@@ -87,5 +122,6 @@ class DeviceManagementViewModel @Inject constructor(
     }
 
     fun clearRenameSuccess() = _state.update { it.copy(renameSuccess = false) }
+    fun clearSaveSuccess() = _state.update { it.copy(saveSuccess = false) }
     fun clearError() = _state.update { it.copy(error = null) }
 }

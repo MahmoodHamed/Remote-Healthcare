@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -14,10 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,12 @@ fun DeviceManagementScreen(
         if (state.renameSuccess) {
             snackbarHost.showSnackbar("Device renamed successfully")
             vm.clearRenameSuccess()
+        }
+    }
+    LaunchedEffect(state.saveSuccess) {
+        if (state.saveSuccess) {
+            snackbarHost.showSnackbar("Pairing details saved")
+            vm.clearSaveSuccess()
         }
     }
 
@@ -81,8 +88,14 @@ fun DeviceManagementScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            state.pairingInfo?.let { info ->
-                item { PairingInfoCard(info, state.usingLocalPairing) }
+            item {
+                PairingSetupCard(
+                    shortCode = state.shortCodeInput,
+                    pairingInfo = state.pairingInfo,
+                    isSaving = state.isSaving,
+                    onShortCodeChange = vm::updateShortCode,
+                    onSave = vm::savePairing,
+                )
             }
 
             if (state.devices.isEmpty()) {
@@ -104,9 +117,13 @@ fun DeviceManagementScreen(
 }
 
 @Composable
-private fun PairingInfoCard(info: PairingInfoDto, fromLocalFallback: Boolean) {
-    val clipboard = LocalClipboardManager.current
-
+private fun PairingSetupCard(
+    shortCode: String,
+    pairingInfo: PairingInfoDto?,
+    isSaving: Boolean,
+    onShortCodeChange: (String) -> Unit,
+    onSave: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -114,8 +131,7 @@ private fun PairingInfoCard(info: PairingInfoDto, fromLocalFallback: Boolean) {
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Watch, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -128,89 +144,102 @@ private fun PairingInfoCard(info: PairingInfoDto, fromLocalFallback: Boolean) {
                 )
             }
 
+            SetupStep(number = "1", title = "Choose your patient ID", body = "Type a 6-character code below (e.g. ABC123) and tap Save.")
+            SetupStep(number = "2", title = "Enter it on the watch", body = "Open the watch app → Settings → Patient ID and type the same code.")
+            SetupStep(number = "3", title = "Press start", body = "The watch streams vitals to your dashboard after the first reading.")
+
             Text(
-                "Enter this 6-character Patient ID in your Galaxy Watch app → Settings.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center,
+                "Pairing details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
 
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
+            OutlinedTextField(
+                value = shortCode,
+                onValueChange = onShortCodeChange,
+                label = { Text("Patient short ID") },
+                placeholder = { Text("ABC123") },
+                supportingText = {
+                    Text("Must match the watch exactly. Save before starting the watch.")
+                },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    Modifier.padding(vertical = 20.dp, horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        "Patient ID",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        info.patientId.uppercase(),
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp,
-                        ),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    FilledTonalButton(
-                        onClick = { clipboard.setText(AnnotatedString(info.patientId.uppercase())) },
-                    ) {
-                        Icon(Icons.Default.ContentCopy, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Copy ID")
-                    }
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("MQTT Broker", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                        Text(
-                            "${info.mqttHost}:${info.mqttPort}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                        )
-                    }
-                    IconButton(onClick = { clipboard.setText(AnnotatedString(info.mqttHost)) }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy host", modifier = Modifier.size(18.dp))
-                    }
-                }
-            }
-
-            if (info.streamingPatientId.isNotBlank()) {
-                Text(
-                    "Streaming ID: ${info.streamingPatientId}",
-                    style = MaterialTheme.typography.labelSmall,
+                textStyle = LocalTextStyle.current.copy(
                     fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                ),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    keyboardType = KeyboardType.Ascii,
+                ),
+            )
+
+            if (!pairingInfo?.streamingPatientId.isNullOrBlank()) {
+                OutlinedTextField(
+                    value = pairingInfo!!.streamingPatientId,
+                    onValueChange = {},
+                    label = { Text("Streaming patient ID") },
+                    supportingText = { Text("Internal ID used by the server after your short code is saved.") },
+                    readOnly = true,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = MaterialTheme.typography.bodySmall.fontSize),
                 )
             }
 
-            if (fromLocalFallback) {
-                Text(
-                    "Code generated from your account. Device list updates after the watch sends its first reading.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f),
-                    textAlign = TextAlign.Center,
+            pairingInfo?.let { info ->
+                OutlinedTextField(
+                    value = info.mqttHost,
+                    onValueChange = {},
+                    label = { Text("MQTT host") },
+                    readOnly = true,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
+                )
+                OutlinedTextField(
+                    value = info.mqttPort.toString(),
+                    onValueChange = {},
+                    label = { Text("MQTT port") },
+                    readOnly = true,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
                 )
             }
+
+            Button(
+                onClick = onSave,
+                enabled = !isSaving && shortCode.length == 6,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(if (isSaving) "Saving…" else "Save pairing details")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupStep(number: String, title: String, body: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(28.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(number, color = MaterialTheme.colorScheme.primaryContainer, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.labelMedium.fontSize)
+            }
+        }
+        Column {
+            Text(title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
         }
     }
 }
@@ -295,7 +324,7 @@ private fun NoDevicesCard() {
             Icon(Icons.Default.WatchOff, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("No watch linked yet", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             Text(
-                "Enter your Patient ID (e.g. ABC123) on the watch, then tap Start. The watch will appear here after the first reading.",
+                "Save your Patient ID here, enter the same code on the watch, then tap Start. The watch appears here after the first reading.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

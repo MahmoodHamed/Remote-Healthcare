@@ -54,7 +54,7 @@ fun SettingsScreen(
             }
             item {
                 Text(
-                    "6-character Patient ID from the mobile app (e.g. ABC123)",
+                    "Enter the same 6-character Patient ID you saved in the mobile app (e.g. ABC123)",
                     fontSize = 9.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),

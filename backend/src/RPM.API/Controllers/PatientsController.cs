@@ -44,16 +44,14 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
         var list = new List<PatientSummaryDto>();
         foreach (var p in patients)
         {
-            var shortCode = await PatientShortCodeService.EnsureAssignedAsync(p, uow, ct);
             var latest = await uow.Vitals.GetLatestByPatientIdAsync(p.UserId, ct);
             list.Add(new PatientSummaryDto(
                 p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
-                p.DateOfBirth, p.BloodType?.ToString(), shortCode,
+                p.DateOfBirth, p.BloodType?.ToString(), p.ShortPatientCode,
                 latest is null ? null : new VitalRecordLatestDto(
                     latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
                     latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt)));
         }
-        await uow.SaveChangesAsync(ct);
         return list;
     }
 
@@ -63,16 +61,13 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
         var profile = await uow.Patients.GetByUserIdAsync(userId, ct);
         if (profile is null) return NotFound();
 
-        var shortCode = await PatientShortCodeService.EnsureAssignedAsync(profile, uow, ct);
-        await uow.SaveChangesAsync(ct);
-
         var latest = await uow.Vitals.GetLatestByPatientIdAsync(userId, ct);
         var dto = new PatientDetailDto(
             profile.UserId, profile.User.FullName, profile.User.Email, profile.User.Phone,
             profile.User.AvatarUrl, profile.DateOfBirth, profile.BloodType?.ToString(),
             profile.WeightKg, profile.HeightCm, profile.ChronicDiseases,
             profile.Allergies, profile.CurrentMedications, profile.EmergencyContactPhone,
-            shortCode,
+            profile.ShortPatientCode,
             latest is null ? null : new VitalRecordLatestDto(
                 latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
                 latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt));

@@ -17,4 +17,6 @@ public record PairingInfoDto(
     string MqttHost,
     int MqttPort);
 
+public record SavePairingInfoRequest(string PatientId);
+
 public record RenameDeviceRequest(string NewName);

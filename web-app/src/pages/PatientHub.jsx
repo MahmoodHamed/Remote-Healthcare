@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { apiFetch } from '../api/client'
-import { normalizeGuid, resolveHubPatientId } from '../utils/patientId'
+import { normalizeGuid } from '../utils/patientId'
 import { SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
 import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const SHORT_ID_PATTERN = /^[A-Za-z0-9]{6}$/
 
 function fmt(value, digits = 0) {
   if (value === null || value === undefined || Number.isNaN(value)) return '--'
@@ -148,42 +149,18 @@ function PatientVitalsPanel({ authProfile, accessToken }) {
 }
 
 function PatientWatchPanel({ authProfile, accessToken }) {
-  const [pairing, setPairing] = useState(null)
+  const [shortCodeInput, setShortCodeInput] = useState('')
+  const [mqttHost, setMqttHost] = useState('')
+  const [mqttPort, setMqttPort] = useState('')
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  const streamingId = normalizeGuid(
-    pairing?.streamingPatientId ?? pairing?.StreamingPatientId ?? authProfile?.id,
-  )
+  const streamingId = normalizeGuid(authProfile?.id)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const [pairRes, devRes] = await Promise.all([
-          apiFetch('/api/devices/pairing-info'),
-          apiFetch('/api/devices'),
-        ])
-        if (!pairRes.ok) throw new Error('Could not load pairing info from the server.')
-        const pairData = await pairRes.json()
-        if (!cancelled) setPairing(pairData)
-        if (devRes.ok && !cancelled) setDevices(await devRes.json())
-      } catch (err) {
-        if (!cancelled) setError(err?.message || 'Failed to load watch pairing info.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [accessToken])
-
-  const shortCode = pairing?.patientId ?? pairing?.PatientId ?? ''
-
-  const reloadPairing = async () => {
+  const loadPairing = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -192,14 +169,50 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         apiFetch('/api/devices'),
       ])
       if (!pairRes.ok) throw new Error('Could not load pairing info from the server.')
-      setPairing(await pairRes.json())
+      const pairData = await pairRes.json()
+      const code = pairData?.patientId ?? pairData?.PatientId ?? ''
+      setShortCodeInput(code)
+      setMqttHost(pairData?.mqttHost ?? pairData?.MqttHost ?? '')
+      setMqttPort(String(pairData?.mqttPort ?? pairData?.MqttPort ?? ''))
       if (devRes.ok) setDevices(await devRes.json())
+    } catch (err) {
+      setError(err?.message || 'Failed to load watch pairing info.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPairing()
+  }, [loadPairing, accessToken])
+
+  const savePairing = async () => {
+    const code = shortCodeInput.trim().toUpperCase()
+    if (!SHORT_ID_PATTERN.test(code)) {
+      setError('Patient short ID must be exactly 6 letters or digits (e.g. ABC123).')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const res = await apiFetch('/api/devices/pairing-info', {
+        method: 'PUT',
+        body: JSON.stringify({ patientId: code }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message || data?.title || `Save failed (${res.status}).`)
+      }
+      const pairData = await res.json()
+      setShortCodeInput(pairData?.patientId ?? pairData?.PatientId ?? code)
+      setMqttHost(pairData?.mqttHost ?? pairData?.MqttHost ?? mqttHost)
+      setMqttPort(String(pairData?.mqttPort ?? pairData?.MqttPort ?? mqttPort))
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
-      setError(err?.message || 'Failed to refresh pairing info.')
+      setError(err?.message || 'Failed to save pairing details.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -217,7 +230,7 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         <div>
           <p className="eyebrow">My watch</p>
           <h2>Pair your Galaxy Watch</h2>
-          <p className="muted">Use the code below on the watch — it is unique to your account.</p>
+          <p className="muted">Choose a 6-character code here, save it, then enter the same code on the watch.</p>
         </div>
       </div>
 
@@ -227,15 +240,15 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         <div className="watch-step-card">
           <span className="step-num">1</span>
           <div>
-            <strong>Install the watch app</strong>
-            <p className="muted">Side-load the Remote Care Wear OS APK on your Galaxy Watch.</p>
+            <strong>Choose your patient ID</strong>
+            <p className="muted">Type a 6-character code below (e.g. ABC123) and tap Save pairing details.</p>
           </div>
         </div>
         <div className="watch-step-card">
           <span className="step-num">2</span>
           <div>
-            <strong>Enter your patient ID</strong>
-            <p className="muted">Open the watch app Settings and type the 6-character ID shown below.</p>
+            <strong>Enter it on the watch</strong>
+            <p className="muted">Open the watch app → Settings → Patient ID and type the same code.</p>
           </div>
         </div>
         <div className="watch-step-card">
@@ -251,24 +264,34 @@ function PatientWatchPanel({ authProfile, accessToken }) {
         <h3>Pairing details</h3>
         <label>
           Patient short ID
-          <input type="text" value={shortCode} readOnly className="mono-input" />
-          <span className="field-hint">Enter this exact code on the watch. Assigned by the server for your account.</span>
+          <input
+            type="text"
+            value={shortCodeInput}
+            onChange={(e) => {
+              setShortCodeInput(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase())
+              setSaved(false)
+            }}
+            placeholder="ABC123"
+            maxLength={6}
+            className="mono-input"
+          />
+          <span className="field-hint">Must match the watch exactly. Your dashboard listens for this code after you save.</span>
         </label>
         <label>
           Streaming patient ID
           <input type="text" value={streamingId} readOnly className="mono-input" />
-          <span className="field-hint">Your account GUID — used internally by the server after the short code is resolved.</span>
+          <span className="field-hint">Internal ID used by the server after your short code is normalized.</span>
         </label>
         <label>
           MQTT host
-          <input type="text" value={pairing?.mqttHost ?? pairing?.MqttHost ?? ''} readOnly className="mono-input" />
+          <input type="text" value={mqttHost} readOnly className="mono-input" />
         </label>
         <label>
           MQTT port
-          <input type="text" value={String(pairing?.mqttPort ?? pairing?.MqttPort ?? '')} readOnly className="mono-input" />
+          <input type="text" value={mqttPort} readOnly className="mono-input" />
         </label>
-        <button className="btn btn-primary" type="button" onClick={reloadPairing}>
-          {saved ? 'Refreshed' : 'Refresh pairing details'}
+        <button className="btn btn-primary" type="button" onClick={savePairing} disabled={saving}>
+          {saving ? 'Saving…' : saved ? 'Saved' : 'Save pairing details'}
         </button>
       </div>
 

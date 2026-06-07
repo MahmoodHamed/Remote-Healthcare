@@ -9,4 +9,6 @@ public record GetPatientDevicesQuery(Guid PatientUserId) : IRequest<IEnumerable<
 
 public record GetPairingInfoQuery : IRequest<PairingInfoDto>;
 
+public record SavePairingInfoCommand(string PatientId) : IRequest<PairingInfoDto>;
+
 public record RenameDeviceCommand(Guid DeviceId, string NewName) : IRequest;

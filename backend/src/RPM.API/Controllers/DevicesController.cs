@@ -26,6 +26,12 @@ public class DevicesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetPairingInfo(CancellationToken ct) =>
         Ok(await mediator.Send(new GetPairingInfoQuery(), ct));
 
+    /// <summary>Saves the 6-character watch code chosen by the patient (must match the watch).</summary>
+    [HttpPut("pairing-info")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> SavePairingInfo([FromBody] SavePairingInfoRequest body, CancellationToken ct) =>
+        Ok(await mediator.Send(new SavePairingInfoCommand(body.PatientId), ct));
+
     /// <summary>Renames a device (patient-owned only).</summary>
     [HttpPatch("{id:guid}/name")]
     [Authorize(Roles = "Patient")]
