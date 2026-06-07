@@ -20,19 +20,22 @@ private val Context.dataStore: DataStore<Preferences>
 class TokenDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val ACCESS_TOKEN  = stringPreferencesKey("access_token")
-    private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
-    private val USER_ID       = stringPreferencesKey("user_id")
-    private val USER_ROLE     = stringPreferencesKey("user_role")
-    private val USER_NAME     = stringPreferencesKey("user_name")
+    private val ACCESS_TOKEN    = stringPreferencesKey("access_token")
+    private val REFRESH_TOKEN   = stringPreferencesKey("refresh_token")
+    private val USER_ID         = stringPreferencesKey("user_id")
+    private val USER_ROLE       = stringPreferencesKey("user_role")
+    private val USER_NAME       = stringPreferencesKey("user_name")
+    private val WATCH_SHORT_ID  = stringPreferencesKey("watch_short_id")
 
     val accessToken: Flow<String?> = context.dataStore.data.map { it[ACCESS_TOKEN] }
     val refreshToken: Flow<String?> = context.dataStore.data.map { it[REFRESH_TOKEN] }
     val userId: Flow<String?> = context.dataStore.data.map { it[USER_ID] }
     val userRole: Flow<String?> = context.dataStore.data.map { it[USER_ROLE] }
     val userName: Flow<String?> = context.dataStore.data.map { it[USER_NAME] }
+    val watchShortId: Flow<String?> = context.dataStore.data.map { it[WATCH_SHORT_ID] }
 
     suspend fun getAccessToken(): String? = context.dataStore.data.first()[ACCESS_TOKEN]
+    suspend fun getWatchShortId(): String? = context.dataStore.data.first()[WATCH_SHORT_ID]
 
     suspend fun saveSession(
         accessToken: String,
@@ -48,6 +51,10 @@ class TokenDataStore @Inject constructor(
             prefs[USER_ROLE]     = role
             prefs[USER_NAME]     = name
         }
+    }
+
+    suspend fun saveWatchShortId(shortId: String) {
+        context.dataStore.edit { it[WATCH_SHORT_ID] = shortId.trim().uppercase() }
     }
 
     suspend fun clearSession() {
