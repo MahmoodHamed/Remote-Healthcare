@@ -42,22 +42,7 @@ fun VitalsSummaryText(vitals: VitalRecordLatestDto, modifier: Modifier = Modifie
     )
 }
 
-fun buildVitalsSummary(v: VitalRecordLatestDto): String = buildString {
-    v.heartRateBpm?.let { append("HR: ${it.toInt()} bpm") }
-    v.spO2Percent?.let {
-        if (isNotEmpty()) append("  •  ")
-        append("SpO₂: ${it.toInt()}%")
-    }
-    v.temperatureC?.let {
-        if (isNotEmpty()) append("  •  ")
-        append("%.1f °C".format(it))
-    }
-    if (v.systolicBp != null && v.diastolicBp != null) {
-        if (isNotEmpty()) append("  •  ")
-        append("BP: ${v.systolicBp.toInt()}/${v.diastolicBp.toInt()}")
-    }
-    if (isEmpty()) append("No vitals recorded yet")
-}
+fun buildVitalsSummary(v: VitalRecordLatestDto): String = SupportedVitals.buildSummary(v)
 
 // ── Detail card dispatcher ─────────────────────────────────────────────────
 
@@ -136,21 +121,7 @@ private fun FullVitalsCard(title: String, v: VitalRecordDto, modifier: Modifier 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            renderLatestRows(
-                VitalRecordLatestDto(
-                    heartRateBpm = v.heartRateBpm,
-                    spO2Percent  = v.spO2Percent,
-                    systolicBp   = v.systolicBp,
-                    diastolicBp  = v.diastolicBp,
-                    temperatureC = v.temperatureC,
-                    hrvMs        = v.hrvMs,
-                    stressScore  = v.stressScore,
-                    recordedAt   = v.recordedAt,
-                )
-            )
-            v.stepsCount?.let   { VitalRow("Steps",    "$it", normalIcon = true) }
-            v.caloriesBurned?.let { VitalRow("Calories", "%.0f kcal".format(it), normalIcon = true) }
-            VitalRow("Watch", if (v.isWearing) "On wrist ✓" else "Off wrist", normalIcon = v.isWearing)
+            renderSupportedRows(v)
             if (v.fallDetected) {
                 Spacer(Modifier.height(4.dp))
                 FallAlert()
@@ -173,34 +144,7 @@ private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier
             VitalsCardHeader(title = title, live = true)
             Spacer(Modifier.height(12.dp))
 
-            if (rv.isWearing) {
-                rv.heartRateBpm?.let {
-                    VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f))
-                }
-                rv.hrvMs?.let { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
-            }
-            rv.spO2Percent?.let {
-                VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f))
-            }
-            rv.temperatureC?.let {
-                VitalRow("Body Temp.", "%.1f °C".format(it), statusFor(it, 36f..37.5f))
-            }
-            rv.skinTemperatureC?.let {
-                VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true)
-            }
-            if (rv.systolicBp != null && rv.diastolicBp != null) {
-                VitalRow(
-                    "Blood Pressure",
-                    "${rv.systolicBp.toInt()}/${rv.diastolicBp.toInt()} mmHg",
-                    statusFor(rv.systolicBp, 80f..130f),
-                )
-            }
-            rv.stressScore?.let   { VitalRow("Stress",    "${it.toInt()} / 100", stressStatus(it)) }
-            rv.bodyFatPercent?.let { VitalRow("Body Fat",  "%.1f%%".format(it), normalIcon = true) }
-            rv.ecgAvgHeartRateBpm?.let { VitalRow("ECG Avg HR", "${it.toInt()} bpm", normalIcon = true) }
-            rv.stepsCount?.let    { VitalRow("Steps",     "$it", normalIcon = true) }
-            rv.caloriesBurned?.let { VitalRow("Calories",  "%.0f kcal".format(it), normalIcon = true) }
-            VitalRow("Watch", if (rv.isWearing) "On wrist ✓" else "Off wrist", normalIcon = rv.isWearing)
+            renderLiveRows(rv)
             if (rv.fallDetected) {
                 Spacer(Modifier.height(4.dp))
                 FallAlert()
@@ -213,14 +157,49 @@ private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier
 
 @Composable
 private fun ColumnScope.renderLatestRows(v: VitalRecordLatestDto) {
-    v.heartRateBpm?.let { VitalRow("Heart Rate",     "${it.toInt()} bpm",  statusFor(it, 40f..100f)) }
-    v.spO2Percent?.let  { VitalRow("SpO₂",           "${it.toInt()}%",     statusFor(it, 95f..100f)) }
-    v.temperatureC?.let { VitalRow("Temperature",    "%.1f °C".format(it), statusFor(it, 36f..37.5f)) }
-    if (v.systolicBp != null && v.diastolicBp != null) {
-        VitalRow("Blood Pressure", "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()} mmHg", statusFor(v.systolicBp, 80f..130f))
-    }
-    v.hrvMs?.let        { VitalRow("HRV",      "${it.toInt()} ms",  normalIcon = true) }
-    v.stressScore?.let  { VitalRow("Stress",   "${it.toInt()} / 100", stressStatus(it)) }
+    v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f)) }
+    v.spO2Percent?.let  { VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f)) }
+    v.skinTemperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
+        ?: v.temperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
+    v.hrvMs?.let       { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
+    v.stressScore?.let { VitalRow("Stress", "${it.toInt()} / 100", stressStatus(it)) }
+}
+
+@Composable
+private fun ColumnScope.renderSupportedRows(v: VitalRecordDto) {
+    renderLatestRows(
+        VitalRecordLatestDto(
+            heartRateBpm = v.heartRateBpm,
+            spO2Percent  = v.spO2Percent,
+            temperatureC = v.temperatureC,
+            skinTemperatureC = v.skinTemperatureC,
+            hrvMs        = v.hrvMs,
+            stressScore  = v.stressScore,
+            recordedAt   = v.recordedAt,
+        ),
+    )
+    v.ambientTemperatureC?.let { VitalRow("Ambient Temp.", "%.1f °C".format(it), normalIcon = true) }
+    v.stepsCount?.let        { VitalRow("Steps", "$it", normalIcon = true) }
+    v.caloriesBurned?.let    { VitalRow("Calories", "%.0f kcal".format(it), normalIcon = true) }
+    v.bodyFatPercent?.let    { VitalRow("Body Fat", "%.1f%%".format(it), normalIcon = true) }
+    v.ecgAvgHeartRateBpm?.let { VitalRow("ECG Avg HR", "${it.toInt()} bpm", normalIcon = true) }
+    VitalRow("Watch", if (SupportedVitals.isWearing(v)) "On wrist ✓" else "Off wrist", normalIcon = SupportedVitals.isWearing(v))
+}
+
+@Composable
+private fun ColumnScope.renderLiveRows(rv: RealTimeVitals) {
+    rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f)) }
+    rv.spO2Percent?.let   { VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f)) }
+    rv.skinTemperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
+        ?: rv.temperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
+    rv.ambientTemperatureC?.let { VitalRow("Ambient Temp.", "%.1f °C".format(it), normalIcon = true) }
+    rv.hrvMs?.let         { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
+    rv.stressScore?.let   { VitalRow("Stress", "${it.toInt()} / 100", stressStatus(it)) }
+    rv.bodyFatPercent?.let { VitalRow("Body Fat", "%.1f%%".format(it), normalIcon = true) }
+    rv.ecgAvgHeartRateBpm?.let { VitalRow("ECG Avg HR", "${it.toInt()} bpm", normalIcon = true) }
+    rv.stepsCount?.let    { VitalRow("Steps", "$it", normalIcon = true) }
+    rv.caloriesBurned?.let { VitalRow("Calories", "%.0f kcal".format(it), normalIcon = true) }
+    VitalRow("Watch", if (SupportedVitals.isWearing(rv)) "On wrist ✓" else "Off wrist", normalIcon = SupportedVitals.isWearing(rv))
 }
 
 // ── Vital Row ──────────────────────────────────────────────────────────────

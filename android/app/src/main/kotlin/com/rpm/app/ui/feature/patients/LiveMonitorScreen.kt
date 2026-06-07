@@ -28,51 +28,29 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rpm.app.data.signalr.RealTimeVitals
 
 // ──────────────────────────────────────────────────────────────────────────
-// Metric definitions (mirrors PatientMonitor.jsx METRIC_DEFS)
+// Metric tones (SupportedVitals.liveMetrics defines values)
 // ──────────────────────────────────────────────────────────────────────────
 
 private enum class MetricTone {
-    Accent,   // red / primary
-    Teal,     // SpO2, Watch
-    Warm,     // Blood pressure
-    Amber,    // Body temp
-    Blue,     // Skin temp
-    Violet,   // HRV, Stress
-    Ink,      // Steps, Calories, ECG, Body fat, Ambient
-    Danger,   // Fall detection
+    Accent, Teal, Blue, Violet, Ink, Danger,
 }
 
-private data class MetricDef(
-    val label: String,
-    val unit: String,
+private data class LiveMetricCard(
+    val def: SupportedVitals.MetricDef,
     val tone: MetricTone,
-    val hint: String? = null,
-    val getValue: (RealTimeVitals?) -> String,
 )
 
-private val METRIC_DEFS = listOf(
-    MetricDef("Heart Rate",     "bpm",   MetricTone.Accent) { v -> v?.heartRateBpm?.toInt()?.toString() ?: "--" },
-    MetricDef("SpO₂",           "%",     MetricTone.Teal)   { v -> v?.spO2Percent?.let { "%.1f".format(it) } ?: "--" },
-    MetricDef("Blood Pressure", "mmHg",  MetricTone.Warm)   { v ->
-        if (v?.systolicBp != null && v.diastolicBp != null)
-            "${v.systolicBp.toInt()}/${v.diastolicBp.toInt()}" else "--"
-    },
-    MetricDef("Body Temp.",     "°C",    MetricTone.Amber)  { v -> v?.temperatureC?.let { "%.1f".format(it) } ?: "--" },
-    MetricDef("Skin Temp.",     "°C",    MetricTone.Blue)   { v -> v?.skinTemperatureC?.let { "%.1f".format(it) } ?: "--" },
-    MetricDef("HRV",            "ms",    MetricTone.Violet) { v -> v?.hrvMs?.toInt()?.toString() ?: "--" },
-    MetricDef("Stress",         "/100",  MetricTone.Violet) { v -> v?.stressScore?.toInt()?.toString() ?: "--" },
-    MetricDef("Steps",          "today", MetricTone.Ink)    { v -> v?.stepsCount?.toString() ?: "--" },
-    MetricDef("Calories",       "kcal",  MetricTone.Ink)    { v -> v?.caloriesBurned?.let { "%.0f".format(it) } ?: "--" },
-    MetricDef("ECG Avg HR",     "bpm",   MetricTone.Ink,    hint = "On-demand") { v -> v?.ecgAvgHeartRateBpm?.toInt()?.toString() ?: "--" },
-    MetricDef("Body Fat",       "%",     MetricTone.Ink,    hint = "On-demand") { v -> v?.bodyFatPercent?.let { "%.1f".format(it) } ?: "--" },
-    MetricDef("Ambient Temp.",  "°C",    MetricTone.Ink)    { v -> v?.ambientTemperatureC?.let { "%.1f".format(it) } ?: "--" },
-    MetricDef("Fall Detection", "",      MetricTone.Danger) { v ->
-        when (v?.fallDetected) { true -> "Alert!"; false -> "Safe"; null -> "--" }
-    },
-    MetricDef("Watch Status",   "",      MetricTone.Teal)   { v ->
-        when (v?.isWearing) { true -> "On Wrist"; false -> "Off Wrist"; null -> "--" }
-    },
-)
+private val LIVE_METRIC_CARDS = SupportedVitals.liveMetrics.map { def ->
+    val tone = when (def.label) {
+        "Heart Rate"     -> MetricTone.Accent
+        "SpO₂", "Watch Status" -> MetricTone.Teal
+        "Skin Temp."     -> MetricTone.Blue
+        "HRV", "Stress"  -> MetricTone.Violet
+        "Fall Detection" -> MetricTone.Danger
+        else             -> MetricTone.Ink
+    }
+    LiveMetricCard(def, tone)
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Colours per tone
@@ -82,8 +60,6 @@ private val METRIC_DEFS = listOf(
 private fun MetricTone.containerColor(): Color = when (this) {
     MetricTone.Accent  -> MaterialTheme.colorScheme.errorContainer
     MetricTone.Teal    -> Color(0xFF003735)
-    MetricTone.Warm    -> Color(0xFF3E2000)
-    MetricTone.Amber   -> Color(0xFF3A1F00)
     MetricTone.Blue    -> Color(0xFF003A4C)
     MetricTone.Violet  -> Color(0xFF2E004D)
     MetricTone.Ink     -> MaterialTheme.colorScheme.surfaceVariant
@@ -94,8 +70,6 @@ private fun MetricTone.containerColor(): Color = when (this) {
 private fun MetricTone.accentColor(): Color = when (this) {
     MetricTone.Accent  -> MaterialTheme.colorScheme.error
     MetricTone.Teal    -> Color(0xFF4DB6AC)
-    MetricTone.Warm    -> Color(0xFFFFB74D)
-    MetricTone.Amber   -> Color(0xFFFFCA28)
     MetricTone.Blue    -> Color(0xFF4FC3F7)
     MetricTone.Violet  -> Color(0xFFCE93D8)
     MetricTone.Ink     -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -178,9 +152,9 @@ fun LiveMonitorScreen(
                 }
             }
 
-            // 14 metric cards — 2-column grid
-            items(METRIC_DEFS) { def ->
-                MetricCard(vitals = state.vitals, def = def)
+            // Supported metric cards — 2-column grid
+            items(LIVE_METRIC_CARDS) { card ->
+                MetricCard(vitals = state.vitals, card = card)
             }
 
             // History section header — spans both columns
@@ -224,12 +198,13 @@ fun LiveMonitorScreen(
 // ──────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun MetricCard(vitals: RealTimeVitals?, def: MetricDef) {
+private fun MetricCard(vitals: RealTimeVitals?, card: LiveMetricCard) {
+    val def = card.def
     val value = def.getValue(vitals)
     val isLive = value != "--"
 
     val bg by animateColorAsState(
-        targetValue = if (isLive) def.tone.containerColor() else MaterialTheme.colorScheme.surface,
+        targetValue = if (isLive) card.tone.containerColor() else MaterialTheme.colorScheme.surface,
         animationSpec = tween(600),
         label = "cardBg",
     )
@@ -252,7 +227,7 @@ private fun MetricCard(vitals: RealTimeVitals?, def: MetricDef) {
             Text(
                 def.label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isLive) def.tone.accentColor().copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isLive) card.tone.accentColor().copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
             )
 
@@ -265,7 +240,7 @@ private fun MetricCard(vitals: RealTimeVitals?, def: MetricDef) {
                         fontWeight = FontWeight.Bold,
                         fontSize   = if (value.length > 5) 22.sp else 28.sp,
                     ),
-                    color = if (isLive) def.tone.accentColor() else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    color = if (isLive) card.tone.accentColor() else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                 )
 
                 // Unit + hint
@@ -274,7 +249,7 @@ private fun MetricCard(vitals: RealTimeVitals?, def: MetricDef) {
                         Text(
                             def.unit,
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isLive) def.tone.accentColor().copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (isLive) card.tone.accentColor().copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     def.hint?.let {
@@ -392,13 +367,14 @@ private fun HistoryRow(entry: LiveHistoryEntry) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HistoryMetric("HR", "${entry.hr} bpm", Color(0xFFEF5350), Modifier.weight(1f))
                 HistoryMetric("SpO₂", "${entry.spo2}%", Color(0xFF26A69A), Modifier.weight(1f))
-                HistoryMetric("Temp", "${entry.tempC}°C", Color(0xFFFF7043), Modifier.weight(1f))
+                HistoryMetric("Skin", "${entry.skinTemp}°C", Color(0xFF42A5F5), Modifier.weight(1f))
                 HistoryMetric("HRV", "${entry.hrv} ms", Color(0xFFAB47BC), Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                HistoryMetric("Skin", "${entry.skinTemp}°C", Color(0xFF42A5F5), Modifier.weight(1f))
+                HistoryMetric("Amb.", "${entry.ambientTemp}°C", MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
+                HistoryMetric("Stress", entry.stress, Color(0xFFAB47BC), Modifier.weight(1f))
                 HistoryMetric("Steps", entry.steps, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.weight(1f))
-                Spacer(Modifier.weight(2f))
+                Spacer(Modifier.weight(1f))
             }
         }
     }

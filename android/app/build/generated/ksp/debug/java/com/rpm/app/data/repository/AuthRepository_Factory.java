@@ -1,6 +1,5 @@
 package com.rpm.app.data.repository;
 
-import com.rpm.app.data.auth.SessionManager;
 import com.rpm.app.data.local.TokenDataStore;
 import com.rpm.app.data.remote.api.RpmApiService;
 import com.rpm.app.data.remote.api.TokenRefresher;
@@ -32,30 +31,27 @@ public final class AuthRepository_Factory implements Factory<AuthRepository> {
 
   private final Provider<TokenRefresher> tokenRefresherProvider;
 
-  private final Provider<SessionManager> sessionManagerProvider;
-
   public AuthRepository_Factory(Provider<RpmApiService> apiProvider,
-      Provider<TokenDataStore> tokenStoreProvider, Provider<TokenRefresher> tokenRefresherProvider,
-      Provider<SessionManager> sessionManagerProvider) {
+      Provider<TokenDataStore> tokenStoreProvider,
+      Provider<TokenRefresher> tokenRefresherProvider) {
     this.apiProvider = apiProvider;
     this.tokenStoreProvider = tokenStoreProvider;
     this.tokenRefresherProvider = tokenRefresherProvider;
-    this.sessionManagerProvider = sessionManagerProvider;
   }
 
   @Override
   public AuthRepository get() {
-    return newInstance(apiProvider.get(), tokenStoreProvider.get(), tokenRefresherProvider.get(), sessionManagerProvider.get());
+    return newInstance(apiProvider.get(), tokenStoreProvider.get(), tokenRefresherProvider.get());
   }
 
   public static AuthRepository_Factory create(Provider<RpmApiService> apiProvider,
-      Provider<TokenDataStore> tokenStoreProvider, Provider<TokenRefresher> tokenRefresherProvider,
-      Provider<SessionManager> sessionManagerProvider) {
-    return new AuthRepository_Factory(apiProvider, tokenStoreProvider, tokenRefresherProvider, sessionManagerProvider);
+      Provider<TokenDataStore> tokenStoreProvider,
+      Provider<TokenRefresher> tokenRefresherProvider) {
+    return new AuthRepository_Factory(apiProvider, tokenStoreProvider, tokenRefresherProvider);
   }
 
   public static AuthRepository newInstance(RpmApiService api, TokenDataStore tokenStore,
-      TokenRefresher tokenRefresher, SessionManager sessionManager) {
-    return new AuthRepository(api, tokenStore, tokenRefresher, sessionManager);
+      TokenRefresher tokenRefresher) {
+    return new AuthRepository(api, tokenStore, tokenRefresher);
   }
 }

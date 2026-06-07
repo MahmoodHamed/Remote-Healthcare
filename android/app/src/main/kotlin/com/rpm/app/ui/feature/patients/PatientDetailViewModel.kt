@@ -10,6 +10,7 @@ import com.rpm.app.data.repository.ChatRepository
 import com.rpm.app.data.repository.PatientRepository
 import com.rpm.app.data.signalr.RealTimeVitals
 import com.rpm.app.data.signalr.VitalsSignalRClient
+import com.rpm.app.data.signalr.mergeWith
 import com.rpm.app.domain.model.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,10 +92,9 @@ class PatientDetailViewModel @Inject constructor(
                     error = _uiState.value.error ?: "Live vitals unavailable (check login or network)",
                 )
             }
-            signalR.vitals.collect { v ->
-                if (v.patientId == patientId) {
-                    _uiState.value = _uiState.value.copy(realtimeVitals = v)
-                }
+            signalR.vitals.collect { incoming ->
+                val merged = incoming.mergeWith(_uiState.value.realtimeVitals)
+                _uiState.value = _uiState.value.copy(realtimeVitals = merged)
             }
         }
     }

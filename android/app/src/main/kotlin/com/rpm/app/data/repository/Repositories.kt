@@ -198,7 +198,5 @@ private suspend fun <T> SessionManager.safeCall(call: suspend () -> retrofit2.Re
     }
 }
 
-private fun SessionManager.errorFromResponse(response: retrofit2.Response<*>): Resource.Error {
-    if (response.code() == 401) notifySessionExpired()
-    return Resource.Error(httpErrorMessage(response), response.code())
-}
+private fun SessionManager.errorFromResponse(response: retrofit2.Response<*>): Resource.Error =
+    Resource.Error(httpErrorMessage(response), response.code())

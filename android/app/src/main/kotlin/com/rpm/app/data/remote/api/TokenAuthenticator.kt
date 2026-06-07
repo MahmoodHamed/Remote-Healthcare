@@ -41,6 +41,7 @@ class TokenAuthenticator @Inject constructor(
 
     private fun expireSession() {
         runBlocking { tokenStore.clearSession() }
+        // Only notify if a session was active; stale 401s are ignored via generation in AuthViewModel.
         sessionManager.notifySessionExpired()
     }
 

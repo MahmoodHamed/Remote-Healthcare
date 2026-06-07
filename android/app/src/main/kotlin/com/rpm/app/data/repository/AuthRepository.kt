@@ -1,6 +1,5 @@
 package com.rpm.app.data.repository
 
-import com.rpm.app.data.auth.SessionManager
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.api.RpmApiService
 import com.rpm.app.data.remote.api.TokenRefresher
@@ -14,7 +13,6 @@ class AuthRepository @Inject constructor(
     private val api: RpmApiService,
     private val tokenStore: TokenDataStore,
     private val tokenRefresher: TokenRefresher,
-    private val sessionManager: SessionManager,
 ) {
     suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> {
         return try {
@@ -30,7 +28,12 @@ class AuthRepository @Inject constructor(
                 )
                 Resource.Success(body)
             } else {
-                Resource.Error(httpErrorMessage(response))
+                val message = if (response.code() == 401) {
+                    "Invalid email or password."
+                } else {
+                    httpErrorMessage(response)
+                }
+                Resource.Error(message, response.code())
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Unknown error")
@@ -113,7 +116,6 @@ class AuthRepository @Inject constructor(
                     Resource.Error(httpErrorMessage(response), response.code())
                 }
             } else {
-                if (response.code() == 401) sessionManager.notifySessionExpired()
                 Resource.Error(httpErrorMessage(response), response.code())
             }
         } catch (e: Exception) {
@@ -122,7 +124,15 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun logout() {
-        try { api.logout() } catch (_: Exception) {}
+        try {
+            if (tokenStore.getAccessToken() != null) {
+                api.logout()
+            }
+        } catch (_: Exception) {}
+        clearLocalSession()
+    }
+
+    suspend fun clearLocalSession() {
         tokenStore.clearSession()
     }
 

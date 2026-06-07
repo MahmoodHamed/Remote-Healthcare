@@ -517,9 +517,13 @@ private fun VitalRecordRow(record: VitalRecordDto, index: Int) {
                         if (isNotEmpty()) append("  •  ")
                         append("SpO₂ ${it.toInt()}%")
                     }
-                    record.temperatureC?.let {
+                    (record.skinTemperatureC ?: record.temperatureC)?.let {
                         if (isNotEmpty()) append("  •  ")
-                        append("%.1f°C".format(it))
+                        append("Skin %.1f°C".format(it))
+                    }
+                    record.stressScore?.let {
+                        if (isNotEmpty()) append("  •  ")
+                        append("Stress ${it.toInt()}")
                     }
                     if (isEmpty() && record.stepsCount != null) {
                         append("${record.stepsCount} steps")
@@ -545,16 +549,16 @@ private fun VitalRecordRow(record: VitalRecordDto, index: Int) {
             // Watch status chip
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = if (record.isWearing) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (SupportedVitals.isWearing(record)) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
                     modifier          = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        if (record.isWearing) Icons.Default.Watch else Icons.Default.WatchOff,
+                        if (SupportedVitals.isWearing(record)) Icons.Default.Watch else Icons.Default.WatchOff,
                         contentDescription = null,
-                        tint     = if (record.isWearing) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint     = if (SupportedVitals.isWearing(record)) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(12.dp),
                     )
                 }
@@ -586,25 +590,19 @@ private fun VitalRecordRow(record: VitalRecordDto, index: Int) {
                     modifier            = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    record.heartRateBpm?.let     { HistoryVitalRow("Heart Rate",    "${it.toInt()} bpm",          vitalStatus(it, 40f..100f)) }
-                    record.spO2Percent?.let      { HistoryVitalRow("SpO₂",          "${it.toInt()}%",             vitalStatus(it, 95f..100f)) }
-                    record.temperatureC?.let     { HistoryVitalRow("Temperature",   "%.1f °C".format(it),        vitalStatus(it, 36f..37.5f)) }
-                    if (record.systolicBp != null && record.diastolicBp != null) {
-                        HistoryVitalRow(
-                            label  = "Blood Pressure",
-                            value  = "${record.systolicBp.toInt()}/${record.diastolicBp.toInt()} mmHg",
-                            status = vitalStatus(record.systolicBp, 80f..130f),
-                        )
+                    SupportedVitals.historyRows(record).forEach { (label, value) ->
+                        val status = when (label) {
+                            "Heart Rate" -> record.heartRateBpm?.let { vitalStatus(it, 40f..100f) } ?: VitalHistoryStatus.Normal
+                            "SpO₂"       -> record.spO2Percent?.let { vitalStatus(it, 95f..100f) } ?: VitalHistoryStatus.Normal
+                            "Stress"     -> record.stressScore?.let {
+                                if (it < 40f) VitalHistoryStatus.Normal
+                                else if (it < 70f) VitalHistoryStatus.Warning
+                                else VitalHistoryStatus.Critical
+                            } ?: VitalHistoryStatus.Normal
+                            else         -> VitalHistoryStatus.Normal
+                        }
+                        HistoryVitalRow(label, value, status)
                     }
-                    record.hrvMs?.let            { HistoryVitalRow("HRV",           "${it.toInt()} ms",           VitalHistoryStatus.Normal) }
-                    record.stressScore?.let      { HistoryVitalRow("Stress Score",  "${it.toInt()} / 100",        if (it < 40f) VitalHistoryStatus.Normal else if (it < 70f) VitalHistoryStatus.Warning else VitalHistoryStatus.Critical) }
-                    record.skinTemperatureC?.let { HistoryVitalRow("Skin Temp.",    "%.1f °C".format(it),        VitalHistoryStatus.Normal) }
-                    record.bodyFatPercent?.let   { HistoryVitalRow("Body Fat",      "%.1f%%".format(it),          VitalHistoryStatus.Normal) }
-                    record.ecgAvgHeartRateBpm?.let { HistoryVitalRow("ECG Avg HR",  "${it.toInt()} bpm",          VitalHistoryStatus.Normal) }
-                    record.stepsCount?.let       { HistoryVitalRow("Steps",         "$it",                        VitalHistoryStatus.Normal) }
-                    record.caloriesBurned?.let   { HistoryVitalRow("Calories",      "%.0f kcal".format(it),      VitalHistoryStatus.Normal) }
-                    record.ambientTemperatureC?.let { HistoryVitalRow("Ambient Temp.", "%.1f °C".format(it),    VitalHistoryStatus.Normal) }
-                    HistoryVitalRow("Watch",     if (record.isWearing) "On wrist" else "Off wrist",               VitalHistoryStatus.Normal)
                 }
             }
         }

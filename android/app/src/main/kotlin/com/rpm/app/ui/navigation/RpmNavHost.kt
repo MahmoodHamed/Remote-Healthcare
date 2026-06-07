@@ -70,8 +70,8 @@ fun RpmNavHost(
         RequestNotificationPermission()
     }
 
-    // Session-expired dialog
-    if (authState.showSessionExpiredDialog) {
+    // Session-expired dialog — only on login screen, never while authenticated
+    if (authState.showSessionExpiredDialog && !authState.isLoggedIn) {
         AlertDialog(
             onDismissRequest = { authViewModel.dismissSessionExpiredDialog() },
             icon             = { Icon(Icons.Default.Lock, contentDescription = null) },

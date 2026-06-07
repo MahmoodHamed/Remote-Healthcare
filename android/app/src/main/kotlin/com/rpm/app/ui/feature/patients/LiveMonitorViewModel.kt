@@ -6,12 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.rpm.app.data.repository.PatientRepository
 import com.rpm.app.data.signalr.RealTimeVitals
 import com.rpm.app.data.signalr.VitalsSignalRClient
+import com.rpm.app.data.signalr.mergeWith
+import com.rpm.app.data.signalr.toRealTime
 import com.rpm.app.domain.model.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -22,9 +26,10 @@ data class LiveHistoryEntry(
     val time: String,
     val hr: String,
     val spo2: String,
-    val tempC: String,
     val skinTemp: String,
+    val ambientTemp: String,
     val hrv: String,
+    val stress: String,
     val steps: String,
     val fallDetected: Boolean,
     val wearing: Boolean,
@@ -55,7 +60,9 @@ class LiveMonitorViewModel @Inject constructor(
 
     init {
         loadPatientName()
-        subscribeRealtime()
+        loadLatestFromApi()
+        startSignalR()
+        startRestPolling()
     }
 
     private fun loadPatientName() {
@@ -67,39 +74,71 @@ class LiveMonitorViewModel @Inject constructor(
         }
     }
 
-    private fun subscribeRealtime() {
+    private fun loadLatestFromApi() {
+        viewModelScope.launch {
+            when (val result = repo.getLatestVitals(patientId)) {
+                is Resource.Success -> applyVitals(result.data.toRealTime(), fromSignalR = false)
+                else -> {}
+            }
+        }
+    }
+
+    private fun startSignalR() {
         viewModelScope.launch {
             val connected = signalR.connect(patientId)
-            _state.update { it.copy(connectionStatus = if (connected) ConnectionStatus.Live else ConnectionStatus.Offline) }
-            if (connected) {
-                signalR.vitals.collect { v ->
-                    if (v.patientId != patientId) return@collect
-                    val entry = LiveHistoryEntry(
-                        time        = timeFmt.format(Instant.now()),
-                        hr          = v.heartRateBpm?.toInt()?.toString() ?: "--",
-                        spo2        = v.spO2Percent?.let { "%.1f".format(it) } ?: "--",
-                        tempC       = v.temperatureC?.let { "%.1f".format(it) } ?: "--",
-                        skinTemp    = v.skinTemperatureC?.let { "%.1f".format(it) } ?: "--",
-                        hrv         = v.hrvMs?.toInt()?.toString() ?: "--",
-                        steps       = v.stepsCount?.toString() ?: "--",
-                        fallDetected = v.fallDetected,
-                        wearing     = v.isWearing,
-                    )
-                    _state.update { s ->
-                        s.copy(
-                            connectionStatus = ConnectionStatus.Live,
-                            vitals  = v,
-                            history = (listOf(entry) + s.history).take(12),
-                        )
-                    }
+            _state.update {
+                it.copy(connectionStatus = if (connected) ConnectionStatus.Live else ConnectionStatus.Offline)
+            }
+        }
+        viewModelScope.launch {
+            signalR.vitals.collect { incoming ->
+                applyVitals(incoming, fromSignalR = true)
+            }
+        }
+    }
+
+    private fun startRestPolling() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(5_000)
+                when (val result = repo.getLatestVitals(patientId)) {
+                    is Resource.Success -> applyVitals(result.data.toRealTime(), fromSignalR = false)
+                    else -> {}
                 }
             }
         }
     }
 
+    private fun applyVitals(incoming: RealTimeVitals, fromSignalR: Boolean) {
+        val merged = incoming.mergeWith(_state.value.vitals)
+        val entry = LiveHistoryEntry(
+            time         = timeFmt.format(Instant.now()),
+            hr           = merged.heartRateBpm?.toInt()?.toString() ?: "--",
+            spo2         = merged.spO2Percent?.let { "%.1f".format(it) } ?: "--",
+            skinTemp     = merged.skinTemperatureC?.let { "%.1f".format(it) }
+                ?: merged.temperatureC?.let { "%.1f".format(it) } ?: "--",
+            ambientTemp  = merged.ambientTemperatureC?.let { "%.1f".format(it) } ?: "--",
+            hrv          = merged.hrvMs?.toInt()?.toString() ?: "--",
+            stress       = merged.stressScore?.toInt()?.toString() ?: "--",
+            steps        = merged.stepsCount?.toString() ?: "--",
+            fallDetected = merged.fallDetected,
+            wearing      = SupportedVitals.isWearing(merged),
+        )
+        _state.update { s ->
+            val newHistory = if (fromSignalR || s.history.isEmpty()) {
+                (listOf(entry) + s.history).take(12)
+            } else {
+                s.history
+            }
+            s.copy(
+                connectionStatus = if (fromSignalR) ConnectionStatus.Live else s.connectionStatus,
+                vitals = merged,
+                history = newHistory,
+            )
+        }
+    }
+
     override fun onCleared() {
-        // Don't disconnect — PatientDetailViewModel (still on the back stack)
-        // owns the SignalR connection lifecycle for this patient.
         super.onCleared()
     }
 }
