@@ -12,6 +12,9 @@ public abstract class BaseEntity
     public void AddDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
     public void ClearDomainEvents() => _domainEvents.Clear();
     protected void SetUpdatedAt() => UpdatedAt = DateTime.UtcNow;
+
+    /// <summary>Assign a pre-determined identifier (e.g. MQTT-ingested device or user IDs).</summary>
+    protected void AssignId(Guid id) => Id = id;
 }
 
 public interface IDomainEvent : INotification { }

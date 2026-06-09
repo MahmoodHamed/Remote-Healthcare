@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using RPM.Application.Common.Exceptions;
-using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Chat;
 using RPM.Application.Features.Chat.Commands;
+using RPM.Application.Features.Chat.Notifications;
 using RPM.Application.Features.Chat.Queries;
 using RPM.Domain.Entities;
 using RPM.Domain.Interfaces;
@@ -29,13 +29,16 @@ public class CreateConversationHandler(IUnitOfWork uow)
     }
 }
 
-public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub, INotificationService notif)
+public class SendMessageHandler(IUnitOfWork uow, IPublisher publisher)
     : IRequestHandler<SendMessageCommand, MessageDto>
 {
     public async Task<MessageDto> Handle(SendMessageCommand cmd, CancellationToken ct)
     {
         var conv = await uow.Chat.GetByIdAsync(cmd.ConversationId, ct)
             ?? throw new NotFoundException(nameof(Conversation), cmd.ConversationId);
+
+        if (!conv.Participants.Any(p => p.UserId == cmd.SenderId))
+            throw new ForbiddenException();
 
         var msg = Message.Create(cmd.ConversationId, cmd.SenderId, cmd.Content, cmd.Type, cmd.MediaUrl);
         await uow.Chat.AddMessageAsync(msg, ct);
@@ -48,34 +51,7 @@ public class SendMessageHandler(IUnitOfWork uow, IChatHubService chatHub, INotif
             sender?.FullName ?? "Unknown", msg.Content, msg.Type.ToString(),
             msg.MediaUrl, msg.IsDeleted, msg.SentAt);
 
-        await chatHub.BroadcastMessageAsync(dto, ct);
-
-        var preview = msg.Content.Length > 120 ? msg.Content[..117] + "..." : msg.Content;
-        var recipientTokens = conv.Participants
-            .Where(p => p.UserId != cmd.SenderId)
-            .Select(p => p.User?.FcmToken)
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Cast<string>()
-            .ToList();
-
-        if (recipientTokens.Count > 0)
-        {
-            await notif.SendPushToManyAsync(
-                recipientTokens,
-                sender?.FullName ?? "New message",
-                preview,
-                new Dictionary<string, string>
-                {
-                    ["type"] = "chat",
-                    ["channelId"] = "rpm_messages",
-                    ["conversationId"] = msg.ConversationId.ToString(),
-                    ["messageId"] = msg.Id.ToString(),
-                    ["senderName"] = sender?.FullName ?? "Unknown",
-                },
-                dataOnly: true,
-                ct);
-        }
-
+        await publisher.Publish(new MessageSentNotification(dto), ct);
         return dto;
     }
 }

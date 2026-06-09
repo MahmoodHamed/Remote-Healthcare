@@ -27,6 +27,7 @@ WORKDIR /app
 # Create non-root user
 RUN groupadd --system appuser \
     && useradd --system --gid appuser --home /app --shell /usr/sbin/nologin appuser \
+    && mkdir -p /app/.aspnet/DataProtection-Keys \
     && chown -R appuser /app
 USER appuser
 

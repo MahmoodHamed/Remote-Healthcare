@@ -22,71 +22,43 @@ public class FcmNotificationService : INotificationService
     }
 
     public async Task SendPushAsync(string fcmToken, string title, string body,
-        Dictionary<string, string>? data = null, bool dataOnly = false, CancellationToken ct = default)
+        Dictionary<string, string>? data = null, string channelId = "rpm_alerts", CancellationToken ct = default)
     {
-        await FirebaseMessaging.DefaultInstance.SendAsync(
-            BuildMessage(fcmToken, title, body, data, dataOnly), ct);
+        var msg = new Message
+        {
+            Token = fcmToken,
+            Notification = new Notification { Title = title, Body = body },
+            Data = data,
+            Android = BuildAndroidConfig(channelId)
+        };
+        await FirebaseMessaging.DefaultInstance.SendAsync(msg, ct);
     }
 
     public async Task SendPushToManyAsync(IEnumerable<string> fcmTokens, string title, string body,
-        Dictionary<string, string>? data = null, bool dataOnly = false, CancellationToken ct = default)
+        Dictionary<string, string>? data = null, string channelId = "rpm_alerts", CancellationToken ct = default)
     {
-        var tokens = fcmTokens.Distinct().Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+        var tokens = fcmTokens.Distinct().ToList();
         if (tokens.Count == 0) return;
 
         var multicast = new MulticastMessage
         {
             Tokens = tokens,
-            Data = BuildDataPayload(title, body, data),
-            Android = new AndroidConfig { Priority = Priority.High },
+            Notification = new Notification { Title = title, Body = body },
+            Data = data,
+            Android = BuildAndroidConfig(channelId)
         };
-
-        if (!dataOnly)
-        {
-            multicast.Notification = new Notification { Title = title, Body = body };
-            multicast.Android.Notification = new AndroidNotification
-            {
-                Sound = "default",
-                ChannelId = data?.GetValueOrDefault("channelId") ?? "rpm_alerts",
-            };
-        }
-
         await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(multicast, ct);
     }
 
-    private static Message BuildMessage(string token, string title, string body,
-        Dictionary<string, string>? data, bool dataOnly)
+    private static AndroidConfig BuildAndroidConfig(string channelId) => new()
     {
-        var msg = new Message
+        Priority = Priority.High,
+        Notification = new AndroidNotification
         {
-            Token = token,
-            Data = BuildDataPayload(title, body, data),
-            Android = new AndroidConfig { Priority = Priority.High },
-        };
-
-        if (!dataOnly)
-        {
-            msg.Notification = new Notification { Title = title, Body = body };
-            msg.Android.Notification = new AndroidNotification
-            {
-                Sound = "default",
-                ChannelId = data?.GetValueOrDefault("channelId") ?? "rpm_alerts",
-            };
+            Sound = "default",
+            ChannelId = channelId,
+            DefaultSound = true,
+            Priority = NotificationPriority.HIGH
         }
-
-        return msg;
-    }
-
-    private static Dictionary<string, string> BuildDataPayload(string title, string body, Dictionary<string, string>? data)
-    {
-        var payload = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["title"] = title,
-            ["body"] = body,
-        };
-        if (data is null) return payload;
-        foreach (var (key, value) in data)
-            payload[key] = value;
-        return payload;
-    }
+    };
 }

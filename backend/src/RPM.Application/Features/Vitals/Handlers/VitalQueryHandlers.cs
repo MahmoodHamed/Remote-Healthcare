@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using RPM.Application.Common.Interfaces;
 using RPM.Application.DTOs.Vitals;
 using RPM.Application.Features.Vitals.Queries;
 using RPM.Domain.Interfaces;
@@ -11,19 +12,27 @@ public class GetPatientVitalsHandler(IUnitOfWork uow)
     {
         var items = await uow.Vitals.GetByPatientIdAsync(q.PatientId, q.From, q.To, q.Page, q.PageSize, ct);
         var total = await uow.Vitals.CountByPatientIdAsync(q.PatientId, q.From, q.To, ct);
-        var dtos = items.Select(VitalRecordDtoMapper.MapToDto);
-        return new VitalsPagedDto(dtos, total, q.Page, q.PageSize);
+        return new VitalsPagedDto(items.Select(VitalMapper.ToDto), total, q.Page, q.PageSize);
     }
 }
 
-public class GetLatestVitalsHandler(IUnitOfWork uow)
+public class GetLatestVitalsHandler(IUnitOfWork uow, ICacheService cache)
     : IRequestHandler<GetLatestVitalsQuery, VitalRecordDto?>
 {
     public async Task<VitalRecordDto?> Handle(GetLatestVitalsQuery q, CancellationToken ct)
     {
-        var r = await uow.Vitals.GetLatestByPatientIdAsync(q.PatientId, ct);
-        if (r is null) return null;
-        return VitalRecordDtoMapper.MapToDto(r);
+        var cached = await cache.GetAsync<VitalRecordDto>(VitalMapper.LatestVitalsKey(q.PatientId), ct);
+        if (cached is not null) return cached;
+
+        var recent = await uow.Vitals.GetRecentByPatientIdAsync(q.PatientId, 30, ct);
+        VitalRecordDto? merged = null;
+        foreach (var record in recent.OrderBy(r => r.RecordedAt))
+            merged = VitalMapper.Merge(merged, VitalMapper.ToDto(record));
+
+        if (merged is null) return null;
+
+        await cache.SetAsync(VitalMapper.LatestVitalsKey(q.PatientId), merged, TimeSpan.FromHours(6), ct);
+        return merged;
     }
 }
 
@@ -32,9 +41,20 @@ public class GetAlertThresholdHandler(IUnitOfWork uow)
 {
     public async Task<AlertThresholdDto?> Handle(GetAlertThresholdQuery q, CancellationToken ct)
     {
-        var t = await uow.Alerts.GetThresholdByPatientIdAsync(q.PatientId, ct);
-        if (t is null) return null;
-        return new AlertThresholdDto(t.MinHeartRate, t.MaxHeartRate, t.MinSpO2, t.MaxSystolicBp, t.MaxDiastolicBp, t.MaxTemperatureC);
+        var threshold = await uow.Alerts.GetThresholdByPatientIdAsync(q.PatientId, ct);
+        if (threshold is null) return null;
+        return new AlertThresholdDto(
+            threshold.MinHeartRate,
+            threshold.MaxHeartRate,
+            threshold.MinSpO2,
+            threshold.MaxSystolicBp,
+            threshold.MaxDiastolicBp,
+            threshold.MaxTemperatureC,
+            threshold.MaxSkinTemperatureC,
+            threshold.MinRespirationRate,
+            threshold.MaxRespirationRate,
+            threshold.MaxStressScore,
+            threshold.MinBloodGlucoseMgDl,
+            threshold.MaxBloodGlucoseMgDl);
     }
 }
-

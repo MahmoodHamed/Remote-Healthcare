@@ -8,12 +8,5 @@ public interface IUserRepository
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
     Task AddNotificationAsync(Notification notification, CancellationToken ct = default);
-    Task<IEnumerable<Notification>> GetNotificationsAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
-    Task<long> GetUnreadNotificationCountAsync(Guid userId, CancellationToken ct = default);
-    Task<Notification?> GetNotificationByIdAsync(Guid id, CancellationToken ct = default);
-    Task MarkAllNotificationsReadAsync(Guid userId, CancellationToken ct = default);
     void Update(User user);
-    Task AddRefreshTokenAsync(RefreshToken token, CancellationToken ct = default);
-    Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken ct = default);
-    void UpdateRefreshToken(RefreshToken token);
 }

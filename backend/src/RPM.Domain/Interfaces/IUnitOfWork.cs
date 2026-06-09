@@ -7,5 +7,7 @@ public interface IUnitOfWork
     IChatRepository Chat { get; }
     IDeviceRepository Devices { get; }
     IPatientRepository Patients { get; }
+    INotificationRepository Notifications { get; }
+    IRefreshTokenRepository RefreshTokens { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

@@ -10,5 +10,7 @@ public class UnitOfWork(AppDbContext db) : IUnitOfWork
     public IChatRepository Chat { get; } = new ChatRepository(db);
     public IDeviceRepository Devices { get; } = new DeviceRepository(db);
     public IPatientRepository Patients { get; } = new PatientRepository(db);
+    public INotificationRepository Notifications { get; } = new NotificationRepository(db);
+    public IRefreshTokenRepository RefreshTokens { get; } = new RefreshTokenRepository(db);
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
 }

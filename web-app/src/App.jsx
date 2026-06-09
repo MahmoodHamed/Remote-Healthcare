@@ -1,216 +1,164 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import { ThemeProvider } from './context/ThemeContext'
 
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard, { HeartRateMonitor } from './pages/Dashboard'
-import PatientMonitor from './pages/PatientMonitor'
-import PatientHub from './pages/PatientHub'
-import { clearAuthSession, loadAuthSession, saveAuthSession } from './utils/authSession'
-import { accountUserId } from './utils/patientId'
+import { readProfile, logout as clearSession, homeRouteForRole } from './utils/auth'
+import { ensureValidSession, getAccessToken } from './utils/authSession'
+import { getApiBase } from './utils/apiBase'
 
-const normalizeAuthUser = (user) => {
-  if (!user || typeof user !== 'object') return user
-  const id = accountUserId(user)
-  return id ? { ...user, id } : user
+import Landing from './pages/Landing.jsx'
+import Login from './pages/Login.jsx'
+import RegisterPicker from './pages/RegisterPicker.jsx'
+import RegisterPatient from './pages/RegisterPatient.jsx'
+import RegisterDoctor from './pages/RegisterDoctor.jsx'
+import AdminLogin from './pages/AdminLogin.jsx'
+
+import AdminLayout from './layouts/AdminLayout.jsx'
+import DoctorLayout from './layouts/DoctorLayout.jsx'
+import PatientLayout from './layouts/PatientLayout.jsx'
+
+import AdminOverview from './pages/admin/AdminOverview.jsx'
+import AdminDoctors from './pages/admin/AdminDoctors.jsx'
+import AdminDoctorDetail from './pages/admin/AdminDoctorDetail.jsx'
+import AdminPatients from './pages/admin/AdminPatients.jsx'
+import AdminUsers from './pages/admin/AdminUsers.jsx'
+import AdminAuditLog from './pages/admin/AdminAuditLog.jsx'
+
+import DoctorDashboard from './pages/doctor/DoctorDashboard.jsx'
+import DoctorPatients from './pages/doctor/DoctorPatients.jsx'
+import DoctorPatientDetail from './pages/doctor/DoctorPatientDetail.jsx'
+import DoctorNotifications from './pages/doctor/DoctorNotifications.jsx'
+import DoctorConversations from './pages/doctor/DoctorConversations.jsx'
+
+import PatientDashboard from './pages/patient/PatientDashboard.jsx'
+import PatientWatch from './pages/patient/PatientWatch.jsx'
+import PatientNotifications from './pages/patient/PatientNotifications.jsx'
+import PatientConversations from './pages/patient/PatientConversations.jsx'
+
+const AuthContext = ({ children }) => children
+
+function ProtectedRoute({ role, profile, children }) {
+  if (!profile) return <Navigate to="/login" replace />
+  if (role && profile.role !== role) return <Navigate to={homeRouteForRole(profile.role)} replace />
+  return children
 }
 
-function Header({ authProfile, onLogout }) {
-  return (
-    <header className="nav">
-      <div className="container nav-inner">
-        <Link className="brand" to="/" aria-label="Remote Care">
-          <span className="brand-mark">RC</span>
-          Remote Care
-        </Link>
-
-        <nav className="nav-links">
-          {authProfile ? (
-            <>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/heart-rate">Heart rate</Link>
-              <Link to="/monitor">Patient monitor</Link>
-              {authProfile?.role === 'Admin' && <Link to="/dashboard#admin">Admin</Link>}
-              <button className="nav-link-btn" onClick={onLogout} style={{ cursor: 'pointer' }}>
-                Sign out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login">Sign in</Link>
-              <Link to="/register">Register</Link>
-            </>
-          )}
-        </nav>
-
-        <div className="nav-cta">
-          {!authProfile && <Link className="btn btn-primary" to="/login">Sign in</Link>}
-        </div>
-      </div>
-    </header>
-  )
-}
-
-function Footer() {
-  return (
-    <footer className="footer">
-      <div className="container">
-        <p>&copy; 2026 Remote Care. Secure remote patient monitoring system.</p>
-      </div>
-    </footer>
-  )
-}
-
-// Protected Route - redirect to login if not authenticated
-function ProtectedRoute({ authProfile, children }) {
-  if (!authProfile) {
-    return <Navigate to="/login" replace />
-  }
+function AdminProtected({ profile, children }) {
+  if (!profile) return <Navigate to="/admin/login" replace />
+  if (profile.role !== 'Admin') return <Navigate to={homeRouteForRole(profile.role)} replace />
   return children
 }
 
 export default function App() {
-  const [authProfile, setAuthProfile] = useState(() => {
-    return loadAuthSession()?.profile ?? null
-  })
-  const [accessToken, setAccessToken] = useState(() => {
-    return loadAuthSession()?.accessToken ?? null
-  })
+  const [profile, setProfile] = useState(() => readProfile())
 
   useEffect(() => {
-    const handler = (e) => {
-      const detail = e?.detail
-      if (!detail) {
-        setAccessToken(null)
-        setAuthProfile(null)
-        return
-      }
-      setAccessToken(detail.accessToken ?? null)
-      setAuthProfile(detail.profile ?? null)
+    const handler = () => setProfile(readProfile())
+    window.addEventListener('storage', handler)
+    window.addEventListener('auth:tokens-updated', handler)
+    return () => {
+      window.removeEventListener('storage', handler)
+      window.removeEventListener('auth:tokens-updated', handler)
     }
-    window.addEventListener('authSessionChanged', handler)
-    return () => window.removeEventListener('authSessionChanged', handler)
   }, [])
 
-  const handleLoginSuccess = (data) => {
-    const accessToken = data?.tokens?.accessToken
-    const refreshToken = data?.tokens?.refreshToken
-    const user = normalizeAuthUser(data?.user)
-    if (accessToken && user) {
-      setAccessToken(accessToken)
-      setAuthProfile(user)
-      saveAuthSession({ accessToken, refreshToken, profile: user })
+  useEffect(() => {
+    const onExpired = () => {
+      clearSession()
+      setProfile(null)
     }
-  }
+    window.addEventListener('auth:session-expired', onExpired)
+    return () => window.removeEventListener('auth:session-expired', onExpired)
+  }, [])
 
-  const handleRegisterSuccess = (data) => {
-    const accessToken = data?.tokens?.accessToken
-    const refreshToken = data?.tokens?.refreshToken
-    const user = normalizeAuthUser(data?.user)
-    if (accessToken && user) {
-      setAccessToken(accessToken)
-      setAuthProfile(user)
-      saveAuthSession({ accessToken, refreshToken, profile: user })
-    }
-  }
+  useEffect(() => {
+    const session = readProfile()
+    if (!session || !getAccessToken()) return undefined
+    let active = true
+    ensureValidSession(getApiBase()).then((ok) => {
+      if (active && !ok) {
+        clearSession()
+        setProfile(null)
+      }
+    })
+    return () => { active = false }
+  }, [])
 
+  const handleSignedIn = (user) => setProfile(user)
   const handleLogout = () => {
-    setAccessToken(null)
-    setAuthProfile(null)
-    clearAuthSession()
+    clearSession()
+    setProfile(null)
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
-      <div className="page">
-        <Header authProfile={authProfile} onLogout={handleLogout} />
-
+      <AuthContext>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-          <Route path="/register" element={<Register onRegisterSuccess={handleRegisterSuccess} />} />
+          {/* Public */}
+          <Route path="/" element={<Landing profile={profile} />} />
+          <Route path="/login" element={<Login onSignedIn={handleSignedIn} />} />
+          <Route path="/register" element={<RegisterPicker />} />
+          <Route path="/register/patient" element={<RegisterPatient onSignedIn={handleSignedIn} />} />
+          <Route path="/register/doctor" element={<RegisterDoctor onSignedIn={handleSignedIn} />} />
+          <Route path="/admin/login" element={<AdminLogin onSignedIn={handleSignedIn} />} />
+
+          {/* Admin */}
           <Route
-            path="/dashboard"
+            path="/admin"
             element={
-              <ProtectedRoute authProfile={authProfile}>
-                <Dashboard
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
+              <AdminProtected profile={profile}>
+                <AdminLayout profile={profile} onLogout={handleLogout} />
+              </AdminProtected>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="doctors" element={<AdminDoctors />} />
+            <Route path="doctors/:doctorId" element={<AdminDoctorDetail />} />
+            <Route path="patients" element={<AdminPatients />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="audit" element={<AdminAuditLog />} />
+          </Route>
+
+          {/* Doctor */}
+          <Route
+            path="/doctor"
+            element={
+              <ProtectedRoute role="Doctor" profile={profile}>
+                <DoctorLayout profile={profile} onLogout={handleLogout} />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DoctorDashboard />} />
+            <Route path="patients" element={<DoctorPatients />} />
+            <Route path="patients/:patientUserId" element={<DoctorPatientDetail />} />
+            <Route path="chat" element={<DoctorConversations />} />
+            <Route path="notifications" element={<DoctorNotifications />} />
+          </Route>
+
+          {/* Patient */}
           <Route
-            path="/heart-rate"
+            path="/patient"
             element={
-              <ProtectedRoute authProfile={authProfile}>
-                <HeartRateMonitor
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
+              <ProtectedRoute role="Patient" profile={profile}>
+                <PatientLayout profile={profile} onLogout={handleLogout} />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/monitor"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <PatientMonitor
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/hub"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <PatientHub
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                  section="vitals"
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/hub/vitals"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <PatientHub
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                  section="vitals"
-                />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/hub/watch"
-            element={
-              <ProtectedRoute authProfile={authProfile}>
-                <PatientHub
-                  authProfile={authProfile}
-                  accessToken={accessToken}
-                  onLogout={handleLogout}
-                  section="watch"
-                />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<PatientDashboard />} />
+            <Route path="watch" element={<PatientWatch />} />
+            <Route path="chat" element={<PatientConversations />} />
+            <Route path="notifications" element={<PatientNotifications />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-
-        <Footer />
-      </div>
+      </AuthContext>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

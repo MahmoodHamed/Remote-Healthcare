@@ -5,8 +5,6 @@ public class PatientProfile : BaseEntity
 {
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
-    /// <summary>6-char code for watch pairing (e.g. ABC123).</summary>
-    public string? ShortPatientCode { get; private set; }
     public DateOnly? DateOfBirth { get; private set; }
     public BloodType? BloodType { get; private set; }
     public float? WeightKg { get; private set; }
@@ -15,6 +13,11 @@ public class PatientProfile : BaseEntity
     public List<string> Allergies { get; private set; } = [];
     public List<string> CurrentMedications { get; private set; } = [];
     public string? EmergencyContactPhone { get; private set; }
+    /// <summary>
+    /// 6-character watch short ID (A-Z, 0-9) entered by the patient.
+    /// Both web and mobile derive the streaming UUID from this via MD5 normalisation.
+    /// </summary>
+    public string? WatchShortId { get; private set; }
 
     public AlertThreshold? AlertThreshold { get; private set; }
     public ICollection<Device> Devices { get; private set; } = [];
@@ -25,12 +28,6 @@ public class PatientProfile : BaseEntity
     protected PatientProfile() { }
 
     public static PatientProfile Create(Guid userId) => new() { UserId = userId };
-
-    public void AssignShortPatientCode(string code)
-    {
-        ShortPatientCode = code;
-        SetUpdatedAt();
-    }
 
     public void UpdateMedicalInfo(DateOnly? dob, BloodType? blood, float? weight, float? height,
         List<string>? diseases, List<string>? allergies, List<string>? meds, string? emergencyPhone)
@@ -43,6 +40,12 @@ public class PatientProfile : BaseEntity
         Allergies = allergies ?? [];
         CurrentMedications = meds ?? [];
         EmergencyContactPhone = emergencyPhone;
+        SetUpdatedAt();
+    }
+
+    public void SetWatchShortId(string? shortId)
+    {
+        WatchShortId = string.IsNullOrWhiteSpace(shortId) ? null : shortId.Trim().ToUpperInvariant();
         SetUpdatedAt();
     }
 }
