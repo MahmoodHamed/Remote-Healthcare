@@ -88,8 +88,8 @@ fun PatientDetailScreen(
                     IconButton(onClick = { patient?.let { onOpenAlerts(it.userId) } }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Alerts")
                     }
-                    // Live Monitor (for Doctor and all roles that can monitor)
-                    if (userRole == "Doctor" || userRole == "Relative") {
+                    // Live Monitor shortcut
+                    if (userRole == "Doctor" || userRole == "Relative" || userRole == "Patient") {
                         patient?.let { p ->
                             IconButton(onClick = { onOpenLiveMonitor?.invoke(p.userId) }) {
                                 Icon(Icons.Default.MonitorHeart, contentDescription = "Live Monitor", tint = MaterialTheme.colorScheme.primary)

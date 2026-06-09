@@ -16,28 +16,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
 import com.rpm.app.ui.RequestNotificationPermission
-import com.rpm.app.ui.feature.alerts.AlertsScreen
 import com.rpm.app.ui.feature.auth.*
 import com.rpm.app.ui.feature.chat.*
-import com.rpm.app.ui.feature.patients.*
-import com.rpm.app.ui.feature.patients.DeviceManagementScreen
-import com.rpm.app.ui.feature.patients.LiveMonitorScreen
 
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MAIN = "main"
-    const val PATIENT_DETAIL = "patients/{patientId}"
-    const val ALERTS = "alerts?patientId={patientId}"
     const val CHAT_ROOM = "conversations/{conversationId}"
-    const val DEVICE_MANAGEMENT = "devices"
-    const val LIVE_MONITOR = "patients/{patientId}/live"
 
-    fun patientDetail(id: String) = "patients/$id"
-    fun alerts(patientId: String? = null) =
-        if (patientId != null) "alerts?patientId=$patientId" else "alerts"
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
-    fun liveMonitor(patientId: String) = "patients/$patientId/live"
 }
 
 fun homeRouteForRole(role: String?, userId: String?): String = Routes.MAIN
@@ -159,53 +147,10 @@ fun RpmNavHost(
         }
 
         composable(
-            route     = Routes.PATIENT_DETAIL,
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
-        ) {
-            PatientDetailScreen(
-                userRole = authState.userRole,
-                userId   = authState.userId,
-                onBack   = { navController.popBackStack() },
-                onOpenChat = { conversationId ->
-                    navController.navigate(Routes.chatRoom(conversationId))
-                },
-                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) },
-                onOpenLiveMonitor = { pid -> navController.navigate(Routes.liveMonitor(pid)) },
-                onOpenDeviceManagement = if (authState.userRole == "Patient") {
-                    { navController.navigate(Routes.DEVICE_MANAGEMENT) }
-                } else null,
-            )
-        }
-
-        composable(
-            route = Routes.ALERTS,
-            arguments = listOf(
-                navArgument("patientId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
-        ) {
-            AlertsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
             route = Routes.CHAT_ROOM,
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
         ) {
             ChatRoomScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Routes.DEVICE_MANAGEMENT) {
-            DeviceManagementScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route     = Routes.LIVE_MONITOR,
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
-        ) {
-            LiveMonitorScreen(onBack = { navController.popBackStack() })
         }
     }
 }
