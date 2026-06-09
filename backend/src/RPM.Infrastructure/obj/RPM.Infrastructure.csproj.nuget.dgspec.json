@@ -1,34 +1,40 @@
 {
   "format": 1,
   "restore": {
-    "/var/www/Remote-Healthcare/backend/src/RPM.Infrastructure/RPM.Infrastructure.csproj": {}
+    "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Infrastructure\\RPM.Infrastructure.csproj": {}
   },
   "projects": {
-    "/var/www/Remote-Healthcare/backend/src/RPM.Application/RPM.Application.csproj": {
+    "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\RPM.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/var/www/Remote-Healthcare/backend/src/RPM.Application/RPM.Application.csproj",
+        "projectUniqueName": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\RPM.Application.csproj",
         "projectName": "RPM.Application",
-        "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Application/RPM.Application.csproj",
-        "packagesPath": "/root/.nuget/packages/",
-        "outputPath": "/var/www/Remote-Healthcare/backend/src/RPM.Application/obj/",
+        "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\RPM.Application.csproj",
+        "packagesPath": "C:\\Users\\mahmo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\mahmo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj": {
-                "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj"
+              "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj": {
+                "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj"
               }
             }
           }
@@ -43,10 +49,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "AutoMapper": {
@@ -86,7 +93,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.108/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -364,27 +371,33 @@
         }
       }
     },
-    "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj": {
+    "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj",
         "projectName": "RPM.Domain",
-        "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj",
-        "packagesPath": "/root/.nuget/packages/",
-        "outputPath": "/var/www/Remote-Healthcare/backend/src/RPM.Domain/obj/",
+        "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj",
+        "packagesPath": "C:\\Users\\mahmo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\mahmo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -399,10 +412,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "MediatR": {
@@ -426,7 +440,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.108/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -704,34 +718,40 @@
         }
       }
     },
-    "/var/www/Remote-Healthcare/backend/src/RPM.Infrastructure/RPM.Infrastructure.csproj": {
+    "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Infrastructure\\RPM.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/var/www/Remote-Healthcare/backend/src/RPM.Infrastructure/RPM.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Infrastructure\\RPM.Infrastructure.csproj",
         "projectName": "RPM.Infrastructure",
-        "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Infrastructure/RPM.Infrastructure.csproj",
-        "packagesPath": "/root/.nuget/packages/",
-        "outputPath": "/var/www/Remote-Healthcare/backend/src/RPM.Infrastructure/obj/",
+        "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Infrastructure\\RPM.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\mahmo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\mahmo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/var/www/Remote-Healthcare/backend/src/RPM.Application/RPM.Application.csproj": {
-                "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Application/RPM.Application.csproj"
+              "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\RPM.Application.csproj": {
+                "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Application\\RPM.Application.csproj"
               },
-              "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj": {
-                "projectPath": "/var/www/Remote-Healthcare/backend/src/RPM.Domain/RPM.Domain.csproj"
+              "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj": {
+                "projectPath": "C:\\Users\\mahmo\\source\\Projects\\Remote-Patiant-Monitoring\\backend\\src\\RPM.Domain\\RPM.Domain.csproj"
               }
             }
           }
@@ -746,10 +766,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.300"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "AWSSDK.S3": {
@@ -815,7 +836,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.108/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
