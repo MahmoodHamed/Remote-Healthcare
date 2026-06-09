@@ -4,7 +4,6 @@ import android.util.Log
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.rpm.app.data.local.TokenDataStore
-import com.rpm.app.data.remote.dto.VitalRecordDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -79,15 +78,22 @@ class VitalsSignalRClient @Inject constructor(
                 val hubUrl = "${baseUrl}hubs/vitals?access_token=${java.net.URLEncoder.encode(token, "UTF-8")}"
                 val connection = HubConnectionBuilder.create(hubUrl).build()
 
-                // Primary: Gson deserializes hub JSON into VitalRecordDto (same as Chat hub).
+                // Use Object callback so Gson returns a LinkedTreeMap (Map<*,*>), then
+                // VitalsPayloadParser normalises both camelCase and PascalCase keys.
+                // This mirrors the web app's normalizePayload() and avoids Gson reflection
+                // failures with Kotlin data classes in release/R8 builds.
                 connection.on(
                     "ReceiveVitals",
-                    { dto: VitalRecordDto ->
-                        val vitals = dto.toRealTime()
-                        Log.d(TAG, "ReceiveVitals HR=${vitals.heartRateBpm} SpO2=${vitals.spO2Percent}")
-                        _vitals.tryEmit(vitals)
+                    { raw: Any? ->
+                        val vitals = VitalsPayloadParser.parse(raw)
+                        if (vitals != null) {
+                            Log.d(TAG, "ReceiveVitals HR=${vitals.heartRateBpm} SpO2=${vitals.spO2Percent}")
+                            _vitals.tryEmit(vitals)
+                        } else {
+                            Log.w(TAG, "ReceiveVitals: could not parse payload – raw type=${raw?.javaClass?.name}")
+                        }
                     },
-                    VitalRecordDto::class.java,
+                    Object::class.java,
                 )
                 connection.on(
                     "ReceiveAlert",

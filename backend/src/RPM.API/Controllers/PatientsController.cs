@@ -48,9 +48,7 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
             list.Add(new PatientSummaryDto(
                 p.UserId, p.User.FullName, p.User.Email, p.User.AvatarUrl,
                 p.DateOfBirth, p.BloodType?.ToString(), p.ShortPatientCode,
-                latest is null ? null : new VitalRecordLatestDto(
-                    latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
-                    latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt)));
+                latest is null ? null : ToLatestDto(latest)));
         }
         return list;
     }
@@ -68,9 +66,7 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
             profile.WeightKg, profile.HeightCm, profile.ChronicDiseases,
             profile.Allergies, profile.CurrentMedications, profile.EmergencyContactPhone,
             profile.ShortPatientCode,
-            latest is null ? null : new VitalRecordLatestDto(
-                latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
-                latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt));
+            latest is null ? null : ToLatestDto(latest));
         return Ok(dto);
     }
 
@@ -99,6 +95,13 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser, IMedi
     [HttpGet("{userId}/devices")]
     public async Task<IActionResult> GetPatientDevices(Guid userId, CancellationToken ct) =>
         Ok(await mediator.Send(new GetPatientDevicesQuery(userId), ct));
+
+    private static VitalRecordLatestDto ToLatestDto(RPM.Domain.Entities.VitalRecord v) =>
+        new(v.HeartRateBpm, v.SpO2Percent, v.SystolicBp, v.DiastolicBp,
+            v.TemperatureC, v.SkinTemperatureC, v.AmbientTemperatureC,
+            v.HrvMs, v.StressScore, v.BodyFatPercent, v.EcgAvgHeartRateBpm,
+            v.StepsCount, v.CaloriesBurned, v.FallDetected, v.IsWearing,
+            v.RecordedAt);
 
     /// <summary>Maps a 6-character watch code to the patient's streaming user GUID.</summary>
     [HttpGet("resolve-code/{code}")]

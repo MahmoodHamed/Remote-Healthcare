@@ -146,20 +146,16 @@ class LiveMonitorViewModel @Inject constructor(
             wearing      = SupportedVitals.isWearing(merged),
         )
         _state.update { s ->
-            val newHistory = if (fromSignalR || s.history.isEmpty()) {
-                (listOf(entry) + s.history).take(12)
-            } else {
-                s.history
-            }
             s.copy(
                 connectionStatus = if (fromSignalR) ConnectionStatus.Live else s.connectionStatus,
                 vitals = merged,
-                history = newHistory,
+                history = (listOf(entry) + s.history).take(20),
             )
         }
     }
 
     override fun onCleared() {
+        signalR.disconnect(patientId)
         super.onCleared()
     }
 }
