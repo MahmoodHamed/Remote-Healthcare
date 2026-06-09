@@ -51,7 +51,15 @@ public class SendMessageHandler(IUnitOfWork uow, IPublisher publisher)
             sender?.FullName ?? "Unknown", msg.Content, msg.Type.ToString(),
             msg.MediaUrl, msg.IsDeleted, msg.SentAt);
 
-        await publisher.Publish(new MessageSentNotification(dto), ct);
+        try
+        {
+            await publisher.Publish(new MessageSentNotification(dto), ct);
+        }
+        catch
+        {
+            // Message is already saved; push/SignalR side-effects are optional.
+        }
+
         return dto;
     }
 }
