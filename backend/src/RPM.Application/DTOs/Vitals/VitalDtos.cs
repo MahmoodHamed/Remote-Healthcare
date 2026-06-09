@@ -15,6 +15,8 @@ public record VitalIngestionDto(
     bool FallDetected,
     bool IsWearing,
     float? SkinTemperatureC = null,
+    /// <summary>Alias of <see cref="TemperatureC"/> (ambient room) for watch/mobile/web clients.</summary>
+    [property: JsonPropertyName("ambientTemperatureC")] float? AmbientTemperatureC = null,
     [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs = null,
     float? RestingHeartRateBpm = null,
     float? MaxHeartRateBpm = null,
@@ -51,6 +53,8 @@ public record VitalRecordDto(
     bool IsWearing,
     DateTime RecordedAt,
     float? SkinTemperatureC = null,
+    /// <summary>Alias of <see cref="TemperatureC"/> (ambient room) for watch/mobile/web clients.</summary>
+    [property: JsonPropertyName("ambientTemperatureC")] float? AmbientTemperatureC = null,
     [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs = null,
     float? RestingHeartRateBpm = null,
     float? MaxHeartRateBpm = null,

@@ -3,9 +3,10 @@ const VITAL_FIELDS = [
   'spO2Percent',
   'systolicBp',
   'diastolicBp',
-  'temperatureC',
   'skinTemperatureC',
+  'ambientTemperatureC',
   'heartRateVariabilityMs',
+  'hrvMs',
   'restingHeartRateBpm',
   'maxHeartRateBpm',
   'respirationRateBpm',
@@ -22,6 +23,7 @@ const VITAL_FIELDS = [
   'bodyWaterPercent',
   'basalMetabolicRate',
   'ecgAverageHeartRate',
+  'ecgAvgHeartRateBpm',
   'ecgClassification',
   'ecgWaveformJson',
   'bloodGlucoseMgDl',
@@ -33,6 +35,30 @@ const hasValue = (value) => value !== null && value !== undefined && value !== '
 const toCamelCase = (key) => {
   if (!key || key.length === 0) return key
   return key.charAt(0).toLowerCase() + key.slice(1)
+}
+
+/**
+ * Watch sends skin + ambient separately; server stores ambient in temperatureC.
+ * Map both to explicit wrist/room fields for web UI.
+ */
+export function normalizeTemperatureFields(source) {
+  if (!source || typeof source !== 'object') return source
+
+  let skin = source.skinTemperatureC ?? null
+  let ambient = source.ambientTemperatureC ?? null
+  const legacy = source.temperatureC ?? null
+
+  if (ambient == null && legacy != null) {
+    if (skin == null || Math.abs(legacy - skin) > 0.05) ambient = legacy
+  }
+  if (skin == null && legacy != null && ambient == null) skin = legacy
+
+  return {
+    ...source,
+    skinTemperatureC: skin,
+    ambientTemperatureC: ambient,
+    temperatureC: null,
+  }
 }
 
 /** Normalize REST/SignalR/MQTT field names (PascalCase + watch aliases). */
@@ -53,9 +79,6 @@ export const normalizeVitalsPayload = (payload) => {
   if (normalized.ecgAvgHeartRateBpm != null && normalized.ecgAverageHeartRate == null) {
     normalized.ecgAverageHeartRate = normalized.ecgAvgHeartRateBpm
   }
-  if (normalized.ambientTemperatureC != null && normalized.temperatureC == null) {
-    normalized.temperatureC = normalized.ambientTemperatureC
-  }
   if (normalized.spo2Percent != null && normalized.spO2Percent == null) {
     normalized.spO2Percent = normalized.spo2Percent
   }
@@ -63,7 +86,7 @@ export const normalizeVitalsPayload = (payload) => {
     normalized.bodyFatPercent = normalized.bodyFatPct
   }
 
-  return normalized
+  return normalizeTemperatureFields(normalized)
 }
 
 /** Hide sensor readings when the watch is off-wrist. */
@@ -84,9 +107,10 @@ export const mapVitalsPayload = (payload) => {
     spO2Percent: source.spO2Percent ?? null,
     systolicBp: source.systolicBp ?? null,
     diastolicBp: source.diastolicBp ?? null,
-    temperatureC: source.temperatureC ?? null,
     skinTemperatureC: source.skinTemperatureC ?? null,
-    heartRateVariabilityMs: source.heartRateVariabilityMs ?? null,
+    ambientTemperatureC: source.ambientTemperatureC ?? null,
+    heartRateVariabilityMs: source.heartRateVariabilityMs ?? source.hrvMs ?? null,
+    hrvMs: source.hrvMs ?? source.heartRateVariabilityMs ?? null,
     restingHeartRateBpm: source.restingHeartRateBpm ?? null,
     maxHeartRateBpm: source.maxHeartRateBpm ?? null,
     respirationRateBpm: source.respirationRateBpm ?? null,
@@ -102,7 +126,8 @@ export const mapVitalsPayload = (payload) => {
     muscleMassKg: source.muscleMassKg ?? null,
     bodyWaterPercent: source.bodyWaterPercent ?? null,
     basalMetabolicRate: source.basalMetabolicRate ?? null,
-    ecgAverageHeartRate: source.ecgAverageHeartRate ?? null,
+    ecgAverageHeartRate: source.ecgAverageHeartRate ?? source.ecgAvgHeartRateBpm ?? null,
+    ecgAvgHeartRateBpm: source.ecgAvgHeartRateBpm ?? source.ecgAverageHeartRate ?? null,
     ecgClassification: source.ecgClassification ?? null,
     ecgWaveformJson: source.ecgWaveformJson ?? null,
     bloodGlucoseMgDl: source.bloodGlucoseMgDl ?? null,
@@ -114,7 +139,7 @@ export const mapVitalsPayload = (payload) => {
   return applyWearState(mapped)
 }
 
-/** Keep last-known values when a partial live update omits fields (e.g. HRV vs SpO2). */
+/** Keep last-known values when a partial live update omits fields. */
 export const mergeVitalsPayload = (previous, incoming) => {
   const next = mapVitalsPayload(incoming)
   if (!next) return previous ?? null

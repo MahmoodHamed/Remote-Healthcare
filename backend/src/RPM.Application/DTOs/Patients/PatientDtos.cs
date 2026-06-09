@@ -43,6 +43,7 @@ public record VitalRecordLatestDto(
     float? DiastolicBp,
     float? TemperatureC,
     float? SkinTemperatureC,
+    [property: JsonPropertyName("ambientTemperatureC")] float? AmbientTemperatureC,
     [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs,
     float? StressScore,
     float? BodyFatPercent,

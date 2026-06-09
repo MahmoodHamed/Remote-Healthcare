@@ -19,6 +19,8 @@ public static class MqttVitalsParser
         var deviceId = NormalizeGuid(GetString(root, "deviceId"));
         if (patientId is null || deviceId is null) return null;
 
+        var ambientTemp = GetFloat(root, "ambientTemperatureC", "temperatureC");
+
         return new VitalIngestionDto(
             patientId.Value,
             deviceId.Value,
@@ -26,12 +28,13 @@ public static class MqttVitalsParser
             GetFloat(root, "spO2Percent", "spo2Percent"),
             GetFloat(root, "systolicBp"),
             GetFloat(root, "diastolicBp"),
-            GetFloat(root, "temperatureC", "ambientTemperatureC"),
+            ambientTemp,
             GetInt(root, "stepsCount"),
             GetFloat(root, "caloriesBurned"),
             GetBool(root, "fallDetected") ?? false,
             GetBool(root, "isWearing") ?? true,
             GetFloat(root, "skinTemperatureC"),
+            ambientTemp,
             GetFloat(root, "heartRateVariabilityMs", "hrvMs"),
             GetFloat(root, "restingHeartRateBpm"),
             GetFloat(root, "maxHeartRateBpm"),

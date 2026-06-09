@@ -96,7 +96,7 @@ fun VitalRecordDto.toRealTime(): RealTimeVitals = RealTimeVitals(
     diastolicBp          = diastolicBp,
     temperatureC         = temperatureC,
     skinTemperatureC     = skinTemperatureC,
-    ambientTemperatureC  = ambientTemperatureC,
+    ambientTemperatureC  = ambientTemperatureC ?: temperatureC,
     hrvMs                = hrvMs,
     stressScore          = stressScore,
     bodyFatPercent       = bodyFatPercent,
@@ -108,15 +108,22 @@ fun VitalRecordDto.toRealTime(): RealTimeVitals = RealTimeVitals(
     recordedAt           = recordedAt,
 ).withNormalizedTemperatures().withInferredWearing()
 
-/** Legacy temperatureC duplicated skin — keep wrist + room separate like the watch UI. */
+/** Server stores ambient in temperatureC; watch sends skin + ambient explicitly. */
 fun RealTimeVitals.withNormalizedTemperatures(): RealTimeVitals {
-    val ambient = ambientTemperatureC
     var skin = skinTemperatureC
-    if (skin == null && temperatureC != null) {
-        if (ambient == null || kotlin.math.abs(temperatureC - ambient) > 0.05f) {
-            skin = temperatureC
-        }
+    var ambient = ambientTemperatureC
+    val legacy = temperatureC
+
+    when {
+        ambient == null && legacy != null && skin != null ->
+            ambient = legacy
+        ambient == null && legacy != null && skin == null ->
+            skin = legacy
+        skin == null && legacy != null && ambient != null &&
+            kotlin.math.abs(legacy - ambient) > 0.05f ->
+            skin = legacy
     }
+
     return copy(
         skinTemperatureC = skin,
         ambientTemperatureC = ambient,

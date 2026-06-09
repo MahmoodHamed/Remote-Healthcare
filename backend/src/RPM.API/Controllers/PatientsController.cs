@@ -146,6 +146,7 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
         r.DiastolicBp,
         r.TemperatureC,
         r.SkinTemperatureC,
+        r.TemperatureC,
         r.HeartRateVariabilityMs,
         r.StressScore,
         r.BodyFatPercent,

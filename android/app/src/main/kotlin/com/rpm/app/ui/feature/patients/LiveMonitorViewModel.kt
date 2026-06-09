@@ -137,7 +137,7 @@ class LiveMonitorViewModel @Inject constructor(
             hr           = merged.heartRateBpm?.toInt()?.toString() ?: "--",
             spo2         = merged.spO2Percent?.let { "%.1f".format(it) } ?: "--",
             skinTemp     = merged.skinTemperatureC?.let { "%.1f".format(it) } ?: "--",
-            ambientTemp  = (merged.ambientTemperatureC ?: merged.temperatureC)?.let { "%.1f".format(it) } ?: "--",
+            ambientTemp  = merged.ambientTemperatureC?.let { "%.1f".format(it) } ?: "--",
             hrv          = merged.hrvMs?.toInt()?.toString() ?: "--",
             stress       = merged.stressScore?.toInt()?.toString() ?: "--",
             steps        = merged.stepsCount?.toString() ?: "--",
