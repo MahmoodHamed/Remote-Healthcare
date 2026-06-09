@@ -46,11 +46,11 @@ export default function VitalsGrid({ vitals }) {
       },
       {
         key: 'temp',
-        label: 'Body temp.',
-        value: format(v.temperatureC, 1),
+        label: 'Ambient temp.',
+        value: format(v.ambientTemperatureC ?? v.temperatureC, 1),
         unit: '°C',
         tone: 'tone-temp',
-        danger: v.temperatureC > TEMP_LIMITS.max,
+        danger: (v.ambientTemperatureC ?? v.temperatureC) > TEMP_LIMITS.max,
         icon: '🌡️',
       },
       {

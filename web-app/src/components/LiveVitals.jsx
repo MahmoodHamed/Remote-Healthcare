@@ -26,7 +26,12 @@ const hasAnyReading = (vitals) => {
   ].some((v) => v != null && v !== '')
 }
 
-export default function LiveVitals({ patientId, patientName, watchSetupHref = '/patient/watch' }) {
+export default function LiveVitals({
+  patientId,
+  patientName,
+  watchSetupHref = '/patient/watch',
+  viewerRole = 'patient',
+}) {
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [latest, setLatest] = useState(null)
@@ -117,11 +122,13 @@ export default function LiveVitals({ patientId, patientName, watchSetupHref = '/
     <section className="card">
       <div className="card-head">
         <div>
-          <h2>Live vitals{patientName ? ` · ${patientName}` : ''}</h2>
+          <h2>{viewerRole === 'doctor' ? 'Live monitoring' : 'Live vitals'}{patientName ? ` · ${patientName}` : ''}</h2>
           <span className="muted">
             {updatedAt
               ? `Last update ${updatedAt.toLocaleTimeString()}`
-              : 'No readings yet — pair your watch to start streaming.'}
+              : viewerRole === 'doctor'
+                ? 'No readings yet — patient watch must be paired and streaming.'
+                : 'No readings yet — pair your watch to start streaming.'}
           </span>
         </div>
         <div className="connection-bar">
@@ -149,14 +156,17 @@ export default function LiveVitals({ patientId, patientName, watchSetupHref = '/
       )}
       {showEmpty && latest?.isWearing !== false && (
         <div className="vitals-empty">
-          <h3>Waiting for your first reading</h3>
+          <h3>{viewerRole === 'doctor' ? 'Waiting for patient readings' : 'Waiting for your first reading'}</h3>
           <p>
-            Your dashboard is ready. Install the watch app, enter your patient ID on the watch, and press start.
-            Vitals will appear here automatically.
+            {viewerRole === 'doctor'
+              ? 'This patient has no live vitals yet. Ask them to pair their Galaxy Watch and start monitoring — readings will appear here automatically.'
+              : 'Your dashboard is ready. Install the watch app, enter your patient ID on the watch, and press start. Vitals will appear here automatically.'}
           </p>
-          <Link to={watchSetupHref} className="btn btn-primary btn-sm">
-            Set up my watch →
-          </Link>
+          {viewerRole !== 'doctor' && watchSetupHref && (
+            <Link to={watchSetupHref} className="btn btn-primary btn-sm">
+              Set up my watch →
+            </Link>
+          )}
         </div>
       )}
       <VitalsGrid vitals={latest} />

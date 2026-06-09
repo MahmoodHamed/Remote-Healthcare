@@ -17,14 +17,19 @@ export const setWatchShortId = (value) => {
 
 export const isValidWatchShortId = (value) => shortIdPattern.test(value.trim())
 
-/** Patient ID the dashboard and watch must share for live vitals. */
-export const getVitalsPatientId = (profileId) => {
-  const shortId = getWatchShortId()
-  if (shortId && isValidWatchShortId(shortId)) {
-    const normalized = normalizePatientId(shortId)
+/** Resolve streaming UUID from watch short ID + account UUID (no localStorage). */
+export const resolveVitalsPatientId = (watchShortId, profileId) => {
+  if (watchShortId && isValidWatchShortId(watchShortId)) {
+    const normalized = normalizePatientId(watchShortId)
     if (normalized) return normalized
   }
   return profileId ?? ''
+}
+
+/** Patient ID the dashboard and watch must share for live vitals. */
+export const getVitalsPatientId = (profileId) => {
+  const shortId = getWatchShortId()
+  return resolveVitalsPatientId(shortId, profileId)
 }
 
 /**

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../utils/api'
 import { readProfile } from '../../utils/auth'
 import LiveVitals from '../../components/LiveVitals.jsx'
+import { resolveVitalsPatientId } from '../../utils/watchPairing'
 
 export default function DoctorPatientDetail() {
   const { patientUserId } = useParams()
@@ -132,7 +133,11 @@ export default function DoctorPatientDetail() {
         ) : null}
       </section>
 
-      <LiveVitals patientId={patient.userId} patientName={patient.fullName} />
+      <LiveVitals
+        patientId={resolveVitalsPatientId(patient.watchShortId, patient.userId)}
+        patientName={patient.fullName}
+        viewerRole="doctor"
+      />
     </>
   )
 }

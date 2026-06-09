@@ -9,9 +9,16 @@ namespace RPM.API.Controllers;
 [ApiController]
 [Route("api/patients/{patientId}/vitals")]
 [Authorize]
-public class VitalsController(IMediator mediator) : ControllerBase
+public class VitalsController(IMediator mediator, IVitalsPatientIdResolver patientIdResolver) : ControllerBase
 {
     private static Guid? ParsePatientId(string patientId) => PatientIdNormalizer.ToGuid(patientId);
+
+    private async Task<Guid?> ResolvePatientIdAsync(string patientId, CancellationToken ct)
+    {
+        var parsed = ParsePatientId(patientId);
+        if (parsed is null) return null;
+        return await patientIdResolver.ResolveAsync(parsed.Value, ct);
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetVitals(string patientId,
@@ -19,7 +26,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var id = ParsePatientId(patientId);
+        var id = await ResolvePatientIdAsync(patientId, ct);
         if (id is null) return BadRequest("Invalid patient ID.");
         return Ok(await mediator.Send(new GetPatientVitalsQuery(id.Value, from, to, page, pageSize), ct));
     }
@@ -27,7 +34,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
     [HttpGet("latest")]
     public async Task<IActionResult> GetLatest(string patientId, CancellationToken ct)
     {
-        var id = ParsePatientId(patientId);
+        var id = await ResolvePatientIdAsync(patientId, ct);
         if (id is null) return BadRequest("Invalid patient ID.");
         var latest = await mediator.Send(new GetLatestVitalsQuery(id.Value), ct);
         if (latest is null) return NoContent();
@@ -37,7 +44,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
     [HttpGet("threshold")]
     public async Task<IActionResult> GetThreshold(string patientId, CancellationToken ct)
     {
-        var id = ParsePatientId(patientId);
+        var id = await ResolvePatientIdAsync(patientId, ct);
         if (id is null) return BadRequest("Invalid patient ID.");
         return Ok(await mediator.Send(new GetAlertThresholdQuery(id.Value), ct));
     }
@@ -47,7 +54,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> UpdateThreshold(string patientId,
         [FromBody] UpdateAlertThresholdCommand cmd, CancellationToken ct)
     {
-        var id = ParsePatientId(patientId);
+        var id = await ResolvePatientIdAsync(patientId, ct);
         if (id is null) return BadRequest("Invalid patient ID.");
         await mediator.Send(cmd with { PatientId = id.Value }, ct);
         return NoContent();
@@ -58,7 +65,7 @@ public class VitalsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> IngestVital(string patientId,
         [FromBody] IngestVitalCommand cmd, CancellationToken ct)
     {
-        var id = ParsePatientId(patientId);
+        var id = await ResolvePatientIdAsync(patientId, ct);
         if (id is null) return BadRequest("Invalid patient ID.");
         return Ok(await mediator.Send(cmd with { PatientId = id.Value }, ct));
     }
