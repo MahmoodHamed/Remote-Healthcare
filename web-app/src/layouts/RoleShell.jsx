@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import { api } from '../utils/api'
@@ -14,26 +14,49 @@ const initials = (name = '') =>
 export default function RoleShell({ profile, onLogout, roleClass, brand, nav, children }) {
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
+  const prevUnreadRef = useRef(0)
   const navigate = useNavigate()
   const location = useLocation()
 
-  useEffect(() => {
-    let active = true
-    const load = async () => {
-      try {
-        const data = await api.get('/api/notifications/unread-count')
-        if (active) setUnread(data?.count ?? 0)
-      } catch {
-        if (active) setUnread(0)
+  const loadUnread = useCallback(async () => {
+    try {
+      const data = await api.get('/api/notifications/unread-count')
+      const count = data?.count ?? 0
+      setUnread(count)
+
+      if (
+        count > prevUnreadRef.current &&
+        document.hidden &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        const delta = count - prevUnreadRef.current
+        new Notification(delta === 1 ? 'New notification' : `${delta} new notifications`, {
+          body: 'Open your inbox to review alerts and messages.',
+          tag: 'rpm-unread',
+        })
       }
+      prevUnreadRef.current = count
+    } catch {
+      setUnread(0)
     }
-    load()
-    const id = setInterval(load, 15_000)
+  }, [])
+
+  useEffect(() => {
+    loadUnread()
+    const id = setInterval(loadUnread, 15_000)
+    const onFocus = () => loadUnread()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadUnread()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
-      active = false
       clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [location.pathname])
+  }, [location.pathname, loadUnread])
 
   useEffect(() => {
     setOpen(false)

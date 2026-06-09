@@ -22,18 +22,20 @@ class RpmFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
-        val type = data["type"] ?: "alert"
+        val type = data["type"]?.lowercase() ?: "alert"
         val title = data["title"] ?: message.notification?.title ?: "RPM"
         val body = data["body"] ?: message.notification?.body ?: ""
 
         when (type) {
-            "chat" -> showChatNotification(
+            "chat", "chatmessage" -> showChatNotification(
                 title = title,
                 body = body,
                 conversationId = data["conversationId"],
             )
             else -> showAlertNotification(title, body)
         }
+
+        NotificationRefreshBus.notifyRefresh()
     }
 
     override fun onNewToken(token: String) {

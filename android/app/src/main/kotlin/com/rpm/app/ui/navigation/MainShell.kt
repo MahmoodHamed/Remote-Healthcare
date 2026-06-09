@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -64,7 +65,13 @@ fun MainShell(
     val patientsNavController = rememberNavController()
     val unreadCount by notificationsViewModel.unreadCount.collectAsState()
 
-    LaunchedEffect(Unit) { notificationsViewModel.refresh() }
+    LaunchedEffect(Unit) {
+        notificationsViewModel.refresh()
+        while (true) {
+            delay(30_000)
+            notificationsViewModel.refresh()
+        }
+    }
 
     LaunchedEffect(userRole, userId) {
         if (userRole == "Patient" && !userId.isNullOrBlank()) {

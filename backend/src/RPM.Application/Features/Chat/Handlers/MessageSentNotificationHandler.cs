@@ -44,12 +44,13 @@ public class MessageSentNotificationHandler(
                     await push.SendPushAsync(user.FcmToken!, title, preview,
                         new Dictionary<string, string>
                         {
+                            ["title"] = title,
+                            ["body"] = preview,
                             ["conversationId"] = msg.ConversationId.ToString(),
                             ["messageId"] = msg.Id.ToString(),
-                            ["type"] = "ChatMessage",
-                            ["channelId"] = "rpm_chat"
+                            ["type"] = "chat",
                         },
-                        channelId: "rpm_chat", ct);
+                        channelId: "rpm_messages", ct);
                 }
                 catch
                 {

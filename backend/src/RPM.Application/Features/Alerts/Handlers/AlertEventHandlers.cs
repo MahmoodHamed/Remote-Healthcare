@@ -37,6 +37,9 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(patientUser?.FcmToken))
+            tokens.Add(patientUser.FcmToken!);
+
         var title = evt.Severity switch
         {
             AlertSeverity.Critical => $"CRITICAL: {patientUser?.FullName ?? "patient"}",
@@ -49,9 +52,11 @@ public class AlertTriggeredEventHandler(IUnitOfWork uow, INotificationService no
             await notif.SendPushToManyAsync(tokens, title, alert.Message,
                 new Dictionary<string, string>
                 {
+                    ["title"] = title,
+                    ["body"] = alert.Message,
                     ["alertId"] = evt.AlertId.ToString(),
                     ["patientId"] = evt.PatientId.ToString(),
-                    ["type"] = evt.Type.ToString(),
+                    ["type"] = "alert",
                     ["severity"] = evt.Severity.ToString()
                 },
                 channelId: "rpm_alerts", ct: ct);

@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.app.data.remote.dto.NotificationDto
 import com.rpm.app.data.repository.NotificationRepository
+import com.rpm.app.fcm.NotificationRefreshBus
 import com.rpm.app.domain.model.Resource
 import com.rpm.app.ui.feature.patients.formatVitalTimestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,7 +49,12 @@ class NotificationsViewModel @Inject constructor(
     private val _unreadCount = MutableStateFlow(0L)
     val unreadCount: StateFlow<Long> = _unreadCount.asStateFlow()
 
-    init { refresh() }
+    init {
+        refresh()
+        viewModelScope.launch {
+            NotificationRefreshBus.events.collect { refresh() }
+        }
+    }
 
     fun refresh() {
         viewModelScope.launch {

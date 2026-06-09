@@ -27,7 +27,21 @@ export default function NotificationsInbox() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const id = setInterval(load, 15_000)
+    const onFocus = () => load()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return
+    Notification.requestPermission().catch(() => {})
+  }, [])
 
   const markRead = async (id) => {
     try {
