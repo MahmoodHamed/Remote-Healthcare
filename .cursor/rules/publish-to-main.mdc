@@ -1,0 +1,36 @@
+---
+description: Publish completed work directly to origin/main
+alwaysApply: true
+---
+
+# Publish completed work to main
+
+When a task is **finished and verified**, ship it on `main` in the same session. Do not leave completed work only on a side branch unless the user explicitly asks otherwise.
+
+## Workflow
+
+1. Finish the implementation and verify (build/test when relevant).
+2. Ensure you are on `main` and synced with `origin/main`:
+   - `git fetch origin`
+   - `git checkout main`
+   - `git pull origin main`
+3. Stage **only** files for the completed task (never `.gradle/`, `**/build/`, `**/obj/`, `node_modules/`, secrets, or local IDE files).
+4. Commit with a clear message focused on **why**.
+5. Push: `git push origin main`
+6. Confirm push succeeded (`git status` shows branch up to date with `origin/main`).
+
+## Scope rules
+
+- If the user limits scope (e.g. “mobile and watch only, not web/backend”), honor that for staging, commit, and push.
+- If scope is not specified, commit and push all files changed for the completed task.
+
+## Safety
+
+- Never force-push to `main`.
+- Never commit secrets (`.env`, credentials, `google-services.json` with keys, etc.).
+- Only create commits when the task is complete or the user explicitly asks to commit.
+- Do not push broken or untested work unless the user accepts that risk.
+
+## After push
+
+Briefly tell the user what was pushed to `main` (commit message + affected areas). No need to ask permission to push when this rule applies and the task is done.
