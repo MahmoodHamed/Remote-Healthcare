@@ -21,19 +21,17 @@ public class Device : BaseEntity
     public static Device Create(Guid patientId, string name, string model, string mqttClientId)
         => new() { PatientId = patientId, DeviceName = name, DeviceModel = model, MqttClientId = mqttClientId };
 
-    /// <summary>Creates a device with a pre-assigned ID (e.g. from MQTT vitals ingestion).</summary>
-    public static Device CreateWithId(Guid id, Guid patientId, string name, string model, string mqttClientId)
-    {
-        var device = Create(patientId, name, model, mqttClientId);
-        device.AssignId(id);
-        return device;
-    }
-
     public void UpdateStatus(DeviceStatus status, float? battery = null)
     {
         Status = status;
-        BatteryLevel = battery;
+        if (battery.HasValue) BatteryLevel = battery;
         LastSeenAt = DateTime.UtcNow;
+        SetUpdatedAt();
+    }
+
+    public void UpdateName(string name)
+    {
+        DeviceName = name;
         SetUpdatedAt();
     }
 }

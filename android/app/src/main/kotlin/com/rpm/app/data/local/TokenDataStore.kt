@@ -20,22 +20,29 @@ private val Context.dataStore: DataStore<Preferences>
 class TokenDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val ACCESS_TOKEN    = stringPreferencesKey("access_token")
-    private val REFRESH_TOKEN   = stringPreferencesKey("refresh_token")
-    private val USER_ID         = stringPreferencesKey("user_id")
-    private val USER_ROLE       = stringPreferencesKey("user_role")
-    private val USER_NAME       = stringPreferencesKey("user_name")
-    private val WATCH_SHORT_ID  = stringPreferencesKey("watch_short_id")
+    private val ACCESS_TOKEN  = stringPreferencesKey("access_token")
+    private val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
+    private val USER_ID       = stringPreferencesKey("user_id")
+    private val USER_ROLE     = stringPreferencesKey("user_role")
+    private val USER_NAME         = stringPreferencesKey("user_name")
+    private val WATCH_SHORT_CODE  = stringPreferencesKey("watch_short_code")
 
     val accessToken: Flow<String?> = context.dataStore.data.map { it[ACCESS_TOKEN] }
     val refreshToken: Flow<String?> = context.dataStore.data.map { it[REFRESH_TOKEN] }
     val userId: Flow<String?> = context.dataStore.data.map { it[USER_ID] }
     val userRole: Flow<String?> = context.dataStore.data.map { it[USER_ROLE] }
     val userName: Flow<String?> = context.dataStore.data.map { it[USER_NAME] }
-    val watchShortId: Flow<String?> = context.dataStore.data.map { it[WATCH_SHORT_ID] }
+    val watchShortCode: Flow<String?> = context.dataStore.data.map { it[WATCH_SHORT_CODE] }
 
     suspend fun getAccessToken(): String? = context.dataStore.data.first()[ACCESS_TOKEN]
-    suspend fun getWatchShortId(): String? = context.dataStore.data.first()[WATCH_SHORT_ID]
+
+    suspend fun getWatchShortCode(): String? = context.dataStore.data.first()[WATCH_SHORT_CODE]
+
+    suspend fun saveWatchShortCode(code: String) {
+        context.dataStore.edit { prefs ->
+            prefs[WATCH_SHORT_CODE] = code.trim().uppercase()
+        }
+    }
 
     suspend fun saveSession(
         accessToken: String,
@@ -53,8 +60,11 @@ class TokenDataStore @Inject constructor(
         }
     }
 
-    suspend fun saveWatchShortId(shortId: String) {
-        context.dataStore.edit { it[WATCH_SHORT_ID] = shortId.trim().uppercase() }
+    suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        context.dataStore.edit { prefs ->
+            prefs[ACCESS_TOKEN] = accessToken
+            prefs[REFRESH_TOKEN] = refreshToken
+        }
     }
 
     suspend fun clearSession() {

@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.rpm.app-mergeDebugResources-86:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\mahmo\\.gradle\\caches\\8.9\\transforms\\42ee2751ffacf60a466d0329f1ddbd1e\\transformed\\jetified-material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

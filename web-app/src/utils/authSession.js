@@ -1,108 +1,50 @@
-const AUTH_KEY = 'authSession'
+import { accountUserId } from './patientId'
 
-export const getAuthSession = () => {
+const AUTH_SESSION_KEY = 'authSession'
+
+const normalizeProfile = (profile) => {
+  if (!profile || typeof profile !== 'object') return profile
+  const id = accountUserId(profile)
+  return id ? { ...profile, id } : profile
+}
+
+const readJson = (value) => {
   try {
-    const raw = localStorage.getItem(AUTH_KEY)
-    if (!raw) return null
-    return JSON.parse(raw)
+    return JSON.parse(value)
   } catch {
-    localStorage.removeItem(AUTH_KEY)
     return null
   }
 }
 
-export const getAccessToken = () => {
-  const session = getAuthSession()
-  const token = session?.token ?? session?.accessToken ?? ''
-  return typeof token === 'string' ? token.trim() : ''
-}
+export const loadAuthSession = () => {
+  if (typeof localStorage === 'undefined') return null
 
-export const getRefreshToken = () => {
-  const session = getAuthSession()
-  const token = session?.refreshToken ?? ''
-  return typeof token === 'string' ? token.trim() : ''
-}
+  const saved = localStorage.getItem(AUTH_SESSION_KEY)
+  if (!saved) return null
 
-export const isTokenExpired = (token) => {
-  if (!token) return true
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    if (!payload?.exp) return false
-    const expiresMs = payload.exp * 1000
-    return Date.now() >= expiresMs - 30_000
-  } catch {
-    return false
+  const session = readJson(saved)
+  if (!session || typeof session !== 'object') return null
+
+  return {
+    accessToken: session.accessToken ?? session.token ?? null,
+    refreshToken: session.refreshToken ?? null,
+    profile: normalizeProfile(session.profile ?? null),
   }
 }
 
-export const updateAuthTokens = (tokens) => {
-  const session = getAuthSession()
-  if (!session || !tokens) return false
-  const accessToken = tokens.accessToken ?? tokens.AccessToken
-  const refreshToken = tokens.refreshToken ?? tokens.RefreshToken ?? session.refreshToken
-  if (!accessToken) return false
+export const saveAuthSession = ({ accessToken, refreshToken = null, profile }) => {
+  if (typeof localStorage === 'undefined') return
+
   localStorage.setItem(
-    AUTH_KEY,
-    JSON.stringify({ ...session, token: accessToken, refreshToken }),
+    AUTH_SESSION_KEY,
+    JSON.stringify({ accessToken, refreshToken, profile: normalizeProfile(profile) })
   )
-  window.dispatchEvent(new Event('auth:tokens-updated'))
-  return true
+  try { window.dispatchEvent(new CustomEvent('authSessionChanged', { detail: { accessToken, refreshToken, profile } })) } catch {}
 }
 
 export const clearAuthSession = () => {
-  localStorage.removeItem(AUTH_KEY)
+  if (typeof localStorage === 'undefined') return
+
+  localStorage.removeItem(AUTH_SESSION_KEY)
+  try { window.dispatchEvent(new CustomEvent('authSessionChanged', { detail: null })) } catch {}
 }
-
-export const isUnauthorizedError = (err) => {
-  if (err?.status === 401) return true
-  const message = `${err?.message || ''}`.toLowerCase()
-  return message.includes('401') || message.includes('unauthorized')
-}
-
-let refreshInFlight = null
-
-/** Refresh the access token using the stored refresh token. Returns true on success. */
-export const refreshAccessToken = async (apiBase) => {
-  if (refreshInFlight) return refreshInFlight
-
-  refreshInFlight = (async () => {
-    try {
-      const refreshToken = getRefreshToken()
-      if (!refreshToken) return false
-
-      const url = new URL('/api/auth/refresh', apiBase).toString()
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          refreshToken,
-          accessToken: getAccessToken() || undefined,
-          deviceInfo: 'web',
-        }),
-      })
-
-      if (!response.ok) return false
-      const data = await response.json()
-      return updateAuthTokens(data)
-    } catch {
-      return false
-    } finally {
-      refreshInFlight = null
-    }
-  })()
-
-  return refreshInFlight
-}
-
-/** Ensure a usable access token exists; refresh when expired. */
-export const ensureValidSession = async (apiBase) => {
-  const token = getAccessToken()
-  if (token && !isTokenExpired(token)) return true
-  return refreshAccessToken(apiBase)
-}
-
-export const notifySessionExpired = () => {
-  clearAuthSession()
-  window.dispatchEvent(new Event('auth:session-expired'))
-}
-

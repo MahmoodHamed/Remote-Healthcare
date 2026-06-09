@@ -2,126 +2,173 @@ package com.rpm.watch.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
+import com.rpm.watch.BuildConfig
 import com.rpm.watch.WatchViewModel
 
 @Composable
 fun SettingsScreen(
     viewModel: WatchViewModel,
-    patientId: String,
-    mqttHost: String,
-    mqttPort: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    var patientInput by remember(patientId) { mutableStateOf(patientId) }
-    var hostInput by remember(mqttHost) { mutableStateOf(mqttHost) }
-    var portInput by remember(mqttPort) { mutableStateOf(mqttPort.toString()) }
+    val state by viewModel.settingsState.collectAsStateWithLifecycle()
+    var patientId by remember(state.patientId) {
+        mutableStateOf(state.patientId.ifBlank { BuildConfig.DEFAULT_PATIENT_ID })
+    }
+    var mqttHost by remember(state.mqttHost) { mutableStateOf(state.mqttHost) }
+    var mqttPort by remember(state.mqttPort) { mutableStateOf(state.mqttPort) }
+    var saved by remember { mutableStateOf(false) }
 
-    Scaffold(
-        timeText = { TimeText() },
-        modifier = Modifier.background(MaterialTheme.colors.background)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+    Scaffold(timeText = { TimeText() }) {
+        ScalingLazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                text = "Server setup",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.primary
-            )
-            Spacer(Modifier.height(6.dp))
-
-            SettingsField(label = "Patient ID (6 chars)", value = patientInput, onValueChange = { patientInput = it })
-            SettingsField(label = "MQTT host", value = hostInput, onValueChange = { hostInput = it })
-            SettingsField(label = "MQTT port", value = portInput, onValueChange = { portInput = it.filter { ch -> ch.isDigit() } })
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    val port = portInput.toIntOrNull() ?: 1883
-                    viewModel.saveConfig(patientInput.trim(), hostInput.trim(), port)
-                    onBack()
-                },
-                modifier = Modifier.fillMaxWidth(0.9f),
-                colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
-            ) {
-                Text("Save", fontSize = 12.sp)
+            item {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.title3,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-
-            Spacer(Modifier.height(4.dp))
-
-            Button(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                Text("Back", fontSize = 12.sp)
+            item {
+                Text(
+                    "Enter the same 6-character Patient ID you saved in the mobile app (e.g. ABC123)",
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                SettingField(
+                    label = "Patient ID",
+                    value = patientId,
+                    onValueChange = { v -> patientId = v.filter { it.isLetterOrDigit() }.take(6).uppercase(); saved = false },
+                    keyboardType = KeyboardType.Ascii,
+                )
+            }
+            item {
+                SettingField(label = "MQTT Host", value = mqttHost, onValueChange = { mqttHost = it; saved = false })
+            }
+            item {
+                SettingField(
+                    label = "MQTT Port",
+                    value = mqttPort,
+                    onValueChange = { mqttPort = it.filter { c -> c.isDigit() }; saved = false },
+                    keyboardType = KeyboardType.Number,
+                )
+            }
+            item {
+                Button(
+                    onClick = {
+                        viewModel.saveSettings(patientId, mqttHost, mqttPort.toIntOrNull() ?: 1883)
+                        saved = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = patientId.isNotBlank() && mqttHost.isNotBlank(),
+                ) {
+                    Text(if (saved) "Saved" else "Save")
+                }
+            }
+            item {
+                Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                    Text("Back")
+                }
+            }
+            item {
+                Text(
+                    "Shared vitals (Samsung SDK)",
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+            }
+            SupportedWatchVitals.sdkContinuous.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            item {
+                Text(
+                    "On-demand",
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+            SupportedWatchVitals.sdkOnDemand.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            item {
+                Text(
+                    "Platform",
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colors.onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                )
+            }
+            SupportedWatchVitals.platformSensors.forEach { line ->
+                item {
+                    Text("• $line", fontSize = 8.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
+            if (state.wasMonitoring) {
+                item {
+                    Text(
+                        "Restart monitoring after saving.",
+                        fontSize = 9.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SettingsField(
+private fun SettingField(
     label: String,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            color = Color(0xFFBDBDBD),
-            modifier = Modifier.fillMaxWidth()
-        )
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(
-                color = MaterialTheme.colors.onBackground,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colors.primary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1E1E1E))
-                .padding(vertical = 6.dp, horizontal = 8.dp)
-        )
-    }
+    Text(label, fontSize = 10.sp)
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colors.surface.copy(alpha = 0.5f))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        textStyle = MaterialTheme.typography.body1.copy(fontSize = 11.sp),
+    )
 }

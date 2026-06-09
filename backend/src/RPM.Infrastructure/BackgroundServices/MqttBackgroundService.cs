@@ -1,30 +1,29 @@
-﻿using System.Threading.Channels;
+﻿using System.Text;
+using System.Text.Json;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
-using RPM.Application.DTOs.Vitals;
+using Microsoft.Extensions.DependencyInjection;
+using RPM.Application.Common;
 using RPM.Application.Features.Vitals.Commands;
+using RPM.Domain.Interfaces;
 
 namespace RPM.Infrastructure.BackgroundServices;
 
-public class MqttBackgroundService(IConfiguration config, IMediator mediator, ILogger<MqttBackgroundService> logger)
+public class MqttBackgroundService(
+    IConfiguration config,
+    IMediator mediator,
+    IServiceScopeFactory scopeFactory,
+    ILogger<MqttBackgroundService> logger)
     : BackgroundService
 {
     private IMqttClient? _client;
-    private readonly Channel<VitalIngestionDto> _queue = Channel.CreateBounded<VitalIngestionDto>(new BoundedChannelOptions(5000)
-    {
-        SingleReader = true,
-        SingleWriter = false,
-        FullMode = BoundedChannelFullMode.Wait
-    });
-    private CancellationToken _stoppingToken;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _stoppingToken = stoppingToken;
         var factory = new MqttClientFactory();
         _client = factory.CreateMqttClient();
 
@@ -35,8 +34,6 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
             .Build();
 
         _client.ApplicationMessageReceivedAsync += OnMessageReceived;
-
-        var consumerTask = ConsumeQueueAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -65,8 +62,6 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
 
             await Task.Delay(10000, stoppingToken);
         }
-
-        await consumerTask;
     }
 
     private async Task OnMessageReceived(MqttApplicationMessageReceivedEventArgs e)
@@ -76,15 +71,38 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
             var payload = e.ApplicationMessage.ConvertPayloadToString();
             logger.LogDebug("MQTT message on {Topic}: {Payload}", e.ApplicationMessage.Topic, payload);
 
-            var dto = MqttVitalsParser.TryParse(payload);
-            if (dto is null)
+            var data = JsonSerializer.Deserialize<MqttVitalsPayload>(payload,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (data is null) return;
+
+            var patientId = await ResolvePatientIdAsync(data.PatientId);
+            var deviceId = NormalizeGuid(data.DeviceId);
+
+            if (patientId is null)
             {
-                logger.LogWarning("Could not parse MQTT vitals payload on {Topic}", e.ApplicationMessage.Topic);
+                logger.LogWarning("Invalid patientId in MQTT payload: {PatientId}", data.PatientId);
                 return;
             }
 
-            if (!_queue.Writer.TryWrite(dto))
-                await _queue.Writer.WriteAsync(dto, _stoppingToken);
+            if (deviceId is null)
+            {
+                logger.LogWarning("Invalid deviceId in MQTT payload: {DeviceId}", data.DeviceId);
+                return;
+            }
+
+            var cmd = new IngestVitalCommand(
+                patientId.Value, deviceId.Value,
+                data.HeartRateBpm, data.SpO2Percent,
+                data.SystolicBp, data.DiastolicBp,
+                data.TemperatureC, data.SkinTemperatureC, data.AmbientTemperatureC,
+                data.HrvMs, data.StressScore, data.BodyFatPercent, data.EcgAvgHeartRateBpm,
+                data.StepsCount, data.CaloriesBurned, data.FallDetected, data.IsWearing);
+
+            await mediator.Send(cmd);
+            logger.LogInformation(
+                "Ingested vitals for patient {PatientId}: HR={HeartRate}, SpO2={SpO2}, Temp={Temp}",
+                patientId.Value, data.HeartRateBpm, data.SpO2Percent, data.TemperatureC);
         }
         catch (Exception ex)
         {
@@ -92,20 +110,43 @@ public class MqttBackgroundService(IConfiguration config, IMediator mediator, IL
         }
     }
 
-    private async Task ConsumeQueueAsync(CancellationToken stoppingToken)
+    private async Task<Guid?> ResolvePatientIdAsync(string? value)
     {
-        await foreach (var reading in _queue.Reader.ReadAllAsync(stoppingToken))
-        {
-            // Process each MQTT message immediately (no batch delay).
-            await mediator.Send(new IngestVitalsBatchCommand([reading]), stoppingToken);
-        }
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (Guid.TryParse(value, out var guid)) return guid;
+
+        if (!PatientShortCode.IsValidFormat(value)) return null;
+
+        var code = PatientShortCode.Normalize(value);
+        using var scope = scopeFactory.CreateScope();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        var profile = await uow.Patients.GetByShortPatientCodeAsync(code);
+        if (profile is not null) return profile.UserId;
+
+        logger.LogWarning(
+            "Watch code {Code} is not linked to any patient. Save pairing details in the mobile or web app first.",
+            code);
+        return null;
+    }
+
+    private static Guid? NormalizeGuid(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return Guid.TryParse(value, out var guid) ? guid : null;
     }
 
     public override async Task StopAsync(CancellationToken ct)
     {
         if (_client?.IsConnected == true)
             await _client.DisconnectAsync(cancellationToken: ct);
-        _queue.Writer.TryComplete();
         await base.StopAsync(ct);
     }
 }
+
+public record MqttVitalsPayload(
+    string PatientId, string DeviceId,
+    float? HeartRateBpm, float? SpO2Percent,
+    float? SystolicBp, float? DiastolicBp,
+    float? TemperatureC, float? SkinTemperatureC, float? AmbientTemperatureC,
+    float? HrvMs, float? StressScore, float? BodyFatPercent, float? EcgAvgHeartRateBpm,
+    int? StepsCount, float? CaloriesBurned, bool FallDetected, bool IsWearing);

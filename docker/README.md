@@ -30,6 +30,13 @@ dotnet ef database update --project src/RPM.Infrastructure --startup-project src
 
 Or on container startup, the API applies migrations automatically via `MigrateDatabaseAsync()` in Program.cs.
 
+## Production (remote-care.tech)
+
+On your VPS, run `docker compose up -d` and proxy nginx to `http://127.0.0.1:8080`.
+See `../deploy/README.md` and `../deploy/nginx-remote-care.tech.conf`.
+
+Verify: `curl http://127.0.0.1:8080/health` → `{"status":"ok"}`
+
 ## Production Notes
 
 1. **Change `Jwt__Secret`** in `docker-compose.yml` to a strong random string (≥ 32 chars).  

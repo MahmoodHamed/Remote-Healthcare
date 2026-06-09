@@ -1,105 +1,314 @@
 package com.rpm.watch
 
-import android.Manifest
+
+
 import android.content.ComponentName
+
 import android.content.Context
+
 import android.content.Intent
+
 import android.content.ServiceConnection
+
+import android.net.Uri
+
 import android.os.Bundle
+
 import android.os.IBinder
+
+import android.provider.Settings
+
+import android.util.Log
+
 import androidx.activity.ComponentActivity
+
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rpm.watch.service.HeartRateMonitorService
-import com.rpm.watch.ui.HeartRateScreen
+
+import androidx.activity.result.contract.ActivityResultContracts
+
+import androidx.activity.viewModels
+
+import com.rpm.watch.sensor.SensorType
+
+import com.rpm.watch.service.VitalsMonitorService
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.rpm.watch.ui.SettingsScreen
+import com.rpm.watch.ui.VitalsMonitorScreen
+
 import com.rpm.watch.ui.theme.WatchTheme
+
 import dagger.hilt.android.AndroidEntryPoint
 
+
+
 @AndroidEntryPoint
+
 class MainActivity : ComponentActivity() {
+
+
 
     private val viewModel: WatchViewModel by viewModels()
 
-    // ── Runtime permissions ───────────────────────────────────────────────────
+
+
+    private var permissionGrantedCallback: (() -> Unit)? = null
+
+
+
     private val requestPermissions =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            if (results[Manifest.permission.BODY_SENSORS] == true) {
-                bindToService()
+
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+
+            Log.i(TAG, "Permission granted=$granted")
+
+            val stillNeeded = WatchPermissions.missingForAllVitals(this)
+
+            if (stillNeeded.isEmpty()) {
+
+                viewModel.onPermissionsGranted()
+
+                permissionGrantedCallback?.invoke()
+
+                permissionGrantedCallback = null
+
+            } else if (!granted) {
+
+                viewModel.onPermissionsDenied(stillNeeded.toSet())
+
+                permissionGrantedCallback = null
+
+            } else {
+
+                requestNextPermission()
+
             }
+
         }
 
-    // ── Service binding (for state injection into ViewModel) ──────────────────
-    private var monitorService: HeartRateMonitorService? = null
+
+
+    private var monitorService: VitalsMonitorService? = null
+
     private val serviceConnection = object : ServiceConnection {
+
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            val localBinder = binder as? HeartRateMonitorService.LocalBinder ?: return
+
+            val localBinder = binder as? VitalsMonitorService.LocalBinder ?: return
+
             monitorService = localBinder.getService()
+
             monitorService?.let { viewModel.attachService(it) }
+
         }
+
         override fun onServiceDisconnected(name: ComponentName?) {
+
             monitorService = null
+
         }
+
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
-        setContent {
-            var showSettings by mutableStateOf(false)
-            val patientId by viewModel.uiState.collectAsStateWithLifecycle()
-            val mqttHost by viewModel.mqttHost.collectAsStateWithLifecycle()
-            val mqttPort by viewModel.mqttPort.collectAsStateWithLifecycle()
+        viewModel.onRequestBindService = { bindMonitoringService() }
 
+        viewModel.onRequestPermissions = { _, onReady ->
+            ensureAllVitalsPermissions(onReady)
+        }
+
+        viewModel.onRequestEcg = {
+            monitorService?.requestEcgMeasurement()
+        }
+
+        viewModel.onRequestBia = {
+            monitorService?.requestBodyFatMeasurement()
+        }
+
+
+
+        setContent {
             WatchTheme {
+                var showSettings by remember { mutableStateOf(false) }
                 if (showSettings) {
                     SettingsScreen(
                         viewModel = viewModel,
-                        patientId = patientId.patientId,
-                        mqttHost = mqttHost,
-                        mqttPort = mqttPort,
-                        onBack = { showSettings = false }
+                        onBack = { showSettings = false },
                     )
                 } else {
-                    HeartRateScreen(
+                    VitalsMonitorScreen(
                         viewModel = viewModel,
-                        onOpenSettings = { showSettings = true }
+                        onOpenSettings = { showSettings = true },
                     )
                 }
             }
         }
 
-        checkAndRequestPermissions()
+
+
+        requestLaunchPermissions()
+
+        bindMonitoringService()
+
     }
+
+
+
+    override fun onResume() {
+
+        super.onResume()
+
+        val missing = WatchPermissions.missingForAllVitals(this)
+
+        if (missing.isEmpty()) {
+
+            viewModel.onPermissionsGranted()
+
+        } else if (!viewModel.uiState.value.isMonitoring) {
+
+            viewModel.showPermissionReminder(missing)
+
+        }
+
+    }
+
+
 
     override fun onDestroy() {
+
         super.onDestroy()
+
         try { unbindService(serviceConnection) } catch (_: Exception) {}
+
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun checkAndRequestPermissions() {
-        val perms = buildList {
-            add(Manifest.permission.BODY_SENSORS)
-            add(Manifest.permission.ACTIVITY_RECOGNITION)
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                add(Manifest.permission.POST_NOTIFICATIONS)
-                add("android.permission.BODY_SENSORS_BACKGROUND")
-            }
+
+    private fun requestLaunchPermissions() {
+
+        if (WatchPermissions.missingForAllVitals(this).isNotEmpty()) {
+
+            requestNextPermission(onComplete = null)
+
         }
-        requestPermissions.launch(perms.toTypedArray())
+
     }
 
-    private fun bindToService() {
-        val intent = Intent(this, HeartRateMonitorService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+
+
+    fun ensureAllVitalsPermissions(onReady: () -> Unit) {
+
+        if (WatchPermissions.hasAllForVitals(this)) {
+
+            viewModel.onPermissionsGranted()
+
+            onReady()
+
+            return
+
+        }
+
+        requestNextPermission(onComplete = onReady)
+
     }
+
+
+
+    private fun requestNextPermission(onComplete: (() -> Unit)? = null) {
+
+        permissionGrantedCallback = onComplete
+
+        val stillNeeded = WatchPermissions.missingForAllVitals(this)
+
+        if (stillNeeded.isEmpty()) {
+
+            viewModel.onPermissionsGranted()
+
+            onComplete?.invoke()
+
+            permissionGrantedCallback = null
+
+            return
+
+        }
+
+        val next = stillNeeded.first()
+
+        Log.i(TAG, "Requesting: $next (${WatchPermissions.label(next)})")
+
+        requestPermissions.launch(next)
+
+    }
+
+
+
+    fun openAppSettings() {
+
+        startActivity(
+
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+
+                data = Uri.fromParts("package", packageName, null)
+
+            },
+
+        )
+
+    }
+
+
+
+    fun bindMonitoringService() {
+
+        monitorService?.let {
+
+            viewModel.attachService(it)
+
+            return
+
+        }
+
+        try {
+
+            bindService(
+
+                Intent(this, VitalsMonitorService::class.java),
+
+                serviceConnection,
+
+                Context.BIND_AUTO_CREATE,
+
+            )
+
+        } catch (e: Exception) {
+
+            Log.e(TAG, "Failed to bind vitals service", e)
+
+        }
+
+    }
+
+
+
+    companion object {
+
+        private const val TAG = "MainActivity"
+
+    }
+
 }
+
+

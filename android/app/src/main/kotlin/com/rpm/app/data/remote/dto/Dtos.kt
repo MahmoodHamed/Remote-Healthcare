@@ -13,18 +13,20 @@ data class LoginRequest(
 
 @Serializable
 data class RegisterRequest(
-    val email: String,
-    val password: String,
     val fullName: String,
+    val email: String,
+    val phone: String,
+    val password: String,
     val role: String,              // "Doctor" | "Patient" | "Relative"
-    val fcmToken: String? = null
+    val licenseNumber: String? = null,
+    val specialization: String? = null,
 )
 
 @Serializable
 data class AuthTokensDto(
     val accessToken: String,
     val refreshToken: String,
-    val expiresAt: String
+    val expiresAt: String? = null,
 )
 
 @Serializable
@@ -39,11 +41,16 @@ data class UserProfileDto(
     val email: String,
     val fullName: String,
     val role: String,
-    val avatarUrl: String? = null
+    val phone: String? = null,
+    val avatarUrl: String? = null,
 )
 
 @Serializable
-data class RefreshTokenRequest(val refreshToken: String)
+data class RefreshTokenRequest(
+    val accessToken: String,
+    val refreshToken: String,
+    val deviceInfo: String? = null,
+)
 
 @Serializable
 data class UpdateFcmTokenRequest(val fcmToken: String)
@@ -57,53 +64,19 @@ data class VitalRecordDto(
     val patientId: String,
     val deviceId: String? = null,
     val recordedAt: String,
-
-    // Cardio
     val heartRateBpm: Float? = null,
-    val heartRateVariabilityMs: Float? = null,
-    val restingHeartRateBpm: Float? = null,
-    val maxHeartRateBpm: Float? = null,
-
-    // Respiratory
     val spO2Percent: Float? = null,
-    val respirationRateBpm: Float? = null,
-
-    // Blood pressure
     val systolicBp: Float? = null,
     val diastolicBp: Float? = null,
-
-    // Temperature
     val temperatureC: Float? = null,
     val skinTemperatureC: Float? = null,
-
-    // Activity & energy
+    val ambientTemperatureC: Float? = null,
+    val hrvMs: Float? = null,
+    val stressScore: Float? = null,
+    val bodyFatPercent: Float? = null,
+    val ecgAvgHeartRateBpm: Float? = null,
     val stepsCount: Int? = null,
     val caloriesBurned: Float? = null,
-    val distanceMeters: Float? = null,
-    val floorsClimbed: Int? = null,
-    val activeMinutes: Int? = null,
-
-    // Sleep & stress
-    val stressScore: Float? = null,
-    val sleepScore: Float? = null,
-    val sleepDurationMinutes: Int? = null,
-
-    // Body composition
-    val bodyFatPercent: Float? = null,
-    val muscleMassKg: Float? = null,
-    val bodyWaterPercent: Float? = null,
-    val basalMetabolicRate: Float? = null,
-
-    // ECG
-    val ecgAverageHeartRate: Float? = null,
-    val ecgClassification: String? = null,
-    val ecgWaveformJson: String? = null,
-
-    // Glucose
-    val bloodGlucoseMgDl: Float? = null,
-
-    // Safety & wear status
-    val batteryLevel: Float? = null,
     val fallDetected: Boolean = false,
     val isWearing: Boolean = true
 )
@@ -122,39 +95,8 @@ data class AlertThresholdDto(
     val minHeartRateBpm: Float? = null,
     val minSpO2Percent: Float? = null,
     val maxTemperatureC: Float? = null,
-    val maxSkinTemperatureC: Float? = null,
-    val maxSystolicBp: Float? = null,
-    val minRespirationRate: Float? = null,
-    val maxRespirationRate: Float? = null,
-    val maxStressScore: Float? = null,
-    val minBloodGlucoseMgDl: Float? = null,
-    val maxBloodGlucoseMgDl: Float? = null
+    val maxSystolicBp: Float? = null
 )
-
-
-// ── Notifications ─────────────────────────────────────────────────────────
-
-@Serializable
-data class NotificationDto(
-    val id: String,
-    val title: String,
-    val body: String,
-    val isRead: Boolean,
-    val sentAt: String,
-    val alertId: String? = null,
-    val dataPayload: String? = null
-)
-
-@Serializable
-data class NotificationsPagedDto(
-    val items: List<NotificationDto>,
-    val unreadCount: Int,
-    val page: Int,
-    val pageSize: Int
-)
-
-@Serializable
-data class UnreadCountDto(val count: Int)
 
 
 // ── Alerts ────────────────────────────────────────────────────────────────
@@ -163,12 +105,14 @@ data class UnreadCountDto(val count: Int)
 data class AlertDto(
     val id: String,
     val patientId: String,
+    val patientName: String,
     val type: String,
     val severity: String,
     val status: String,
     val message: String,
     val triggeredAt: String,
     val resolvedAt: String? = null,
+    val resolvedByName: String? = null
 )
 
 @Serializable
@@ -185,19 +129,21 @@ data class AlertPagedDto(
 @Serializable
 data class ConversationDto(
     val id: String,
-    val title: String? = null,
+    val name: String? = null,
     val type: String,
-    val lastMessage: String? = null,
     val lastMessageAt: String? = null,
-    val unreadCount: Int = 0,
-    val participants: List<ParticipantDto> = emptyList()
-)
+    val participants: List<ParticipantDto> = emptyList(),
+) {
+    /** Display title — maps backend `name` field. */
+    val title: String? get() = name
+}
 
 @Serializable
 data class ParticipantDto(
     val userId: String,
     val fullName: String,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val isAdmin: Boolean = false,
 )
 
 @Serializable
@@ -209,21 +155,23 @@ data class MessageDto(
     val content: String,
     val type: String,
     val sentAt: String,
-    val fileUrl: String? = null
+    val mediaUrl: String? = null,
+    val isDeleted: Boolean = false,
 )
 
 @Serializable
 data class MessagePagedDto(
     val items: List<MessageDto>,
-    val totalCount: Int,
+    val totalCount: Long = 0,
     val page: Int,
     val pageSize: Int
 )
 
 @Serializable
 data class CreateConversationRequest(
-    val participantUserIds: List<String>,
-    val title: String? = null
+    val type: String,
+    val name: String? = null,
+    val participantIds: List<String>,
 )
 
 @Serializable
@@ -233,23 +181,7 @@ data class SendMessageRequest(
 )
 
 
-@Serializable
-data class ResolveAlertRequest(val notes: String? = null)
-
 // ── Patients ──────────────────────────────────────────────────────────────
-
-@Serializable
-data class PatientSummaryDto(
-    val userId: String,
-    val profileId: String,
-    val fullName: String,
-    val email: String,
-    val phone: String? = null,
-    val avatarUrl: String? = null,
-    val dateOfBirth: String? = null,
-    val bloodType: String? = null,
-    val isActive: Boolean = true,
-)
 
 @Serializable
 data class VitalRecordLatestDto(
@@ -258,25 +190,37 @@ data class VitalRecordLatestDto(
     val systolicBp: Float? = null,
     val diastolicBp: Float? = null,
     val temperatureC: Float? = null,
-    val recordedAt: String,
+    val skinTemperatureC: Float? = null,
+    val ambientTemperatureC: Float? = null,
+    val hrvMs: Float? = null,
+    val stressScore: Float? = null,
+    val bodyFatPercent: Float? = null,
+    val ecgAvgHeartRateBpm: Float? = null,
+    val stepsCount: Int? = null,
+    val caloriesBurned: Float? = null,
+    val fallDetected: Boolean = false,
+    val isWearing: Boolean = true,
+    val recordedAt: String? = null,
 )
 
 @Serializable
-data class DoctorAssignmentDto(
-    val doctorUserId: String,
-    val doctorName: String,
-    val specialization: String,
-    val status: String,
-    val assignedAt: String,
+data class PatientSummaryDto(
+    val userId: String,
+    val fullName: String,
+    val email: String? = null,
+    val avatarUrl: String? = null,
+    val dateOfBirth: String? = null,
+    val bloodType: String? = null,
+    val shortPatientCode: String? = null,
+    val latestVitals: VitalRecordLatestDto? = null,
 )
 
 @Serializable
 data class PatientDetailDto(
     val userId: String,
-    val profileId: String,
     val fullName: String,
-    val email: String,
-    val phone: String,
+    val email: String? = null,
+    val phone: String? = null,
     val avatarUrl: String? = null,
     val dateOfBirth: String? = null,
     val bloodType: String? = null,
@@ -286,10 +230,16 @@ data class PatientDetailDto(
     val allergies: List<String> = emptyList(),
     val currentMedications: List<String> = emptyList(),
     val emergencyContactPhone: String? = null,
+    val shortPatientCode: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
-    val doctors: List<DoctorAssignmentDto> = emptyList(),
-    /** 6-char short ID for the paired watch; used to derive the streaming patient UUID. */
-    val watchShortId: String? = null,
+    val doctor: DoctorDto? = null,
+)
+
+@Serializable
+data class DoctorDto(
+    val userId: String,
+    val fullName: String,
+    val specialization: String? = null
 )
 
 @Serializable
@@ -301,8 +251,55 @@ data class LinkRelativeRequest(
     val relationship: String
 )
 
-@Serializable
-data class SetWatchShortIdRequest(val shortId: String?)
+
+// ── Push notification inbox ───────────────────────────────────────────────
 
 @Serializable
-data class WatchShortIdResponse(val watchShortId: String?)
+data class NotificationDto(
+    val id: String,
+    val title: String,
+    val body: String,
+    val alertId: String? = null,
+    val isRead: Boolean = false,
+    val sentAt: String,
+)
+
+@Serializable
+data class NotificationPagedDto(
+    val items: List<NotificationDto>,
+    val unreadCount: Long = 0,
+    val page: Int = 1,
+    val pageSize: Int = 30,
+)
+
+@Serializable
+data class UnreadCountDto(val count: Long = 0)
+
+
+// ── Devices / Watch pairing ───────────────────────────────────────────────
+
+@Serializable
+data class DeviceDto(
+    val id: String,
+    val deviceName: String,
+    val deviceModel: String,
+    val status: String,                // "Online" | "Offline" | "LowBattery"
+    val batteryLevel: Float? = null,
+    val lastSeenAt: String? = null,
+    val registeredAt: String,
+)
+
+/** @param patientId 6-character watch code assigned by the server. */
+@Serializable
+data class PairingInfoDto(
+    val patientId: String = "",
+    val streamingPatientId: String = "",
+    val mqttHost: String = "",
+    val mqttPort: Int = 0,
+)
+
+@Serializable
+data class SavePairingInfoRequest(val patientId: String)
+
+@Serializable
+data class RenameDeviceRequest(val newName: String)

@@ -16,25 +16,22 @@ android {
         applicationId = "com.rpm.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "BASE_URL", "\"https://remote-care.tech/\"")
         buildConfigField("String", "SIGNALR_URL", "\"https://remote-care.tech/\"")
+        buildConfigField("String", "MQTT_HOST", "\"remote-care.tech\"")
+        buildConfigField("int", "MQTT_PORT", "1883")
+        buildConfigField("String", "DEFAULT_PATIENT_ID", "\"ABC123\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "BASE_URL", "\"https://remote-care.tech/\"")
-            buildConfigField("String", "SIGNALR_URL", "\"https://remote-care.tech/\"")
-        }
-        debug {
-            buildConfigField("String", "BASE_URL", "\"https://remote-care.tech/\"")
-            buildConfigField("String", "SIGNALR_URL", "\"https://remote-care.tech/\"")
         }
     }
 
@@ -53,6 +50,7 @@ android {
 
 dependencies {
     // Core
+    implementation("com.google.android.material:material:1.12.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.lifecycle.viewmodel)
@@ -102,10 +100,13 @@ dependencies {
     // WorkManager
     implementation(libs.workmanager.ktx)
 
-    // Firebase
+    // Firebase (BoM manages versions — do not pin versions on Firebase libs)
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.messaging.ktx)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.messaging)
+
+    // QR code generation
+    implementation("com.google.zxing:core:3.5.3")
 
     // Tests
     testImplementation(libs.junit)

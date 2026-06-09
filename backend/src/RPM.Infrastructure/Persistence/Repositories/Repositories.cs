@@ -13,7 +13,7 @@ public class UserRepository(AppDbContext db) : IUserRepository
         db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant(), ct);
 
     public async Task<IEnumerable<User>> GetAllAsync(CancellationToken ct = default) =>
-        await db.Users.OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
+        await db.Users.Include(u => u.RefreshTokens).OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
 
     public Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default) =>
         db.Users.AnyAsync(u => u.Email == email.ToLowerInvariant(), ct);
@@ -24,7 +24,34 @@ public class UserRepository(AppDbContext db) : IUserRepository
     public async Task AddNotificationAsync(Notification notification, CancellationToken ct = default) =>
         await db.Notifications.AddAsync(notification, ct);
 
+    public async Task<IEnumerable<Notification>> GetNotificationsAsync(Guid userId, int page, int pageSize, CancellationToken ct = default) =>
+        await db.Notifications
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+    public Task<long> GetUnreadNotificationCountAsync(Guid userId, CancellationToken ct = default) =>
+        db.Notifications.LongCountAsync(n => n.UserId == userId && !n.IsRead, ct);
+
+    public Task<Notification?> GetNotificationByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+
+    public async Task MarkAllNotificationsReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        var unread = await db.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync(ct);
+        foreach (var n in unread) n.MarkRead();
+    }
+
     public void Update(User user) => db.Users.Update(user);
+    public async Task AddRefreshTokenAsync(RefreshToken token, CancellationToken ct = default) =>
+        await db.RefreshTokens.AddAsync(token, ct);
+
+    public Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken ct = default) =>
+        db.RefreshTokens.FirstOrDefaultAsync(r => r.TokenHash == tokenHash, ct);
+
+    public void UpdateRefreshToken(RefreshToken token) => db.RefreshTokens.Update(token);
 }
 
 public class VitalRepository(AppDbContext db) : IVitalRepository
@@ -43,21 +70,11 @@ public class VitalRepository(AppDbContext db) : IVitalRepository
     public Task<VitalRecord?> GetLatestByPatientIdAsync(Guid patientId, CancellationToken ct = default) =>
         db.VitalRecords.Where(v => v.PatientId == patientId).OrderByDescending(v => v.RecordedAt).FirstOrDefaultAsync(ct);
 
-    public async Task<IEnumerable<VitalRecord>> GetRecentByPatientIdAsync(Guid patientId, int limit, CancellationToken ct = default) =>
-        await db.VitalRecords
-            .Where(v => v.PatientId == patientId)
-            .OrderByDescending(v => v.RecordedAt)
-            .Take(limit)
-            .ToListAsync(ct);
-
     public Task<long> CountByPatientIdAsync(Guid patientId, DateTime from, DateTime to, CancellationToken ct = default) =>
         db.VitalRecords.LongCountAsync(v => v.PatientId == patientId && v.RecordedAt >= from && v.RecordedAt <= to, ct);
 
     public async Task AddAsync(VitalRecord record, CancellationToken ct = default) =>
         await db.VitalRecords.AddAsync(record, ct);
-
-    public async Task AddRangeAsync(IEnumerable<VitalRecord> records, CancellationToken ct = default) =>
-        await db.VitalRecords.AddRangeAsync(records, ct);
 }
 
 public class AlertRepository(AppDbContext db) : IAlertRepository
@@ -75,8 +92,30 @@ public class AlertRepository(AppDbContext db) : IAlertRepository
             (a.Status == Domain.Enums.AlertStatus.Unread || a.Status == Domain.Enums.AlertStatus.Read))
             .OrderByDescending(a => a.TriggeredAt).ToListAsync(ct);
 
-    public Task<AlertThreshold?> GetThresholdByPatientIdAsync(Guid patientId, CancellationToken ct = default) =>
-        db.AlertThresholds.FirstOrDefaultAsync(t => t.PatientId == patientId, ct);
+    // Threshold stored with PatientProfile.Id as FK.
+    public Task<AlertThreshold?> GetThresholdByPatientIdAsync(Guid patientProfileId, CancellationToken ct = default) =>
+        db.AlertThresholds.FirstOrDefaultAsync(t => t.PatientId == patientProfileId, ct);
+
+    // Resolve User.Id → PatientProfile.Id via join, then fetch threshold.
+    public Task<AlertThreshold?> GetThresholdByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        db.AlertThresholds
+            .Join(db.PatientProfiles,
+                threshold => threshold.PatientId,
+                profile   => profile.Id,
+                (threshold, profile) => new { threshold, profile })
+            .Where(x => x.profile.UserId == userId)
+            .Select(x => x.threshold)
+            .FirstOrDefaultAsync(ct);
+
+    // Returns the most recent alert of a given type within the lookback window (for deduplication).
+    public Task<Alert?> GetRecentAlertAsync(Guid patientId, Domain.Enums.AlertType type, TimeSpan lookback, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow - lookback;
+        return db.Alerts
+            .Where(a => a.PatientId == patientId && a.Type == type && a.TriggeredAt >= since)
+            .OrderByDescending(a => a.TriggeredAt)
+            .FirstOrDefaultAsync(ct);
+    }
 
     public async Task AddAsync(Alert alert, CancellationToken ct = default) =>
         await db.Alerts.AddAsync(alert, ct);
@@ -156,6 +195,13 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
         db.PatientProfiles.Include(p => p.DoctorAssignments).Include(p => p.RelativeLinks)
             .FirstOrDefaultAsync(p => p.UserId == userId, ct);
 
+    public Task<PatientProfile?> GetByShortPatientCodeAsync(string shortCode, CancellationToken ct = default) =>
+        db.PatientProfiles.FirstOrDefaultAsync(
+            p => p.ShortPatientCode == shortCode.ToUpperInvariant(), ct);
+
+    public Task<bool> ShortPatientCodeExistsAsync(string shortCode, CancellationToken ct = default) =>
+        db.PatientProfiles.AnyAsync(p => p.ShortPatientCode == shortCode.ToUpperInvariant(), ct);
+
     public Task<PatientProfile?> GetByPatientUserIdAsync(Guid userId, CancellationToken ct = default) =>
         db.PatientProfiles.Include(p => p.DoctorAssignments).ThenInclude(a => a.Doctor)
             .Include(p => p.RelativeLinks)
@@ -167,27 +213,13 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
             .Where(p => p.DoctorAssignments.Any(a => a.DoctorId == doctorId && a.Status == Domain.Enums.RelationshipAssignmentStatus.Active))
             .ToListAsync(ct);
 
+    public async Task<IEnumerable<PatientProfile>> GetByRelativeUserIdAsync(Guid relativeUserId, CancellationToken ct = default) =>
+        await db.PatientProfiles.Include(p => p.User)
+            .Where(p => p.RelativeLinks.Any(l => l.RelativeUserId == relativeUserId))
+            .ToListAsync(ct);
+
     public Task<DoctorProfile?> GetDoctorProfileByUserIdAsync(Guid userId, CancellationToken ct = default) =>
         db.DoctorProfiles.FirstOrDefaultAsync(d => d.UserId == userId, ct);
-
-    public async Task<IReadOnlyList<DoctorProfile>> GetAllDoctorsAsync(CancellationToken ct = default) =>
-        await db.DoctorProfiles
-            .Include(d => d.User)
-            .Include(d => d.PatientAssignments)
-            .OrderBy(d => d.User.FullName)
-            .ToListAsync(ct);
-
-    public async Task<IReadOnlyList<PatientProfile>> GetAllPatientsAsync(CancellationToken ct = default) =>
-        await db.PatientProfiles
-            .Include(p => p.User)
-            .Include(p => p.DoctorAssignments).ThenInclude(a => a.Doctor)
-            .OrderBy(p => p.User.FullName)
-            .ToListAsync(ct);
-
-    public Task<DoctorPatientAssignment?> GetAssignmentAsync(Guid doctorUserId, Guid patientProfileId, CancellationToken ct = default) =>
-        db.DoctorPatientAssignments.FirstOrDefaultAsync(a => a.DoctorId == doctorUserId && a.PatientId == patientProfileId, ct);
-
-    public void UpdateAssignment(DoctorPatientAssignment assignment) => db.DoctorPatientAssignments.Update(assignment);
 
     public async Task AddPatientProfileAsync(PatientProfile profile, CancellationToken ct = default) =>
         await db.PatientProfiles.AddAsync(profile, ct);
@@ -202,40 +234,4 @@ public class PatientRepository(AppDbContext db) : IPatientRepository
         await db.PatientRelativeLinks.AddAsync(link, ct);
 
     public void Update(PatientProfile profile) => db.PatientProfiles.Update(profile);
-}
-
-public class NotificationRepository(AppDbContext db) : INotificationRepository
-{
-    public Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-        db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
-
-    public async Task<IReadOnlyList<Notification>> GetByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken ct = default) =>
-        await db.Notifications
-            .Where(n => n.UserId == userId)
-            .OrderByDescending(n => n.SentAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(ct);
-
-    public Task<int> GetUnreadCountAsync(Guid userId, CancellationToken ct = default) =>
-        db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, ct);
-
-    public async Task MarkAllReadAsync(Guid userId, CancellationToken ct = default)
-    {
-        var rows = await db.Notifications.Where(n => n.UserId == userId && !n.IsRead).ToListAsync(ct);
-        foreach (var n in rows) n.MarkRead();
-    }
-
-    public void Update(Notification notification) => db.Notifications.Update(notification);
-}
-
-public class RefreshTokenRepository(AppDbContext db) : IRefreshTokenRepository
-{
-    public Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default) =>
-        db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
-
-    public async Task AddAsync(RefreshToken token, CancellationToken ct = default) =>
-        await db.RefreshTokens.AddAsync(token, ct);
-
-    public void Update(RefreshToken token) => db.RefreshTokens.Update(token);
 }

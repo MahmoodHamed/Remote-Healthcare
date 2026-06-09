@@ -13,8 +13,7 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
 
     private static async Task HandleExceptionAsync(HttpContext ctx, Exception ex, ILogger logger)
     {
-        if (ex is not (NotFoundException or ValidationException or ConflictException or UnauthorizedException or ForbiddenException))
-            logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
+        logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
 
         var (status, title, errors) = ex switch
         {

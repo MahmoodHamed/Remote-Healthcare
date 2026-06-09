@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "68155043415",
+    "project_id": "rpms-75cc6",
+    "storage_bucket": "rpms-75cc6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68155043415:android:fde6dccc8a68e2ae86bd12",
+        "android_client_info": {
+          "package_name": "com.rpm.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnfZ1WsMhQIq8WgrHY01b0GSKiB-VS6Q4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = https://github.com/MahmoodHamed/Remote-Healthcare.git
+	tagOpt = --no-tags
+	fetch = +refs/*:refs/*
+	mirror = true
+[branch "cleaned-main"]
+	remote = origin
+	merge = refs/heads/main

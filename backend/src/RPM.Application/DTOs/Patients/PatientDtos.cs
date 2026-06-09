@@ -1,75 +1,18 @@
 ﻿namespace RPM.Application.DTOs.Patients;
-
 public record PatientSummaryDto(
-    Guid UserId,
-    Guid ProfileId,
-    string FullName,
-    string Email,
-    string? Phone,
-    string? AvatarUrl,
-    DateOnly? DateOfBirth,
-    string? BloodType,
-    bool IsActive);
-
-public record PatientDetailDto(
-    Guid UserId,
-    Guid ProfileId,
-    string FullName,
-    string Email,
-    string Phone,
-    string? AvatarUrl,
-    DateOnly? DateOfBirth,
-    string? BloodType,
-    float? WeightKg,
-    float? HeightCm,
-    List<string> ChronicDiseases,
-    List<string> Allergies,
-    List<string> CurrentMedications,
-    string? EmergencyContactPhone,
-    VitalRecordLatestDto? LatestVitals,
-    IReadOnlyList<DoctorAssignmentDto> Doctors,
-    string? WatchShortId = null);
-
-public record SetWatchShortIdRequest(string? ShortId);
-
+    Guid UserId, string FullName, string Email, string? AvatarUrl,
+    DateOnly? DateOfBirth, string? BloodType, string? ShortPatientCode,
+    VitalRecordLatestDto? LatestVitals = null);
+public record PatientDetailDto(Guid UserId, string FullName, string Email, string Phone, string? AvatarUrl,
+    DateOnly? DateOfBirth, string? BloodType, float? WeightKg, float? HeightCm,
+    List<string> ChronicDiseases, List<string> Allergies, List<string> CurrentMedications,
+    string? EmergencyContactPhone, string? ShortPatientCode, VitalRecordLatestDto? LatestVitals);
 public record VitalRecordLatestDto(
-    float? HeartRateBpm,
-    float? SpO2Percent,
-    float? SystolicBp,
-    float? DiastolicBp,
-    float? TemperatureC,
+    float? HeartRateBpm, float? SpO2Percent,
+    float? SystolicBp, float? DiastolicBp,
+    float? TemperatureC, float? SkinTemperatureC, float? AmbientTemperatureC,
+    float? HrvMs, float? StressScore, float? BodyFatPercent, float? EcgAvgHeartRateBpm,
+    int? StepsCount, float? CaloriesBurned,
+    bool FallDetected, bool IsWearing,
     DateTime RecordedAt);
-
-public record DoctorDto(
-    Guid UserId,
-    string FullName,
-    string Email,
-    string? Phone,
-    string Specialization,
-    string? LicenseNumber,
-    string? HospitalName,
-    string? AvatarUrl,
-    bool IsActive,
-    int PatientCount);
-
-public record DoctorAssignmentDto(
-    Guid DoctorUserId,
-    string DoctorName,
-    string Specialization,
-    string Status,
-    DateTime AssignedAt);
-
-public record DoctorWithPatientsDto(
-    DoctorDto Doctor,
-    IReadOnlyList<PatientSummaryDto> Patients);
-
-public record AssignmentRequestDto(Guid DoctorUserId, Guid PatientUserId);
-
-public record AdminOverviewDto(
-    int TotalUsers,
-    int TotalDoctors,
-    int TotalPatients,
-    int TotalRelatives,
-    int ActiveAssignments,
-    int UnreadNotifications,
-    int OpenAlerts);
+public record DoctorDto(Guid UserId, string FullName, string Specialization, string? HospitalName, string? AvatarUrl);

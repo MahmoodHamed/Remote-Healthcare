@@ -2,11 +2,13 @@ package com.rpm.app.ui.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rpm.app.data.auth.SessionManager
+import com.rpm.app.data.fcm.FcmTokenRegistrar
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.repository.AuthRepository
 import com.rpm.app.domain.model.Resource
-import com.rpm.app.fcm.FcmTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,65 +20,147 @@ data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLoggedIn: Boolean = false,
+    val userRole: String? = null,
     val userId: String? = null,
-    val userRole: String? = null
+    /** False until cached session is read / validated on cold start. */
+    val isSessionReady: Boolean = false,
+    /** True when the session expired automatically (not a manual logout). */
+    val showSessionExpiredDialog: Boolean = false,
 )
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val tokenStore: TokenDataStore,
-    private val fcmRegistrar: FcmTokenRegistrar,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val sessionManager: SessionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    init {
-        checkSession()
-    }
+    private var sessionCheckJob: Job? = null
 
-    private fun checkSession() {
+    init {
+        sessionCheckJob = viewModelScope.launch { checkSession() }
         viewModelScope.launch {
-            val token = tokenStore.getAccessToken()
-            val role  = tokenStore.userRole.firstOrNull()
-            val userId = tokenStore.userId.firstOrNull()
-            if (token != null) {
-                _uiState.value = AuthUiState(isLoggedIn = true, userRole = role, userId = userId)
-                launch { fcmRegistrar.registerCurrentToken() }
+            sessionManager.sessionExpired.collect { expiredGeneration ->
+                if (expiredGeneration != sessionManager.currentGeneration()) return@collect
+                navigateToLoginDueToExpiry()
             }
         }
     }
 
-    fun login(email: String, password: String) = runAuth { authRepository.login(email, password, null) }
+    private suspend fun checkSession() {
+        val token = tokenStore.getAccessToken()
+        if (token == null) {
+            _uiState.value = AuthUiState(isSessionReady = true)
+            return
+        }
 
-    fun adminLogin(email: String, password: String) =
-        runAuth { authRepository.adminLogin(email, password, null) }
+        when (val result = authRepository.refreshProfile()) {
+            is Resource.Success -> {
+                sessionManager.beginSession()
+                _uiState.value = AuthUiState(
+                    isLoggedIn = true,
+                    userRole = result.data.role,
+                    userId = result.data.id,
+                    isSessionReady = true,
+                )
+                registerFcmToken()
+            }
+            is Resource.Error -> {
+                if (result.httpCode == 401) {
+                    authRepository.clearLocalSession()
+                    _uiState.value = AuthUiState(isSessionReady = true)
+                    return
+                }
+                val cachedRole = tokenStore.userRole.firstOrNull()
+                val cachedUserId = tokenStore.userId.firstOrNull()
+                if (cachedRole != null && cachedUserId != null) {
+                    sessionManager.beginSession()
+                    _uiState.value = AuthUiState(
+                        isLoggedIn = true,
+                        userRole = cachedRole,
+                        userId = cachedUserId,
+                        isSessionReady = true,
+                    )
+                    registerFcmToken()
+                } else {
+                    authRepository.clearLocalSession()
+                    _uiState.value = AuthUiState(isSessionReady = true)
+                }
+            }
+            Resource.Loading -> {}
+        }
+    }
 
-    fun registerPatient(email: String, password: String, fullName: String) =
-        runAuth { authRepository.registerPatient(email, password, fullName, null) }
-
-    fun registerDoctor(email: String, password: String, fullName: String) =
-        runAuth { authRepository.registerDoctor(email, password, fullName, null) }
-
-    fun register(email: String, password: String, fullName: String, role: String) =
-        runAuth { authRepository.register(email, password, fullName, role, null) }
-
-    private fun runAuth(block: suspend () -> Resource<com.rpm.app.data.remote.dto.LoginResponseDto>) {
+    fun login(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = block()) {
+            sessionCheckJob?.cancel()
+            sessionManager.beginSession()
+            _uiState.value = AuthUiState(
+                isLoading = true,
+                isSessionReady = true,
+                showSessionExpiredDialog = false,
+            )
+            when (val result = authRepository.login(email, password, fcmToken = null)) {
                 is Resource.Success -> {
+                    sessionManager.beginSession()
                     _uiState.value = AuthUiState(
                         isLoggedIn = true,
                         userRole = result.data.user.role,
                         userId = result.data.user.id,
+                        isSessionReady = true,
+                        showSessionExpiredDialog = false,
                     )
-                    fcmRegistrar.registerCurrentToken()
+                    registerFcmToken()
                 }
-                is Resource.Error -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
+                is Resource.Error -> _uiState.value = AuthUiState(
                     error = result.message,
+                    isSessionReady = true,
+                    showSessionExpiredDialog = false,
+                )
+                Resource.Loading -> {}
+            }
+        }
+    }
+
+    fun register(
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        role: String,
+        licenseNumber: String? = null,
+        specialization: String? = null,
+    ) {
+        viewModelScope.launch {
+            sessionCheckJob?.cancel()
+            sessionManager.beginSession()
+            _uiState.value = AuthUiState(
+                isLoading = true,
+                isSessionReady = true,
+                showSessionExpiredDialog = false,
+            )
+            when (val result = authRepository.register(
+                email, password, fullName, phone, role, licenseNumber, specialization,
+            )) {
+                is Resource.Success -> {
+                    sessionManager.beginSession()
+                    _uiState.value = AuthUiState(
+                        isLoggedIn = true,
+                        userRole = result.data.user.role,
+                        userId = result.data.user.id,
+                        isSessionReady = true,
+                        showSessionExpiredDialog = false,
+                    )
+                    registerFcmToken()
+                }
+                is Resource.Error -> _uiState.value = AuthUiState(
+                    error = result.message,
+                    isSessionReady = true,
+                    showSessionExpiredDialog = false,
                 )
                 Resource.Loading -> {}
             }
@@ -85,8 +169,37 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            sessionCheckJob?.cancel()
             authRepository.logout()
-            _uiState.value = AuthUiState()
+            sessionManager.beginSession()
+            _uiState.value = AuthUiState(
+                isSessionReady = true,
+                showSessionExpiredDialog = false,
+            )
+        }
+    }
+
+    /** Called when the server returns 401 mid-session — shows an expiry notice before login. */
+    private suspend fun navigateToLoginDueToExpiry() {
+        if (tokenStore.getAccessToken() == null) {
+            authRepository.clearLocalSession()
+        } else {
+            authRepository.logout()
+        }
+        sessionManager.beginSession()
+        _uiState.value = AuthUiState(
+            isSessionReady = true,
+            showSessionExpiredDialog = true,
+        )
+    }
+
+    fun dismissSessionExpiredDialog() {
+        _uiState.value = _uiState.value.copy(showSessionExpiredDialog = false)
+    }
+
+    private fun registerFcmToken() {
+        viewModelScope.launch {
+            fcmTokenRegistrar.registerToken()
         }
     }
 }

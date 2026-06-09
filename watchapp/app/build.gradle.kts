@@ -16,11 +16,11 @@ android {
         // Galaxy Watch 4+ runs Wear OS 3 (API 30); Watch 8 runs Wear OS 4 (API 33)
         minSdk                 = 30
         targetSdk              = 34
-        versionCode            = 4
-        versionName            = "1.0.3"
+        versionCode            = 1
+        versionName            = "1.0.0"
 
         // MQTT broker settings – override per build variant or inject at runtime via DataStore
-        buildConfigField("String", "MQTT_HOST", "\"remote-care.tech\"")   // RPM domain (not shared IP)
+        buildConfigField("String", "MQTT_HOST", "\"remote-care.tech\"")
         buildConfigField("int",    "MQTT_PORT", "1883")
         // 6-char patient code (A-Z, 0-9). The app will derive a deterministic UUID for MQTT.
         buildConfigField("String", "DEFAULT_PATIENT_ID", "\"ABC123\"")

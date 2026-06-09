@@ -14,8 +14,6 @@ public class JwtService(IConfiguration config) : IJwtService
     private readonly string _audience = config["Jwt:Audience"] ?? "RPM";
     private readonly int _expiryHours = int.Parse(config["Jwt:ExpiryHours"] ?? "1");
 
-    public int AccessTokenExpiryHours => _expiryHours;
-
     public string GenerateAccessToken(Guid userId, string email, string role)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
@@ -24,7 +22,7 @@ public class JwtService(IConfiguration config) : IJwtService
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, role),
+            new Claim("role", role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         var token = new JwtSecurityToken(_issuer, _audience, claims,
@@ -35,4 +33,7 @@ public class JwtService(IConfiguration config) : IJwtService
 
     public string GenerateRefreshToken() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+    public (bool IsValid, Guid UserId) ValidateRefreshToken(string token) =>
+        throw new NotImplementedException("Handled by looking up hash in DB.");
 }

@@ -14,6 +14,7 @@ using RPM.Domain.Enums;
 using RPM.API;
 using RPM.API.Middlewares;
 using RPM.API.Hubs;
+using RPM.API.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,11 +30,10 @@ builder.Host.UseSerilog();
 
 // Services
 builder.Services.AddControllers()
-    .AddJsonOptions(o =>
+    .AddJsonOptions(options =>
     {
-        o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        o.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 builder.Services.AddEndpointsApiExplorer();
 
@@ -64,27 +64,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = true, ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidateAudience = true, ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true, ClockSkew = TimeSpan.FromMinutes(2)
+            ValidateLifetime = true, ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "role"
         };
-        // SignalR: Bearer header (negotiate) + access_token query (WebSocket)
+        // Support SignalR JWT from query string
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
+                var accessToken = ctx.Request.Query["access_token"];
                 var path = ctx.HttpContext.Request.Path;
-                if (!path.StartsWithSegments("/hubs")) return Task.CompletedTask;
-
-                var queryToken = ctx.Request.Query["access_token"];
-                if (!string.IsNullOrEmpty(queryToken))
-                {
-                    ctx.Token = queryToken;
-                    return Task.CompletedTask;
-                }
-
-                var authHeader = ctx.Request.Headers.Authorization.ToString();
-                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                    ctx.Token = authHeader["Bearer ".Length..].Trim();
-
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    ctx.Token = accessToken;
                 return Task.CompletedTask;
             }
         };
@@ -108,39 +99,41 @@ using (var scope = app.Services.CreateScope())
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     db.Database.Migrate();
 
-    await db.Database.ExecuteSqlRawAsync("""
-        CREATE TABLE IF NOT EXISTS "AuditLogs" (
-            "Id"          uuid                     PRIMARY KEY DEFAULT gen_random_uuid(),
-            "UserId"      uuid,
-            "UserEmail"   text,
-            "Action"      text                     NOT NULL,
-            "Resource"    text,
-            "Detail"      text,
-            "IpAddress"   text,
-            "OccurredAt"  timestamp with time zone NOT NULL DEFAULT now()
-        );
-        CREATE INDEX IF NOT EXISTS "IX_AuditLogs_OccurredAt" ON "AuditLogs" ("OccurredAt" DESC);
-    """);
-
-    var adminEmail = builder.Configuration["Admin:Email"] ?? "mahmoodjob8@gmail.com";
-    var adminPassword = builder.Configuration["Admin:Password"] ?? "M1@a2@h3&m4&";
-
-    var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
-    if (admin is null)
+    var bootstrapAdmin = builder.Configuration.GetSection("BootstrapAdmin").Get<BootstrapAdminOptions>();
+    if (bootstrapAdmin?.Enabled == true)
     {
-        admin = User.Create("Mahmood Job", adminEmail, "+1000000000", hasher.Hash(adminPassword), UserRole.Admin);
-        await db.Users.AddAsync(admin);
-    }
-    else
-    {
-        admin.UpdateProfile("Mahmood Job", "+1000000000");
-        admin.UpdateRole(UserRole.Admin);
-        admin.Activate();
-        admin.UpdatePasswordHash(hasher.Hash(adminPassword));
-        db.Users.Update(admin);
-    }
+        if (string.IsNullOrWhiteSpace(bootstrapAdmin.FullName) ||
+            string.IsNullOrWhiteSpace(bootstrapAdmin.Email) ||
+            string.IsNullOrWhiteSpace(bootstrapAdmin.Password))
+        {
+            throw new InvalidOperationException("BootstrapAdmin is enabled but required values are missing.");
+        }
 
-    await db.SaveChangesAsync();
+        var adminEmail = bootstrapAdmin.Email.Trim().ToLowerInvariant();
+        var admin = await db.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
+        if (admin is null)
+        {
+            admin = User.Create(
+                bootstrapAdmin.FullName.Trim(),
+                adminEmail,
+                bootstrapAdmin.Phone?.Trim() ?? string.Empty,
+                hasher.Hash(bootstrapAdmin.Password),
+                UserRole.Admin);
+            await db.Users.AddAsync(admin);
+        }
+        else
+        {
+            admin.UpdateProfile(
+                bootstrapAdmin.FullName.Trim(),
+                bootstrapAdmin.Phone?.Trim() ?? string.Empty);
+            admin.UpdateRole(UserRole.Admin);
+            admin.Activate();
+            admin.UpdatePasswordHash(hasher.Hash(bootstrapAdmin.Password));
+            db.Users.Update(admin);
+        }
+
+        await db.SaveChangesAsync();
+    }
 }
 
 // Middleware pipeline
@@ -148,10 +141,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
-var swaggerEnabled = app.Environment.IsDevelopment()
-    || builder.Configuration.GetValue<bool>("Swagger:Enabled");
-
-if (swaggerEnabled)
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "RPM API v1"));
@@ -164,5 +154,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<VitalsHub>("/hubs/vitals");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();

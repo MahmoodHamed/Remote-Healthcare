@@ -2,58 +2,147 @@ package com.rpm.app.data.repository
 
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.api.RpmApiService
+import com.rpm.app.data.remote.api.TokenRefresher
 import com.rpm.app.data.remote.dto.*
+import com.rpm.app.data.remote.httpErrorMessage
 import com.rpm.app.domain.model.Resource
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
     private val api: RpmApiService,
-    private val tokenStore: TokenDataStore
+    private val tokenStore: TokenDataStore,
+    private val tokenRefresher: TokenRefresher,
 ) {
-    suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> =
-        runLogin { api.login(LoginRequest(email, password, fcmToken)) }
-
-    suspend fun adminLogin(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> =
-        runLogin { api.adminLogin(LoginRequest(email, password, fcmToken)) }
-
-    suspend fun registerPatient(
-        email: String, password: String, fullName: String, fcmToken: String?
-    ): Resource<LoginResponseDto> =
-        runLogin { api.registerPatient(RegisterRequest(email, password, fullName, "Patient", fcmToken)) }
-
-    suspend fun registerDoctor(
-        email: String, password: String, fullName: String, fcmToken: String?
-    ): Resource<LoginResponseDto> =
-        runLogin { api.registerDoctor(RegisterRequest(email, password, fullName, "Doctor", fcmToken)) }
+    suspend fun login(email: String, password: String, fcmToken: String?): Resource<LoginResponseDto> {
+        return try {
+            val response = api.login(LoginRequest(email, password, fcmToken))
+            if (response.isSuccessful) {
+                val body = response.body()!!
+                tokenStore.saveSession(
+                    body.tokens.accessToken,
+                    body.tokens.refreshToken,
+                    body.user.id,
+                    body.user.role,
+                    body.user.fullName
+                )
+                Resource.Success(body)
+            } else {
+                val message = if (response.code() == 401) {
+                    "Invalid email or password."
+                } else {
+                    httpErrorMessage(response)
+                }
+                Resource.Error(message, response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error")
+        }
+    }
 
     suspend fun register(
-        email: String, password: String, fullName: String, role: String, fcmToken: String?
-    ): Resource<LoginResponseDto> =
-        runLogin { api.register(RegisterRequest(email, password, fullName, role, fcmToken)) }
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        role: String,
+        licenseNumber: String? = null,
+        specialization: String? = null,
+    ): Resource<LoginResponseDto> {
+        return try {
+            val response = api.register(
+                RegisterRequest(
+                    fullName = fullName,
+                    email = email,
+                    phone = phone,
+                    password = password,
+                    role = role,
+                    licenseNumber = licenseNumber,
+                    specialization = specialization,
+                )
+            )
+            if (response.isSuccessful) {
+                val body = response.body()!!
+                tokenStore.saveSession(
+                    body.tokens.accessToken,
+                    body.tokens.refreshToken,
+                    body.user.id,
+                    body.user.role,
+                    body.user.fullName
+                )
+                Resource.Success(body)
+            } else {
+                Resource.Error(httpErrorMessage(response))
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    suspend fun refreshProfile(): Resource<UserProfileDto> {
+        return try {
+            var response = api.getMe()
+            if (response.code() == 401 && tokenRefresher.refreshTokens()) {
+                response = api.getMe()
+            }
+            if (response.isSuccessful) {
+                val body = response.body()!!
+                val existingToken = tokenStore.getAccessToken()
+                val refresh = tokenStore.refreshToken.firstOrNull()
+                if (existingToken != null && refresh != null) {
+                    tokenStore.saveSession(
+                        existingToken,
+                        refresh,
+                        body.id,
+                        body.role,
+                        body.fullName,
+                    )
+                }
+                Resource.Success(body)
+            } else if (response.code() == 404) {
+                val role = tokenStore.userRole.firstOrNull()
+                val userId = tokenStore.userId.firstOrNull()
+                val name = tokenStore.userName.firstOrNull()
+                if (role != null && userId != null) {
+                    Resource.Success(
+                        UserProfileDto(
+                            id = userId,
+                            email = "",
+                            fullName = name.orEmpty(),
+                            role = role,
+                        )
+                    )
+                } else {
+                    Resource.Error(httpErrorMessage(response), response.code())
+                }
+            } else {
+                Resource.Error(httpErrorMessage(response), response.code())
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Unknown error")
+        }
+    }
 
     suspend fun logout() {
-        try { api.logout() } catch (_: Exception) {}
+        try {
+            if (tokenStore.getAccessToken() != null) {
+                api.logout()
+            }
+        } catch (_: Exception) {}
+        clearLocalSession()
+    }
+
+    suspend fun clearLocalSession() {
         tokenStore.clearSession()
     }
 
-    private suspend fun runLogin(
-        call: suspend () -> retrofit2.Response<LoginResponseDto>,
-    ): Resource<LoginResponseDto> = try {
-        val response = call()
-        if (response.isSuccessful) {
-            val body = response.body()!!
-            tokenStore.saveSession(
-                body.tokens.accessToken,
-                body.tokens.refreshToken,
-                body.user.id,
-                body.user.role,
-                body.user.fullName,
-            )
-            Resource.Success(body)
-        } else {
-            Resource.Error("Error ${response.code()}: ${response.message()}")
+    suspend fun updateFcmToken(fcmToken: String): Resource<Unit> {
+        return try {
+            val response = api.updateFcmToken(UpdateFcmTokenRequest(fcmToken))
+            if (response.isSuccessful) Resource.Success(Unit)
+            else Resource.Error(httpErrorMessage(response))
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to update FCM token")
         }
-    } catch (e: Exception) {
-        Resource.Error(e.message ?: "Unknown error")
     }
 }

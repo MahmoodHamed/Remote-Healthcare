@@ -8,7 +8,10 @@ using RPM.Domain.Interfaces;
 using RPM.Infrastructure.BackgroundServices;
 using RPM.Infrastructure.Persistence;
 using RPM.Infrastructure.Services;
+
 namespace RPM.Infrastructure;
+
+file sealed record MqttBrokerSettings(string Host, int Port, string PublicHost) : IMqttBrokerSettings;
 
 public static class InfrastructureServiceExtensions
 {
@@ -23,8 +26,6 @@ public static class InfrastructureServiceExtensions
 
         // Auth Services
         services.AddScoped<IJwtService, JwtService>();
-        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-        services.AddScoped<ITokenHasher, TokenHasher>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
 
         // Cache
@@ -38,21 +39,24 @@ public static class InfrastructureServiceExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUserService>();
 
-        // Audit + chat presence
-        services.AddScoped<IAuditService, AuditService>();
-        services.AddSingleton<IChatPresenceService, ChatPresenceService>();
+        // MQTT settings (exposed as abstraction to Application layer)
+        var mqttHost = config["Mqtt:Host"] ?? "localhost";
+        services.AddSingleton<IMqttBrokerSettings>(new MqttBrokerSettings(
+            mqttHost,
+            int.TryParse(config["Mqtt:Port"], out var mqttPort) ? mqttPort : 1883,
+            config["Mqtt:PublicHost"] ?? mqttHost));
 
         // MQTT Background Service
         services.AddHostedService<MqttBackgroundService>();
 
-        // SignalR Redis Backplane
+        // SignalR Redis Backplane — camelCase JSON for web/mobile clients
         services.AddSignalR()
-            .AddStackExchangeRedis(config.GetConnectionString("Redis") ?? "localhost:6379")
             .AddJsonProtocol(options =>
             {
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-            });
+            })
+            .AddStackExchangeRedis(config.GetConnectionString("Redis") ?? "localhost:6379");
 
         return services;
     }

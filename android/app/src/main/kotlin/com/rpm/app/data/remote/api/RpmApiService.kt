@@ -7,20 +7,11 @@ import retrofit2.http.*
 interface RpmApiService {
 
     // ── Auth ──────────────────────────────────────────────────────────────
-    @POST("api/auth/register/patient")
-    suspend fun registerPatient(@Body request: RegisterRequest): Response<LoginResponseDto>
-
-    @POST("api/auth/register/doctor")
-    suspend fun registerDoctor(@Body request: RegisterRequest): Response<LoginResponseDto>
-
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<LoginResponseDto>
 
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponseDto>
-
-    @POST("api/auth/admin/login")
-    suspend fun adminLogin(@Body request: LoginRequest): Response<LoginResponseDto>
 
     @POST("api/auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<AuthTokensDto>
@@ -38,6 +29,9 @@ interface RpmApiService {
     @GET("api/patients")
     suspend fun getMyPatients(): Response<List<PatientSummaryDto>>
 
+    @GET("api/patients/accessible")
+    suspend fun getAccessiblePatients(): Response<List<PatientSummaryDto>>
+
     @GET("api/patients/{patientId}")
     suspend fun getPatientDetail(@Path("patientId") patientId: String): Response<PatientDetailDto>
 
@@ -53,18 +47,12 @@ interface RpmApiService {
         @Body request: LinkRelativeRequest
     ): Response<Unit>
 
-    @PUT("api/patients/{patientId}/watch-setup")
-    suspend fun setWatchShortId(
-        @Path("patientId") patientId: String,
-        @Body request: SetWatchShortIdRequest
-    ): Response<WatchShortIdResponse>
-
     // ── Vitals ────────────────────────────────────────────────────────────
     @GET("api/patients/{patientId}/vitals")
     suspend fun getVitals(
         @Path("patientId") patientId: String,
-        @Query("from") from: String? = null,
-        @Query("to") to: String? = null,
+        @Query("from") from: String,
+        @Query("to") to: String,
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 50
     ): Response<VitalsPagedDto>
@@ -91,20 +79,21 @@ interface RpmApiService {
 
     @GET("api/patients/{patientId}/alerts/unresolved")
     suspend fun getUnresolvedAlerts(
-        @Path("patientId") patientId: String
-    ): Response<List<AlertDto>>
+        @Path("patientId") patientId: String,
+        @Query("page") page: Int = 1,
+        @Query("pageSize") pageSize: Int = 20
+    ): Response<AlertPagedDto>
 
     @POST("api/patients/{patientId}/alerts/{alertId}/resolve")
     suspend fun resolveAlert(
         @Path("patientId") patientId: String,
         @Path("alertId") alertId: String,
-        @Body body: ResolveAlertRequest = ResolveAlertRequest()
     ): Response<Unit>
 
     @POST("api/patients/{patientId}/alerts/{alertId}/dismiss")
     suspend fun dismissAlert(
         @Path("patientId") patientId: String,
-        @Path("alertId") alertId: String
+        @Path("alertId") alertId: String,
     ): Response<Unit>
 
     // ── Chat ──────────────────────────────────────────────────────────────
@@ -130,19 +119,38 @@ interface RpmApiService {
     @DELETE("api/chat/messages/{messageId}")
     suspend fun deleteMessage(@Path("messageId") messageId: String): Response<Unit>
 
-    // ── Notifications ─────────────────────────────────────────────────────
+    // ── Notifications (push inbox) ────────────────────────────────────────
     @GET("api/notifications")
     suspend fun getNotifications(
         @Query("page") page: Int = 1,
-        @Query("pageSize") pageSize: Int = 30
-    ): Response<NotificationsPagedDto>
+        @Query("pageSize") pageSize: Int = 30,
+    ): Response<NotificationPagedDto>
 
     @GET("api/notifications/unread-count")
-    suspend fun getUnreadCount(): Response<UnreadCountDto>
+    suspend fun getUnreadNotificationCount(): Response<UnreadCountDto>
 
     @PATCH("api/notifications/{id}/read")
     suspend fun markNotificationRead(@Path("id") id: String): Response<Unit>
 
     @PATCH("api/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<Unit>
+
+    // ── Devices / Watch ───────────────────────────────────────────────────
+    @GET("api/devices")
+    suspend fun getMyDevices(): Response<List<DeviceDto>>
+
+    @GET("api/devices/pairing-info")
+    suspend fun getDevicePairingInfo(): Response<PairingInfoDto>
+
+    @PUT("api/devices/pairing-info")
+    suspend fun saveDevicePairingInfo(@Body request: SavePairingInfoRequest): Response<PairingInfoDto>
+
+    @PATCH("api/devices/{id}/name")
+    suspend fun renameDevice(
+        @Path("id") id: String,
+        @Body request: RenameDeviceRequest,
+    ): Response<Unit>
+
+    @GET("api/patients/{patientId}/devices")
+    suspend fun getPatientDevices(@Path("patientId") patientId: String): Response<List<DeviceDto>>
 }

@@ -5,142 +5,166 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rpm.app.data.local.TokenDataStore
 import com.rpm.app.data.remote.dto.PatientDetailDto
-import com.rpm.app.data.remote.dto.SetWatchShortIdRequest
 import com.rpm.app.data.remote.dto.VitalRecordDto
-import com.rpm.app.data.remote.dto.forDisplay
+import com.rpm.app.data.repository.ChatRepository
 import com.rpm.app.data.repository.PatientRepository
+import com.rpm.app.data.signalr.RealTimeVitals
 import com.rpm.app.data.signalr.VitalsSignalRClient
+import com.rpm.app.data.signalr.mergeWith
 import com.rpm.app.domain.model.Resource
-import com.rpm.app.util.ShortIdNormalizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class PatientDetailUiState(
-    val isLoading: Boolean = false,
-    val patient: PatientDetailDto? = null,
-    val latestVitals: VitalRecordDto? = null,
-    val realtimeVitals: VitalRecordDto? = null,
-    /** The UUID actually used to subscribe to the vitals hub (may differ from userId). */
-    val streamingPatientId: String = "",
-    val watchShortId: String = "",
-    val error: String? = null
+    val isLoading: Boolean              = false,
+    val patient: PatientDetailDto?      = null,
+    val latestVitals: VitalRecordDto?   = null,
+    val realtimeVitals: RealTimeVitals? = null,
+    val vitalsHistory: List<VitalRecordDto> = emptyList(),
+    val isLoadingHistory: Boolean       = false,
+    val error: String?                  = null,
+    val isOpeningChat: Boolean          = false,
 )
 
 @HiltViewModel
 class PatientDetailViewModel @Inject constructor(
     private val repo: PatientRepository,
-    private val signalR: VitalsSignalRClient,
+    private val chatRepo: ChatRepository,
     private val tokenStore: TokenDataStore,
-    savedStateHandle: SavedStateHandle
+    private val signalR: VitalsSignalRClient,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    /** Raw patient/user ID from the navigation argument (the real account UUID). */
-    private val navPatientId: String = checkNotNull(savedStateHandle["patientId"])
+    private val patientId: String = checkNotNull(savedStateHandle["patientId"])
 
     private val _uiState = MutableStateFlow(PatientDetailUiState(isLoading = true))
     val uiState: StateFlow<PatientDetailUiState> = _uiState.asStateFlow()
 
     init {
+        loadPatient()
+        subscribeRealtime()
+    }
+
+    fun refresh() = loadPatient()
+
+    private fun loadPatient() {
         viewModelScope.launch {
-            // 1. Use locally stored short ID first for immediate streaming
-            val localShortId = tokenStore.getWatchShortId() ?: ""
-            val initialStreamingId = resolveStreamingId(localShortId)
-            _uiState.value = _uiState.value.copy(
-                watchShortId = localShortId,
-                streamingPatientId = initialStreamingId
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val detail  = repo.getPatientDetail(patientId)
+            val vitals  = repo.getLatestVitals(patientId)
+            val patient = (detail as? Resource.Success)?.data
+            _uiState.value = PatientDetailUiState(
+                isLoading    = false,
+                patient      = patient,
+                latestVitals = (vitals as? Resource.Success)?.data ?: null,
+                error        = (detail as? Resource.Error)?.message
+                    ?: (vitals as? Resource.Error)?.message.takeIf { patient == null },
             )
+            // Load vitals history in background after main data is shown
+            loadVitalsHistory()
+        }
+    }
 
-            // 2. Fetch patient profile — it may contain a watchShortId stored server-side
-            val detailResult = repo.getPatientDetail(navPatientId)
-            val profileShortId = (detailResult as? Resource.Success)?.data?.watchShortId ?: ""
-
-            // 3. Server-side short ID wins if it's valid; sync it locally
-            val resolvedShortId = when {
-                ShortIdNormalizer.isValidShortId(profileShortId) -> {
-                    tokenStore.saveWatchShortId(profileShortId)
-                    profileShortId
-                }
-                ShortIdNormalizer.isValidShortId(localShortId) -> localShortId
-                else -> ""
+    private fun loadVitalsHistory() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingHistory = true)
+            when (val result = repo.getVitals(patientId)) {
+                is Resource.Success -> _uiState.value = _uiState.value.copy(
+                    vitalsHistory    = result.data.items.sortedByDescending { it.recordedAt },
+                    isLoadingHistory = false,
+                )
+                is Resource.Error   -> _uiState.value = _uiState.value.copy(isLoadingHistory = false)
+                Resource.Loading    -> {}
             }
-            val streamingId = resolveStreamingId(resolvedShortId)
+        }
+    }
 
-            _uiState.value = _uiState.value.copy(
-                patient = (detailResult as? Resource.Success)?.data,
-                watchShortId = resolvedShortId,
-                streamingPatientId = streamingId,
-                error = (detailResult as? Resource.Error)?.message
-            )
-
-            // 4. Load vitals using the resolved streaming ID
-            loadVitals(streamingId)
-            subscribeRealtime(streamingId)
+    private fun subscribeRealtime() {
+        viewModelScope.launch {
+            val connected = signalR.connect(patientId)
+            if (!connected) {
+                _uiState.value = _uiState.value.copy(
+                    error = _uiState.value.error ?: "Live vitals unavailable (check login or network)",
+                )
+            }
+            signalR.vitals.collect { incoming ->
+                val merged = incoming.mergeWith(_uiState.value.realtimeVitals)
+                _uiState.value = _uiState.value.copy(realtimeVitals = merged)
+            }
         }
     }
 
     /**
-     * Resolve the UUID we actually subscribe / query vitals for.
-     * Priority: short-ID-derived UUID > real user UUID.
+     * Works for all roles:
+     * - Doctor    → starts/opens conversation with this patient.
+     * - Patient   → starts/opens conversation with their assigned doctor.
+     * - Relative  → opens the doctor-patient conversation for the linked patient.
      */
-    private fun resolveStreamingId(shortId: String): String {
-        if (ShortIdNormalizer.isValidShortId(shortId)) {
-            val normalized = ShortIdNormalizer.normalize(shortId)
-            if (normalized != null) return normalized
-        }
-        return navPatientId
-    }
-
-    private fun loadVitals(streamingId: String) {
+    fun startChat(
+        currentUserId: String?,
+        currentRole: String?,
+        onConversationReady: (conversationId: String) -> Unit,
+    ) {
+        val patient = _uiState.value.patient ?: return
+        if (currentUserId == null) return
         viewModelScope.launch {
-            val vitals = repo.getLatestVitals(streamingId)
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                latestVitals = (vitals as? Resource.Success)?.data?.forDisplay()
-            )
-        }
-    }
-
-    private fun subscribeRealtime(streamingId: String) {
-        viewModelScope.launch {
-            try {
-                signalR.connect(streamingId)
-            } catch (e: Exception) {
-                return@launch
-            }
-            signalR.vitals.collect { v ->
-                if (v.patientId.equals(streamingId, ignoreCase = true)) {
-                    _uiState.value = _uiState.value.copy(realtimeVitals = v.forDisplay())
+            _uiState.value = _uiState.value.copy(isOpeningChat = true, error = null)
+            val convDoctorId: String
+            val convPatientId: String
+            when (currentRole) {
+                "Doctor" -> {
+                    convDoctorId  = currentUserId
+                    convPatientId = patient.userId
+                }
+                "Patient", "Relative" -> {
+                    val doc = patient.doctor
+                    if (doc == null) {
+                        _uiState.value = _uiState.value.copy(
+                            isOpeningChat = false,
+                            error         = "No doctor is assigned to this patient yet.",
+                        )
+                        return@launch
+                    }
+                    convDoctorId  = doc.userId
+                    convPatientId = patient.userId
+                }
+                else -> {
+                    _uiState.value = _uiState.value.copy(isOpeningChat = false)
+                    return@launch
                 }
             }
+            when (
+                val result = chatRepo.findOrCreateDoctorPatientConversation(
+                    doctorId    = convDoctorId,
+                    patientId   = convPatientId,
+                    patientName = patient.fullName,
+                )
+            ) {
+                is Resource.Success -> onConversationReady(result.data.id)
+                is Resource.Error   -> _uiState.value = _uiState.value.copy(
+                    error         = result.message,
+                    isOpeningChat = false,
+                )
+                Resource.Loading    -> {}
+            }
+            _uiState.value = _uiState.value.copy(isOpeningChat = false)
         }
     }
 
-    fun saveWatchShortId(shortId: String) {
-        val trimmed = shortId.trim().uppercase()
-        if (!ShortIdNormalizer.isValidShortId(trimmed) && trimmed.isNotEmpty()) return
+    fun openDoctorChat(onConversationReady: (conversationId: String) -> Unit) {
         viewModelScope.launch {
-            tokenStore.saveWatchShortId(trimmed)
-            // Persist to backend so web and other devices sync automatically
-            repo.setWatchShortId(navPatientId, trimmed.ifEmpty { null })
-            val streamingId = resolveStreamingId(trimmed)
-            _uiState.value = _uiState.value.copy(watchShortId = trimmed, streamingPatientId = streamingId)
-            signalR.disconnect(_uiState.value.streamingPatientId)
-            loadVitals(streamingId)
-            subscribeRealtime(streamingId)
+            val doctorId = tokenStore.userId.firstOrNull()
+            startChat(doctorId, "Doctor", onConversationReady)
         }
-    }
-
-    fun refresh() {
-        val streamingId = _uiState.value.streamingPatientId.ifBlank { navPatientId }
-        loadVitals(streamingId)
     }
 
     override fun onCleared() {
-        signalR.disconnect(_uiState.value.streamingPatientId)
+        signalR.disconnect(patientId)
         super.onCleared()
     }
 }

@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.rpm.watch.app-debug-62:/xml_network_security_config.xml.flat",
+        "source": "com.rpm.watch.app-main-64:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "C:\\Users\\mahmo\\.gradle\\daemon\\9.2.1\\com.rpm.watch.app-debug-62:\\drawable_ic_launcher.xml.flat",
+        "source": "C:\\Users\\mahmo\\.gradle\\daemon\\9.2.1\\com.rpm.watch.app-main-64:\\drawable\\ic_launcher.xml"
+    }
+]

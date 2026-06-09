@@ -12,46 +12,35 @@
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <!-- Required on Wear OS 4 (API ≥ 33) for background measurement -->
     <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
-    <!-- POST_NOTIFICATIONS required for the foreground service notification on API 33+ -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Required for step counter and other activity sensors -->
+    <!-- Required for step counter/health tracking on Wear OS -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <!-- Required for advanced Samsung sensors (skin temperature etc.) on Wear OS 5+ -->
+    <!-- Skin temperature (Health Connect / Wear OS 4+) -->
     <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
-    <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE" />
-    <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE" />
-    <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE" />
-    <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE" />
-    <uses-permission android:name="android.permission.health.READ_SLEEP" />
-    <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED" />
-    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
-    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
-    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
-    <uses-permission android:name="android.permission.health.READ_BODY_FAT" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
-    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <!-- Samsung skin temp / SpO2 on Wear OS 5+ (API 36+) -->
+    <uses-permission android:name="com.samsung.android.hardware.sensormanager.permission.READ_ADDITIONAL_HEALTH_DATA" />
 
     <!-- ── Foreground service to keep MQTT + sensor alive ── -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- API 34+ requires declaring the type -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Tell Samsung Health Sensor SDK which services we may bind to -->
     <queries>
         <package android:name="com.samsung.android.service.health" />
         <package android:name="com.sec.android.app.samsungapps" />
+        <package android:name="com.samsung.android.shealthmonitor" />
     </queries>
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <application
         android:name=".WatchApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
@@ -74,14 +63,9 @@
             </intent-filter>
         </activity>
 
-        <!--
-            HeartRateMonitorService – Foreground service that:
-              1. binds to Samsung Health Tracking Service
-              2. starts heart-rate measurement
-              3. publishes readings to MQTT broker
-        -->
+        <!-- VitalsMonitorService: HR, skin temperature, SpO₂ → MQTT (Galaxy Watch 8) -->
         <service
-            android:name=".service.HeartRateMonitorService"
+            android:name=".service.VitalsMonitorService"
             android:exported="false"
             android:foregroundServiceType="dataSync|health" />
 

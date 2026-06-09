@@ -1,142 +1,211 @@
 package com.rpm.app.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
+import com.rpm.app.ui.RequestNotificationPermission
 import com.rpm.app.ui.feature.alerts.AlertsScreen
 import com.rpm.app.ui.feature.auth.*
 import com.rpm.app.ui.feature.chat.*
-import com.rpm.app.ui.feature.notifications.NotificationsScreen
 import com.rpm.app.ui.feature.patients.*
+import com.rpm.app.ui.feature.patients.DeviceManagementScreen
+import com.rpm.app.ui.feature.patients.LiveMonitorScreen
 
 object Routes {
-    const val LOGIN               = "login"
-    const val REGISTER            = "register"
-    const val PATIENT_LIST        = "patients"
-    const val PATIENT_DETAIL      = "patients/{patientId}"
-    const val MY_VITALS           = "my-vitals/{patientId}"
-    const val ALERTS              = "alerts?patientId={patientId}"
-    const val CONVERSATION_LIST   = "conversations"
-    const val CHAT_ROOM           = "conversations/{conversationId}"
-    const val NOTIFICATIONS       = "notifications"
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val MAIN = "main"
+    const val PATIENT_DETAIL = "patients/{patientId}"
+    const val ALERTS = "alerts?patientId={patientId}"
+    const val CHAT_ROOM = "conversations/{conversationId}"
+    const val DEVICE_MANAGEMENT = "devices"
+    const val LIVE_MONITOR = "patients/{patientId}/live"
 
     fun patientDetail(id: String) = "patients/$id"
-    fun myVitals(id: String) = "my-vitals/$id"
-    fun alerts(patientId: String? = null) = if (patientId != null) "alerts?patientId=$patientId" else "alerts"
+    fun alerts(patientId: String? = null) =
+        if (patientId != null) "alerts?patientId=$patientId" else "alerts"
     fun chatRoom(conversationId: String) = "conversations/$conversationId"
+    fun liveMonitor(patientId: String) = "patients/$patientId/live"
+}
+
+fun homeRouteForRole(role: String?, userId: String?): String = Routes.MAIN
+
+fun patientListTitle(role: String?): String = when (role) {
+    "Doctor" -> "My Patients"
+    "Patient" -> "My Health"
+    "Relative" -> "Family Members"
+    else -> "Remote Patient Monitoring"
+}
+
+fun patientListEmptyMessage(role: String?): String = when (role) {
+    "Doctor" -> "No patients assigned yet."
+    "Patient" -> "Your health profile is not set up yet."
+    "Relative" -> "No linked family members yet. Ask a patient to link your account."
+    else -> "No records to show."
 }
 
 @Composable
-fun RpmNavHost() {
+fun RpmNavHost(
+    initialConversationId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
+    var wasLoggedIn by remember { mutableStateOf(false) }
 
-    val startDest = when {
-        !authState.isLoggedIn -> Routes.LOGIN
-        authState.userRole.equals("Patient", ignoreCase = true) && authState.userId != null ->
-            Routes.myVitals(authState.userId!!)
-        else -> Routes.PATIENT_LIST
+    if (authState.isLoggedIn) {
+        RequestNotificationPermission()
     }
 
-    NavHost(navController, startDestination = startDest) {
+    // Session-expired dialog — only on login screen, never while authenticated
+    if (authState.showSessionExpiredDialog && !authState.isLoggedIn) {
+        AlertDialog(
+            onDismissRequest = { authViewModel.dismissSessionExpiredDialog() },
+            icon             = { Icon(Icons.Default.Lock, contentDescription = null) },
+            title            = { Text("Session Expired") },
+            text             = { Text("Your session has expired. Please sign in again to continue.") },
+            confirmButton    = {
+                Button(onClick = { authViewModel.dismissSessionExpiredDialog() }) {
+                    Text("Sign In")
+                }
+            },
+        )
+    }
+
+    LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, initialConversationId) {
+        if (!authState.isSessionReady || !authState.isLoggedIn) return@LaunchedEffect
+        if (!initialConversationId.isNullOrBlank()) {
+            navController.navigate(Routes.chatRoom(initialConversationId)) {
+                launchSingleTop = true
+            }
+            onDeepLinkConsumed()
+        }
+    }
+
+    LaunchedEffect(authState.isLoggedIn, authState.isSessionReady, authState.userRole, authState.userId) {
+        if (!authState.isSessionReady) return@LaunchedEffect
+        if (authState.isLoggedIn) {
+            wasLoggedIn = true
+            val dest = homeRouteForRole(authState.userRole, authState.userId)
+            val current = navController.currentDestination?.route
+            if (current == Routes.LOGIN || current == Routes.REGISTER) {
+                navController.navigate(dest) {
+                    popUpTo(Routes.LOGIN) { inclusive = true }
+                }
+            }
+        } else if (wasLoggedIn) {
+            wasLoggedIn = false
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
+    if (!authState.isSessionReady) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val navigateHome: () -> Unit = {
+        val dest = homeRouteForRole(authState.userRole, authState.userId)
+        navController.navigate(dest) {
+            popUpTo(Routes.LOGIN) { inclusive = true }
+        }
+    }
+
+    NavHost(navController, startDestination = Routes.LOGIN) {
 
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = {
-                    val state = authViewModel.uiState.value
-                    val dest = if (state.userRole.equals("Patient", ignoreCase = true) && state.userId != null) {
-                        Routes.myVitals(state.userId)
-                    } else {
-                        Routes.PATIENT_LIST
-                    }
-                    navController.navigate(dest) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
-                onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
+                onLoginSuccess = { navigateHome() },
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) },
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = {
-                    val state = authViewModel.uiState.value
-                    val dest = if (state.userRole.equals("Patient", ignoreCase = true) && state.userId != null) {
-                        Routes.myVitals(state.userId)
-                    } else {
-                        Routes.PATIENT_LIST
-                    }
-                    navController.navigate(dest) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
-                onNavigateToLogin = { navController.popBackStack() }
+                onRegisterSuccess = { navigateHome() },
+                onNavigateToLogin = { navController.popBackStack() },
             )
         }
 
-        composable(Routes.PATIENT_LIST) {
-            PatientListScreen(
-                onPatientClick = { navController.navigate(Routes.patientDetail(it)) },
-                onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+        composable(Routes.MAIN) {
+            MainShell(
+                navController = navController,
+                userRole = authState.userRole,
+                userId = authState.userId,
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
             )
         }
 
         composable(
-            route = Routes.MY_VITALS,
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
+            route     = Routes.PATIENT_DETAIL,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
         ) {
             PatientDetailScreen(
-                onBack = {},
-                showBack = false,
-                onOpenChat = { navController.navigate(Routes.CONVERSATION_LIST) },
-                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) }
-            )
-        }
-
-        composable(
-            route = Routes.PATIENT_DETAIL,
-            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
-        ) {
-            PatientDetailScreen(
-                onBack = { navController.popBackStack() },
-                onOpenChat = { navController.navigate(Routes.CONVERSATION_LIST) },
-                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) }
+                userRole = authState.userRole,
+                userId   = authState.userId,
+                onBack   = { navController.popBackStack() },
+                onOpenChat = { conversationId ->
+                    navController.navigate(Routes.chatRoom(conversationId))
+                },
+                onOpenAlerts = { pid -> navController.navigate(Routes.alerts(pid)) },
+                onOpenLiveMonitor = { pid -> navController.navigate(Routes.liveMonitor(pid)) },
+                onOpenDeviceManagement = if (authState.userRole == "Patient") {
+                    { navController.navigate(Routes.DEVICE_MANAGEMENT) }
+                } else null,
             )
         }
 
         composable(
             route = Routes.ALERTS,
-            arguments = listOf(navArgument("patientId") {
-                type = NavType.StringType; nullable = true; defaultValue = null
-            })
+            arguments = listOf(
+                navArgument("patientId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) {
             AlertsScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(Routes.CONVERSATION_LIST) {
-            ConversationListScreen(
-                onConversationClick = { navController.navigate(Routes.chatRoom(it)) },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         composable(
             route = Routes.CHAT_ROOM,
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
         ) {
             ChatRoomScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(Routes.NOTIFICATIONS) {
-            NotificationsScreen(onBack = { navController.popBackStack() })
+        composable(Routes.DEVICE_MANAGEMENT) {
+            DeviceManagementScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route     = Routes.LIVE_MONITOR,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType }),
+        ) {
+            LiveMonitorScreen(onBack = { navController.popBackStack() })
         }
     }
 }
