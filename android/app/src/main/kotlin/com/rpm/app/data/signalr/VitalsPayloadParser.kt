@@ -53,7 +53,7 @@ object VitalsPayloadParser {
             isWearing            = pickBool(map, "isWearing", "IsWearing") ?: true,
             recordedAt           = pickString(map, "recordedAt", "RecordedAt") ?: "",
         )
-        return vitals.withInferredWearing()
+        return vitals.withNormalizedTemperatures().withInferredWearing()
     }
 
     private fun pick(map: Map<*, *>, camel: String, pascal: String): Any? =
@@ -106,7 +106,23 @@ fun VitalRecordDto.toRealTime(): RealTimeVitals = RealTimeVitals(
     fallDetected         = fallDetected,
     isWearing            = isWearing,
     recordedAt           = recordedAt,
-).withInferredWearing()
+).withNormalizedTemperatures().withInferredWearing()
+
+/** Legacy temperatureC duplicated skin — keep wrist + room separate like the watch UI. */
+fun RealTimeVitals.withNormalizedTemperatures(): RealTimeVitals {
+    val ambient = ambientTemperatureC
+    var skin = skinTemperatureC
+    if (skin == null && temperatureC != null) {
+        if (ambient == null || kotlin.math.abs(temperatureC - ambient) > 0.05f) {
+            skin = temperatureC
+        }
+    }
+    return copy(
+        skinTemperatureC = skin,
+        ambientTemperatureC = ambient,
+        temperatureC = null,
+    )
+}
 
 /** Samsung off-body sensor often reports false while vitals are still streaming. */
 fun RealTimeVitals.withInferredWearing(): RealTimeVitals {
@@ -147,5 +163,5 @@ fun RealTimeVitals.mergeWith(previous: RealTimeVitals?): RealTimeVitals {
         isWearing           = isWearing || previous.isWearing,
         recordedAt          = recordedAt.ifBlank { previous.recordedAt },
         patientId           = patientId.ifBlank { previous.patientId },
-    ).withInferredWearing()
+    ).withNormalizedTemperatures().withInferredWearing()
 }

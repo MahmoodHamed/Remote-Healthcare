@@ -44,7 +44,7 @@ private val LIVE_METRIC_CARDS = SupportedVitals.liveMetrics.map { def ->
     val tone = when (def.label) {
         "Heart Rate"     -> MetricTone.Accent
         "SpO₂", "Watch Status" -> MetricTone.Teal
-        "Skin Temp."     -> MetricTone.Blue
+        "Skin Temp.", "Ambient Temp." -> MetricTone.Blue
         "HRV", "Stress"  -> MetricTone.Violet
         "Fall Detection" -> MetricTone.Danger
         else             -> MetricTone.Ink
