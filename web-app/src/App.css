@@ -1349,3 +1349,72 @@
     border-bottom: 1px solid var(--line);
   }
 }
+
+/* Vitals grid — wrist skin vs ambient room (matches watch UI) */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.vital-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.vital-card .vital-label {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.vital-card .vital-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.vital-card .vital-unit {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  margin-left: 0.3rem;
+  font-weight: 500;
+}
+
+.vital-card .vital-meta {
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.vital-card.tone-hr { background: linear-gradient(135deg, #fff1f2, #fff); }
+.vital-card.tone-spo2 { background: linear-gradient(135deg, #ecfeff, #fff); }
+.vital-card.tone-bp { background: linear-gradient(135deg, #fef3c7, #fff); }
+.vital-card.tone-temp { background: linear-gradient(135deg, #fef2f2, #fff); }
+.vital-card.tone-steps { background: linear-gradient(135deg, #f0fdf4, #fff); }
+.vital-card.tone-calories { background: linear-gradient(135deg, #fff7ed, #fff); }
+.vital-card.tone-ecg { background: linear-gradient(135deg, #f3e8ff, #fff); }
+.vital-card.tone-sleep { background: linear-gradient(135deg, #eef2ff, #fff); }
+.vital-card.tone-stress { background: linear-gradient(135deg, #fff7ed, #fff); }
+.vital-card.tone-bia { background: linear-gradient(135deg, #f1f5f9, #fff); }
+.vital-card.tone-glucose { background: linear-gradient(135deg, #fef9c3, #fff); }
+.vital-card.danger {
+  border-color: rgba(220, 38, 38, 0.3);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), #fff);
+}
+
+.vital-icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.1rem;
+  opacity: 0.45;
+}

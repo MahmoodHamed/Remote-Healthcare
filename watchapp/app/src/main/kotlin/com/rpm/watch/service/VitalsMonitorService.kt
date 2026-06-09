@@ -401,7 +401,7 @@ class VitalsMonitorService : Service() {
             deviceId = deviceId,
             heartRateBpm = hrForMqtt,
             spO2Percent = latestSpO2Percent,
-            temperatureC = latestSkinTemperatureC ?: latestTemperatureC,
+            temperatureC = null,
             skinTemperatureC = latestSkinTemperatureC,
             ambientTemperatureC = latestAmbientTemperatureC,
             hrvMs = latestHrvMs?.takeIf { wearing },
@@ -491,7 +491,6 @@ class VitalsMonitorService : Service() {
                     latestAmbientTemperatureC = it
                     _ambientTemperatureC.value = it
                 }
-                reading.temperatureC?.let { latestTemperatureC = it }
                 maybePublishVitals()
             }
         }

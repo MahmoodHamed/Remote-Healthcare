@@ -41,9 +41,26 @@ export function inferWearing(vitals) {
   return true
 }
 
+/** Split Samsung wrist (OBJECT) vs room (AMBIENT) — legacy temperatureC duplicated skin. */
+export function normalizeTemperatureFields(vitals) {
+  if (!vitals) return vitals
+  const ambient = vitals.ambientTemperatureC ?? null
+  let skin = vitals.skinTemperatureC ?? null
+  const legacy = vitals.temperatureC ?? null
+  if (skin == null && legacy != null) {
+    if (ambient == null || Math.abs(legacy - ambient) > 0.05) skin = legacy
+  }
+  return {
+    ...vitals,
+    skinTemperatureC: skin,
+    ambientTemperatureC: ambient,
+    temperatureC: null,
+  }
+}
+
 export function normalizePayload(payload) {
   if (!payload || typeof payload !== 'object') return null
-  const vitals = {
+  const vitals = normalizeTemperatureFields({
     heartRateBpm: pick(payload, 'heartRateBpm', 'HeartRateBpm'),
     spO2Percent: pick(payload, 'spO2Percent', 'SpO2Percent'),
     systolicBp: pick(payload, 'systolicBp', 'SystolicBp'),
@@ -60,13 +77,13 @@ export function normalizePayload(payload) {
     fallDetected: Boolean(pickBool(payload, 'fallDetected', 'FallDetected')),
     isWearing: pickBool(payload, 'isWearing', 'IsWearing'),
     recordedAt: pick(payload, 'recordedAt', 'RecordedAt') ?? new Date().toISOString(),
-  }
+  })
   vitals.isWearing = inferWearing(vitals)
   return vitals
 }
 
 const MERGE_KEYS = [
-  'heartRateBpm', 'spO2Percent', 'systolicBp', 'diastolicBp', 'temperatureC',
+  'heartRateBpm', 'spO2Percent', 'systolicBp', 'diastolicBp',
   'skinTemperatureC', 'ambientTemperatureC', 'hrvMs', 'stressScore', 'bodyFatPercent',
   'ecgAvgHeartRateBpm', 'stepsCount', 'caloriesBurned',
 ]

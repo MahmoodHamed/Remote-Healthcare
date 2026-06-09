@@ -15,8 +15,8 @@ enum class WatchViewMetric(
     HEART_RATE("HR", "Heart rate", "bpm"),
     HRV("HRV", "HRV", "ms"),
     SPO2("SpO₂", "SpO₂", "%", onDemand = true),
-    SKIN_TEMP("Skin", "Skin temp.", "°C"),
-    AMBIENT_TEMP("Amb.", "Ambient temp.", "°C"),
+    SKIN_TEMP("Skin", "Skin temp. (wrist)", "°C"),
+    AMBIENT_TEMP("Amb.", "Ambient temp. (room)", "°C"),
     STRESS("Stress", "Stress", "/100"),
     STEPS("Steps", "Steps", "today", sdkSource = "platform"),
     CALORIES("Cal", "Calories", "kcal", sdkSource = "platform"),
@@ -90,8 +90,8 @@ object SupportedWatchVitals {
         }
         WatchViewMetric.HRV -> if (state.hrvMs != null) "From heart rate IBI" else "Waiting for HR…"
         WatchViewMetric.SPO2 -> if (state.spO2Percent != null) "On-demand · ~3 min" else "Measuring SpO₂…"
-        WatchViewMetric.SKIN_TEMP -> if (state.skinTemperatureC != null) "Skin temperature" else "Measuring skin…"
-        WatchViewMetric.AMBIENT_TEMP -> if (state.ambientTemperatureC != null) "Ambient temperature" else "Measuring ambient…"
+        WatchViewMetric.SKIN_TEMP -> if (state.skinTemperatureC != null) "Wrist skin (Samsung OBJECT_TEMPERATURE)" else "Measuring wrist skin…"
+        WatchViewMetric.AMBIENT_TEMP -> if (state.ambientTemperatureC != null) "Room air (Samsung AMBIENT_TEMPERATURE)" else "Measuring ambient air…"
         WatchViewMetric.STRESS -> if (state.stressScore != null) "EDA continuous (Watch8+)" else "Stress in background…"
         WatchViewMetric.STEPS -> "Shared with server"
         WatchViewMetric.CALORIES -> "Estimated from steps"

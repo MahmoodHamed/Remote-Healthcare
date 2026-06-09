@@ -22,7 +22,10 @@ class PlatformSensorHub(context: Context) {
             false
         }
         SensorType.SKIN_TEMPERATURE -> skinTempReader.start { c ->
-            emit(TrackerState.Measuring(com.rpm.watch.sensor.VitalReading(temperatureC = c)))
+            // Android platform sensor reports wrist/skin surface temperature.
+            // Map to skinTemperatureC so it flows to the dedicated skin-temp field,
+            // not the legacy temperatureC alias.
+            emit(TrackerState.Measuring(com.rpm.watch.sensor.VitalReading(skinTemperatureC = c)))
         }
         SensorType.SPO2 -> spO2Reader.start { pct ->
             emit(TrackerState.Measuring(com.rpm.watch.sensor.VitalReading(spO2Percent = pct)))

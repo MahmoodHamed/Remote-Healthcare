@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { resolveConnectPatientId } from '../utils/patientId'
+import { mergeVitals, normalizePayload } from '../utils/vitalsUtils'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 
@@ -65,22 +66,14 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
       .build()
 
     connection.on('ReceiveVitals', (payload) => {
-      if (!payload || typeof payload !== 'object') return
-
-      const normalized = {
-        heartRateBpm: payload.heartRateBpm ?? null,
-        spO2Percent: payload.spO2Percent ?? null,
-        skinTemperatureC: payload.skinTemperatureC ?? payload.temperatureC ?? null,
-        temperatureC: payload.temperatureC ?? null,
-        hrvMs: payload.hrvMs ?? null,
-        stressScore: payload.stressScore ?? null,
-        stepsCount: payload.stepsCount ?? null,
-        recordedAt: payload.recordedAt ?? null,
-      }
-
-      setVitals(normalized)
-      const time = normalized.recordedAt ? new Date(normalized.recordedAt).toLocaleTimeString() : 'n/a'
-      setVitalsHistory((prev) => [{ time, ...normalized }, ...prev].slice(0, 12))
+      const normalized = normalizePayload(payload)
+      if (!normalized) return
+      setVitals((prev) => {
+        const merged = mergeVitals(prev, normalized)
+        const time = merged.recordedAt ? new Date(merged.recordedAt).toLocaleTimeString() : 'n/a'
+        setVitalsHistory((hist) => [{ time, ...merged }, ...hist].slice(0, 12))
+        return merged
+      })
     })
 
     connection.onreconnecting(() => setConnectionStatus('connecting'))
@@ -182,20 +175,28 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                     <span className="vital-value">{vitals.heartRateBpm ?? '--'} bpm</span>
                   </div>
                   <div className="vital-item">
-                    <span className="vital-label">SpO2</span>
-                    <span className="vital-value">{vitals.spO2Percent ?? '--'}%</span>
+                    <span className="vital-label">SpO₂</span>
+                    <span className="vital-value">{vitals.spO2Percent != null ? vitals.spO2Percent.toFixed(1) : '--'}%</span>
                   </div>
                   <div className="vital-item">
-                    <span className="vital-label">Skin temp.</span>
-                    <span className="vital-value">{vitals.skinTemperatureC ?? vitals.temperatureC ?? '--'}°C</span>
+                    <span className="vital-label">Skin temp. (wrist)</span>
+                    <span className="vital-value">{vitals.skinTemperatureC != null ? vitals.skinTemperatureC.toFixed(1) : '--'}°C</span>
+                  </div>
+                  <div className="vital-item">
+                    <span className="vital-label">Ambient temp. (room)</span>
+                    <span className="vital-value">{vitals.ambientTemperatureC != null ? vitals.ambientTemperatureC.toFixed(1) : '--'}°C</span>
                   </div>
                   <div className="vital-item">
                     <span className="vital-label">HRV</span>
-                    <span className="vital-value">{vitals.hrvMs ?? '--'} ms</span>
+                    <span className="vital-value">{vitals.hrvMs != null ? Math.round(vitals.hrvMs) : '--'} ms</span>
                   </div>
                   <div className="vital-item">
                     <span className="vital-label">Stress</span>
-                    <span className="vital-value">{vitals.stressScore ?? '--'} / 100</span>
+                    <span className="vital-value">{vitals.stressScore != null ? Math.round(vitals.stressScore) : '--'} / 100</span>
+                  </div>
+                  <div className="vital-item">
+                    <span className="vital-label">Steps</span>
+                    <span className="vital-value">{vitals.stepsCount ?? '--'}</span>
                   </div>
                 </div>
               )}
@@ -216,7 +217,8 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                   <th>Time</th>
                   <th>Heart Rate</th>
                   <th>SpO₂</th>
-                  <th>Skin °C</th>
+                  <th>Skin °C (wrist)</th>
+                  <th>Ambient °C (room)</th>
                   <th>HRV</th>
                   <th>Steps</th>
                 </tr>
@@ -225,10 +227,11 @@ export default function Dashboard({ authProfile, accessToken, onLogout }) {
                 {vitalsHistory.map((record, idx) => (
                   <tr key={idx}>
                     <td>{record.time}</td>
-                    <td>{record.heartRateBpm ?? '--'} bpm</td>
-                    <td>{record.spO2Percent ?? '--'}%</td>
-                    <td>{record.skinTemperatureC ?? record.temperatureC ?? '--'}°C</td>
-                    <td>{record.hrvMs ?? '--'} ms</td>
+                    <td>{record.heartRateBpm != null ? Math.round(record.heartRateBpm) : '--'} bpm</td>
+                    <td>{record.spO2Percent != null ? record.spO2Percent.toFixed(1) : '--'}%</td>
+                    <td>{record.skinTemperatureC != null ? record.skinTemperatureC.toFixed(1) : '--'}°C</td>
+                    <td>{record.ambientTemperatureC != null ? record.ambientTemperatureC.toFixed(1) : '--'}°C</td>
+                    <td>{record.hrvMs != null ? Math.round(record.hrvMs) : '--'} ms</td>
                     <td>{record.stepsCount ?? '--'}</td>
                   </tr>
                 ))}

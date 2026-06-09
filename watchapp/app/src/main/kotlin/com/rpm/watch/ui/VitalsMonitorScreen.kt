@@ -108,7 +108,7 @@ fun VitalsMonitorContent(
             if (state.isMonitoring) {
                 item {
                     Text(
-                        text = "Sharing: HR · Skin · SpO₂ · Stress · Steps",
+                        text = "Sharing: HR · Skin (wrist) · Ambient (room) · SpO₂ · Stress · Steps",
                         fontSize = 8.sp,
                         color = MaterialTheme.colors.primary,
                         textAlign = TextAlign.Center,

@@ -1,33 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Navigate, useNavigate } from 'react-router-dom'
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
+import VitalsGrid from '../components/VitalsGrid'
 import { apiFetch } from '../api/client'
 import { accountUserId, normalizeGuid } from '../utils/patientId'
-import { SUPPORTED_METRIC_DEFS } from '../utils/supportedVitals'
-import { inferWearing, mergeVitals, normalizePayload } from '../utils/vitalsUtils'
+import { mapVitalsPayload, mergeVitalsPayload } from '../utils/vitalsPayload'
 
 const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
 const DEFAULT_WATCH_CODE = 'ABC123'
 const SHORT_ID_PATTERN = /^[A-Za-z0-9]{6}$/
-
-function fmt(value, digits = 0) {
-  if (value === null || value === undefined || Number.isNaN(value)) return '--'
-  return digits > 0 ? Number(value).toFixed(digits) : String(value)
-}
-
-function metricValue(vitals, def) {
-  if (!vitals) return '--'
-  if (def.boolean) return vitals.fallDetected ? 'Alert' : 'Safe'
-  if (def.wearing) return inferWearing(vitals) ? 'On wrist' : 'Off-wrist'
-  return fmt(vitals[def.key], def.digits ?? 0)
-}
-
-function metricTone(vitals, def) {
-  if (!vitals) return def.tone
-  if (def.boolean) return vitals.fallDetected ? 'danger' : 'teal'
-  if (def.wearing) return inferWearing(vitals) ? 'teal' : 'danger'
-  return def.tone
-}
 
 function PatientSidebar({ authProfile, onLogout }) {
   return (
@@ -76,9 +57,7 @@ function PatientVitalsPanel({ authProfile, accessToken }) {
       .build()
 
     connection.on('ReceiveVitals', (payload) => {
-      const vitals = normalizePayload(payload)
-      if (!vitals) return
-      setLatestVitals((prev) => mergeVitals(prev, vitals))
+      setLatestVitals((prev) => mergeVitalsPayload(prev, payload))
     })
 
     connection.onreconnecting(() => setConnectionStatus('connecting'))
@@ -134,17 +113,7 @@ function PatientVitalsPanel({ authProfile, accessToken }) {
         </div>
       </div>
       {connectionError ? <p className="live-error">{connectionError}</p> : null}
-      <div className="sensor-grid sensor-grid-dense">
-        {SUPPORTED_METRIC_DEFS.map((def) => (
-          <div key={def.label} className={`sensor-card tone-${metricTone(latestVitals, def)}`}>
-            <span className="sensor-label">{def.label}</span>
-            <strong className="sensor-value">
-              {metricValue(latestVitals, def)}
-              {def.unit ? <small>{def.unit}</small> : null}
-            </strong>
-          </div>
-        ))}
-      </div>
+      <VitalsGrid vitals={latestVitals} />
     </div>
   )
 }
