@@ -1,4 +1,5 @@
-﻿namespace RPM.Application.DTOs.Vitals;
+﻿using System.Text.Json.Serialization;
+namespace RPM.Application.DTOs.Vitals;
 
 /// <summary>Payload coming from a watch or ingest endpoint.</summary>
 public record VitalIngestionDto(
@@ -14,7 +15,7 @@ public record VitalIngestionDto(
     bool FallDetected,
     bool IsWearing,
     float? SkinTemperatureC = null,
-    float? HeartRateVariabilityMs = null,
+    [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs = null,
     float? RestingHeartRateBpm = null,
     float? MaxHeartRateBpm = null,
     float? RespirationRateBpm = null,
@@ -28,7 +29,7 @@ public record VitalIngestionDto(
     float? MuscleMassKg = null,
     float? BodyWaterPercent = null,
     float? BasalMetabolicRate = null,
-    float? EcgAverageHeartRate = null,
+    [property: JsonPropertyName("ecgAvgHeartRateBpm")] float? EcgAverageHeartRate = null,
     string? EcgClassification = null,
     string? EcgWaveformJson = null,
     float? BloodGlucoseMgDl = null,
@@ -50,7 +51,7 @@ public record VitalRecordDto(
     bool IsWearing,
     DateTime RecordedAt,
     float? SkinTemperatureC = null,
-    float? HeartRateVariabilityMs = null,
+    [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs = null,
     float? RestingHeartRateBpm = null,
     float? MaxHeartRateBpm = null,
     float? RespirationRateBpm = null,
@@ -64,7 +65,7 @@ public record VitalRecordDto(
     float? MuscleMassKg = null,
     float? BodyWaterPercent = null,
     float? BasalMetabolicRate = null,
-    float? EcgAverageHeartRate = null,
+    [property: JsonPropertyName("ecgAvgHeartRateBpm")] float? EcgAverageHeartRate = null,
     string? EcgClassification = null,
     string? EcgWaveformJson = null,
     float? BloodGlucoseMgDl = null,

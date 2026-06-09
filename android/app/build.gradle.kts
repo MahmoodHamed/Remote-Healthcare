@@ -105,6 +105,9 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.messaging)
 
+    // Location (GPS)
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // QR code generation
     implementation("com.google.zxing:core:3.5.3")
 

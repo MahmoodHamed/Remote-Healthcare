@@ -1,5 +1,6 @@
 package com.rpm.app.data.remote.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -71,10 +72,10 @@ data class VitalRecordDto(
     val temperatureC: Float? = null,
     val skinTemperatureC: Float? = null,
     val ambientTemperatureC: Float? = null,
-    val hrvMs: Float? = null,
+    @SerialName("hrvMs") val hrvMs: Float? = null,
     val stressScore: Float? = null,
     val bodyFatPercent: Float? = null,
-    val ecgAvgHeartRateBpm: Float? = null,
+    @SerialName("ecgAvgHeartRateBpm") val ecgAvgHeartRateBpm: Float? = null,
     val stepsCount: Int? = null,
     val caloriesBurned: Float? = null,
     val fallDetected: Boolean = false,
@@ -192,10 +193,10 @@ data class VitalRecordLatestDto(
     val temperatureC: Float? = null,
     val skinTemperatureC: Float? = null,
     val ambientTemperatureC: Float? = null,
-    val hrvMs: Float? = null,
+    @SerialName("hrvMs") val hrvMs: Float? = null,
     val stressScore: Float? = null,
     val bodyFatPercent: Float? = null,
-    val ecgAvgHeartRateBpm: Float? = null,
+    @SerialName("ecgAvgHeartRateBpm") val ecgAvgHeartRateBpm: Float? = null,
     val stepsCount: Int? = null,
     val caloriesBurned: Float? = null,
     val fallDetected: Boolean = false,
@@ -211,7 +212,7 @@ data class PatientSummaryDto(
     val avatarUrl: String? = null,
     val dateOfBirth: String? = null,
     val bloodType: String? = null,
-    val shortPatientCode: String? = null,
+    @SerialName("watchShortId") val watchShortId: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
 )
 
@@ -230,7 +231,7 @@ data class PatientDetailDto(
     val allergies: List<String> = emptyList(),
     val currentMedications: List<String> = emptyList(),
     val emergencyContactPhone: String? = null,
-    val shortPatientCode: String? = null,
+    val watchShortId: String? = null,
     val latestVitals: VitalRecordLatestDto? = null,
     val doctor: DoctorDto? = null,
 )

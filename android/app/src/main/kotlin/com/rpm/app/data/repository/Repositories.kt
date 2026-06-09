@@ -165,6 +165,7 @@ private fun PatientDetailDto.toSummary() = PatientSummaryDto(
     avatarUrl = avatarUrl,
     dateOfBirth = dateOfBirth,
     bloodType = bloodType,
+    watchShortId = watchShortId,
     latestVitals = latestVitals,
 )
 

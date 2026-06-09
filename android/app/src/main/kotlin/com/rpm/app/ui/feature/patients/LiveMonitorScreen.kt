@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rpm.app.data.signalr.RealTimeVitals
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 // ──────────────────────────────────────────────────────────────────────────
 // Metric tones (SupportedVitals.liveMetrics defines values)
@@ -88,6 +91,14 @@ fun LiveMonitorScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
 
+    var liveClockText by remember { mutableStateOf(liveMonitorClockNow()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            liveClockText = liveMonitorClockNow()
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -97,11 +108,32 @@ fun LiveMonitorScreen(
                             if (state.patientName.isNotBlank()) "Live Monitor · ${state.patientName}" else "Live Monitor",
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        Text(
-                            "Galaxy Watch · Real-time vitals",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                "Galaxy Watch · Real-time vitals",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                "·",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(10.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                liveClockText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -393,4 +425,9 @@ private fun HistoryBadge(text: String, color: Color) {
     Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.15f)) {
         Text(text, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = color)
     }
+}
+
+private fun liveMonitorClockNow(): String {
+    val now = LocalDateTime.now(ZoneId.systemDefault())
+    return DateTimeFormatter.ofPattern("HH:mm:ss").format(now)
 }

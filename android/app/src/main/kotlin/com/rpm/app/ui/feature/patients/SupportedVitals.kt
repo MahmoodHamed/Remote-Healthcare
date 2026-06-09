@@ -21,8 +21,12 @@ object SupportedVitals {
         MetricDef("Heart Rate", "bpm") { v -> v?.heartRateBpm?.toInt()?.toString() ?: "--" },
         MetricDef("HRV", "ms") { v -> v?.hrvMs?.toInt()?.toString() ?: "--" },
         MetricDef("SpO₂", "%", hint = "On-demand") { v -> v?.spO2Percent?.let { "%.1f".format(it) } ?: "--" },
-        MetricDef("Skin Temp.", "°C", hint = "wrist") { v -> v?.skinTemperatureC?.let { "%.1f".format(it) } ?: "--" },
-        MetricDef("Ambient Temp.", "°C", hint = "room") { v -> v?.ambientTemperatureC?.let { "%.1f".format(it) } ?: "--" },
+        MetricDef("Skin Temp.", "°C", hint = "wrist") { v ->
+            v?.skinTemperatureC?.let { "%.1f".format(it) } ?: "--"
+        },
+        MetricDef("Ambient Temp.", "°C", hint = "room") { v ->
+            (v?.ambientTemperatureC ?: v?.temperatureC)?.let { "%.1f".format(it) } ?: "--"
+        },
         MetricDef("Stress", "/100") { v -> v?.stressScore?.toInt()?.toString() ?: "--" },
         MetricDef("Steps", "today") { v -> v?.stepsCount?.toString() ?: "--" },
         MetricDef("Calories", "kcal") { v -> v?.caloriesBurned?.let { "%.0f".format(it) } ?: "--" },
@@ -57,9 +61,10 @@ object SupportedVitals {
         v.skinTemperatureC?.let {
             if (isNotEmpty()) append("  •  ")
             append("Skin: %.1f °C".format(it))
-        } ?: v.temperatureC?.let {
+        }
+        v.temperatureC?.let {
             if (isNotEmpty()) append("  •  ")
-            append("%.1f °C".format(it))
+            append("Amb.: %.1f °C".format(it))
         }
         v.stressScore?.let {
             if (isNotEmpty()) append("  •  ")
@@ -72,8 +77,12 @@ object SupportedVitals {
     fun historyRows(record: VitalRecordDto): List<Pair<String, String>> = buildList {
         record.heartRateBpm?.let { add("Heart Rate" to "${it.toInt()} bpm") }
         record.spO2Percent?.let { add("SpO₂" to "${it.toInt()}%") }
-        record.skinTemperatureC?.let { add("Skin Temp." to "%.1f °C".format(it)) }
-        record.ambientTemperatureC?.let { add("Ambient Temp." to "%.1f °C".format(it)) }
+        record.skinTemperatureC?.let { add("Skin Temp. (Wrist)" to "%.1f °C".format(it)) }
+        // temperatureC = ambient/room temperature stored from MQTT ambientTemperatureC
+        record.temperatureC?.let { add("Ambient Temp. (Room)" to "%.1f °C".format(it)) }
+        record.ambientTemperatureC?.let {
+            if (record.temperatureC == null) add("Ambient Temp. (Room)" to "%.1f °C".format(it))
+        }
         record.hrvMs?.let { add("HRV" to "${it.toInt()} ms") }
         record.stressScore?.let { add("Stress" to "${it.toInt()} / 100") }
         record.stepsCount?.let { add("Steps" to "$it") }

@@ -1,5 +1,12 @@
 package com.rpm.app.ui.feature.patients
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.os.Looper
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,13 +21,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.rpm.app.data.remote.dto.PatientDetailDto
 import com.rpm.app.data.remote.dto.VitalRecordDto
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Period
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -155,6 +171,11 @@ fun PatientDetailScreen(
                             WatchLinkSection(onOpenDeviceManagement = onOpenDeviceManagement)
                         }
 
+                        // ── My Location (patient-only) ─────────────────────
+                        if (userRole == "Patient") {
+                            LocationSection()
+                        }
+
                         uiState.error?.let { msg ->
                             Text(msg, color = MaterialTheme.colorScheme.error)
                         }
@@ -207,6 +228,10 @@ private fun ProfileSection(patient: PatientDetailDto, userRole: String?) {
         patient.emergencyContactPhone?.let {
             InfoRow(Icons.Default.ContactEmergency, "Emergency Contact", it)
         }
+        Spacer(Modifier.height(4.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        Spacer(Modifier.height(4.dp))
+        LiveClockRow()
     }
 }
 
@@ -510,16 +535,20 @@ private fun VitalRecordRow(record: VitalRecordDto, index: Int) {
                     formatVitalTimestamp(record.recordedAt),
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                 )
-                // Inline summary: HR • SpO₂ • Temp
+                // Inline summary: HR • SpO₂ • Skin • Ambient
                 val summary = buildString {
                     record.heartRateBpm?.let { append("HR ${it.toInt()}") }
                     record.spO2Percent?.let {
                         if (isNotEmpty()) append("  •  ")
                         append("SpO₂ ${it.toInt()}%")
                     }
-                    (record.skinTemperatureC ?: record.temperatureC)?.let {
+                    record.skinTemperatureC?.let {
                         if (isNotEmpty()) append("  •  ")
                         append("Skin %.1f°C".format(it))
+                    }
+                    record.temperatureC?.let {
+                        if (isNotEmpty()) append("  •  ")
+                        append("Amb. %.1f°C".format(it))
                     }
                     record.stressScore?.let {
                         if (isNotEmpty()) append("  •  ")
@@ -705,6 +734,27 @@ private fun bmiCategory(bmi: Float) = when {
     else        -> "Obese"
 }
 
+// ── Live Clock ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun LiveClockRow() {
+    var currentTime by remember { mutableStateOf(formattedNow()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = formattedNow()
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+    InfoRow(Icons.Default.Schedule, "Current Time", currentTime)
+}
+
+private fun formattedNow(): String {
+    val now = LocalDateTime.now(ZoneId.systemDefault())
+    val fmt = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+    return now.format(fmt)
+}
+
 // ── WatchLinkSection ───────────────────────────────────────────────────────
 
 @Composable
@@ -743,6 +793,129 @@ private fun WatchLinkSection(onOpenDeviceManagement: (() -> Unit)?) {
                 enabled  = onOpenDeviceManagement != null,
             ) {
                 Text("Setup")
+            }
+        }
+    }
+}
+
+// ── Location Section ───────────────────────────────────────────────────────
+
+@SuppressLint("MissingPermission")
+@Composable
+private fun LocationSection() {
+    val context = LocalContext.current
+    var locationText by remember { mutableStateOf<String?>(null) }
+    var isLoading   by remember { mutableStateOf(false) }
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { perms ->
+        hasPermission = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission) return@LaunchedEffect
+        isLoading = true
+        val client   = LocationServices.getFusedLocationProviderClient(context)
+        val geocoder = Geocoder(context, Locale.getDefault())
+
+        val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10_000L)
+            .setMaxUpdates(1)
+            .build()
+
+        val callback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                client.removeLocationUpdates(this)
+                val loc = result.lastLocation ?: return
+                isLoading = false
+                locationText = try {
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(loc.latitude, loc.longitude, 1)
+                    val addr = addresses?.firstOrNull()
+                    when {
+                        addr != null -> buildString {
+                            addr.locality?.let { append(it) }
+                            addr.adminArea?.let {
+                                if (isNotEmpty()) append(", ")
+                                append(it)
+                            }
+                            addr.countryName?.let {
+                                if (isNotEmpty()) append(", ")
+                                append(it)
+                            }
+                            if (isEmpty()) append("%.4f, %.4f".format(loc.latitude, loc.longitude))
+                        }
+                        else -> "%.4f°N, %.4f°E".format(loc.latitude, loc.longitude)
+                    }
+                } catch (_: Exception) {
+                    "%.4f°N, %.4f°E".format(loc.latitude, loc.longitude)
+                }
+            }
+        }
+
+        try {
+            client.requestLocationUpdates(request, callback, Looper.getMainLooper())
+        } catch (_: Exception) {
+            isLoading = false
+            locationText = "Location unavailable"
+        }
+    }
+
+    DetailCard(title = "My Location", icon = Icons.Default.LocationOn) {
+        LiveClockRow()
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 6.dp),
+            color    = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+        )
+        when {
+            !hasPermission -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Location permission needed",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        },
+                    ) { Text("Allow") }
+                }
+            }
+            isLoading -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Text(
+                        "Getting location…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            locationText != null -> {
+                InfoRow(Icons.Default.LocationOn, "Location", locationText!!)
             }
         }
     }

@@ -1,8 +1,8 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RPM.Application.DTOs.Patients;
 using RPM.Application.Common.Interfaces;
+using RPM.Domain.Entities;
 using RPM.Domain.Interfaces;
 namespace RPM.API.Controllers;
 
@@ -16,16 +16,22 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
     public async Task<IActionResult> GetMyPatients(CancellationToken ct)
     {
         var patients = await uow.Patients.GetByDoctorIdAsync(currentUser.UserId, ct);
-        var result = patients.Select(p => new PatientSummaryDto(
-            p.UserId,
-            p.Id,
-            p.User.FullName,
-            p.User.Email,
-            p.User.Phone,
-            p.User.AvatarUrl,
-            p.DateOfBirth,
-            p.BloodType?.ToString(),
-            p.User.IsActive));
+        var result = new List<PatientSummaryDto>();
+        foreach (var p in patients)
+        {
+            var latest = await uow.Vitals.GetLatestByPatientIdAsync(p.UserId, ct);
+            result.Add(new PatientSummaryDto(
+                p.UserId,
+                p.Id,
+                p.User.FullName,
+                p.User.Email,
+                p.User.Phone,
+                p.User.AvatarUrl,
+                p.DateOfBirth,
+                p.BloodType?.ToString(),
+                p.User.IsActive,
+                latest is null ? null : ToVitalRecordLatestDto(latest)));
+        }
         return Ok(result);
     }
 
@@ -50,6 +56,9 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
                 assignment.AssignedAt));
         }
 
+        var primaryDoctor = doctorDtos.FirstOrDefault(d => d.Status == "Active")
+            ?? doctorDtos.FirstOrDefault();
+
         var dto = new PatientDetailDto(
             profile.UserId,
             profile.Id,
@@ -65,11 +74,13 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
             profile.Allergies,
             profile.CurrentMedications,
             profile.EmergencyContactPhone,
-            latest is null ? null : new VitalRecordLatestDto(
-                latest.HeartRateBpm, latest.SpO2Percent, latest.SystolicBp,
-                latest.DiastolicBp, latest.TemperatureC, latest.RecordedAt),
+            latest is null ? null : ToVitalRecordLatestDto(latest),
             doctorDtos,
-            profile.WatchShortId);
+            profile.WatchShortId,
+            primaryDoctor is null ? null : new DoctorSimpleDto(
+                primaryDoctor.DoctorUserId,
+                primaryDoctor.DoctorName,
+                primaryDoctor.Specialization));
         return Ok(dto);
     }
 
@@ -127,4 +138,21 @@ public class PatientsController(IUnitOfWork uow, ICurrentUser currentUser) : Con
         await uow.SaveChangesAsync(ct);
         return Ok(new { message = "Relative linked successfully" });
     }
+
+    private static VitalRecordLatestDto ToVitalRecordLatestDto(VitalRecord r) => new(
+        r.HeartRateBpm,
+        r.SpO2Percent,
+        r.SystolicBp,
+        r.DiastolicBp,
+        r.TemperatureC,
+        r.SkinTemperatureC,
+        r.HeartRateVariabilityMs,
+        r.StressScore,
+        r.BodyFatPercent,
+        r.EcgAverageHeartRate,
+        r.StepsCount,
+        r.CaloriesBurned,
+        r.FallDetected,
+        r.IsWearing,
+        r.RecordedAt);
 }

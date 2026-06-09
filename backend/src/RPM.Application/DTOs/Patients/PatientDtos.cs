@@ -1,4 +1,5 @@
-﻿namespace RPM.Application.DTOs.Patients;
+﻿using System.Text.Json.Serialization;
+namespace RPM.Application.DTOs.Patients;
 
 public record PatientSummaryDto(
     Guid UserId,
@@ -9,7 +10,8 @@ public record PatientSummaryDto(
     string? AvatarUrl,
     DateOnly? DateOfBirth,
     string? BloodType,
-    bool IsActive);
+    bool IsActive,
+    VitalRecordLatestDto? LatestVitals = null);
 
 public record PatientDetailDto(
     Guid UserId,
@@ -28,17 +30,34 @@ public record PatientDetailDto(
     string? EmergencyContactPhone,
     VitalRecordLatestDto? LatestVitals,
     IReadOnlyList<DoctorAssignmentDto> Doctors,
-    string? WatchShortId = null);
+    string? WatchShortId = null,
+    DoctorSimpleDto? Doctor = null);
 
 public record SetWatchShortIdRequest(string? ShortId);
 
+/// <summary>Full latest vitals snapshot returned inside patient profile — aligned with mobile client fields.</summary>
 public record VitalRecordLatestDto(
     float? HeartRateBpm,
     float? SpO2Percent,
     float? SystolicBp,
     float? DiastolicBp,
     float? TemperatureC,
+    float? SkinTemperatureC,
+    [property: JsonPropertyName("hrvMs")] float? HeartRateVariabilityMs,
+    float? StressScore,
+    float? BodyFatPercent,
+    [property: JsonPropertyName("ecgAvgHeartRateBpm")] float? EcgAverageHeartRate,
+    int? StepsCount,
+    float? CaloriesBurned,
+    bool FallDetected,
+    bool IsWearing,
     DateTime RecordedAt);
+
+/// <summary>Primary doctor for mobile display — simplified single-doctor view.</summary>
+public record DoctorSimpleDto(
+    Guid UserId,
+    string FullName,
+    string? Specialization);
 
 public record DoctorDto(
     Guid UserId,

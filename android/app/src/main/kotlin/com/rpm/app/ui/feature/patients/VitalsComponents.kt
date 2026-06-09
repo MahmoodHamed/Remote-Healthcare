@@ -159,26 +159,22 @@ private fun LiveVitalsCard(title: String, rv: RealTimeVitals, modifier: Modifier
 private fun ColumnScope.renderLatestRows(v: VitalRecordLatestDto) {
     v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f)) }
     v.spO2Percent?.let  { VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f)) }
-    v.skinTemperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
-        ?: v.temperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
+    v.skinTemperatureC?.let { VitalRow("Skin Temp. (Wrist)", "%.1f °C".format(it), normalIcon = true) }
+    v.temperatureC?.let     { VitalRow("Ambient Temp. (Room)", "%.1f °C".format(it), normalIcon = true) }
     v.hrvMs?.let       { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
     v.stressScore?.let { VitalRow("Stress", "${it.toInt()} / 100", stressStatus(it)) }
 }
 
 @Composable
 private fun ColumnScope.renderSupportedRows(v: VitalRecordDto) {
-    renderLatestRows(
-        VitalRecordLatestDto(
-            heartRateBpm = v.heartRateBpm,
-            spO2Percent  = v.spO2Percent,
-            temperatureC = v.temperatureC,
-            skinTemperatureC = v.skinTemperatureC,
-            hrvMs        = v.hrvMs,
-            stressScore  = v.stressScore,
-            recordedAt   = v.recordedAt,
-        ),
-    )
-    v.ambientTemperatureC?.let { VitalRow("Ambient Temp.", "%.1f °C".format(it), normalIcon = true) }
+    v.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f)) }
+    v.spO2Percent?.let  { VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f)) }
+    v.skinTemperatureC?.let { VitalRow("Skin Temp. (Wrist)", "%.1f °C".format(it), normalIcon = true) }
+    // temperatureC stores ambient/room temperature (mapped from ambientTemperatureC in MQTT)
+    v.temperatureC?.let     { VitalRow("Ambient Temp. (Room)", "%.1f °C".format(it), normalIcon = true) }
+    v.ambientTemperatureC?.let { if (v.temperatureC == null) VitalRow("Ambient Temp. (Room)", "%.1f °C".format(it), normalIcon = true) }
+    v.hrvMs?.let       { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
+    v.stressScore?.let { VitalRow("Stress", "${it.toInt()} / 100", stressStatus(it)) }
     v.stepsCount?.let        { VitalRow("Steps", "$it", normalIcon = true) }
     v.caloriesBurned?.let    { VitalRow("Calories", "%.0f kcal".format(it), normalIcon = true) }
     v.bodyFatPercent?.let    { VitalRow("Body Fat", "%.1f%%".format(it), normalIcon = true) }
@@ -190,9 +186,9 @@ private fun ColumnScope.renderSupportedRows(v: VitalRecordDto) {
 private fun ColumnScope.renderLiveRows(rv: RealTimeVitals) {
     rv.heartRateBpm?.let { VitalRow("Heart Rate", "${it.toInt()} bpm", statusFor(it, 40f..100f)) }
     rv.spO2Percent?.let   { VitalRow("SpO₂", "${it.toInt()}%", statusFor(it, 95f..100f)) }
-    rv.skinTemperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
-        ?: rv.temperatureC?.let { VitalRow("Skin Temp.", "%.1f °C".format(it), normalIcon = true) }
-    rv.ambientTemperatureC?.let { VitalRow("Ambient Temp.", "%.1f °C".format(it), normalIcon = true) }
+    // After withNormalizedTemperatures(): skinTemperatureC = wrist, ambientTemperatureC = room, temperatureC = null
+    rv.skinTemperatureC?.let    { VitalRow("Skin Temp. (Wrist)", "%.1f °C".format(it), normalIcon = true) }
+    rv.ambientTemperatureC?.let { VitalRow("Ambient Temp. (Room)", "%.1f °C".format(it), normalIcon = true) }
     rv.hrvMs?.let         { VitalRow("HRV", "${it.toInt()} ms", normalIcon = true) }
     rv.stressScore?.let   { VitalRow("Stress", "${it.toInt()} / 100", stressStatus(it)) }
     rv.bodyFatPercent?.let { VitalRow("Body Fat", "%.1f%%".format(it), normalIcon = true) }
